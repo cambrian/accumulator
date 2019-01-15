@@ -5,3 +5,5 @@ authors = ["Eddie Wang <eddie@vest.com>, add yourselves here"]
 edition = "2018"
 
 [dependencies]
+alga = "0.7.2"
+bigint = "4.4.1"
