@@ -1,0 +1,7 @@
+[package]
+name = "crypto"
+version = "0.1.0"
+authors = ["Eddie Wang <eddie@vest.com>, add yourselves here"]
+edition = "2018"
+
+[dependencies]
