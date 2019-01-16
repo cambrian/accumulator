@@ -1,7 +1,7 @@
 // TODO
 use num::BigUint;
 
-struct PoKE2i<G> {
+struct PoKE2<G> {
   z: G,
   q: G,
   r: BigUint,
