@@ -18,5 +18,5 @@ pub trait Inverse<O: Operator>: AbstractGroup<O> {
 /// Efficient exponentiation in a group.
 pub trait Pow<O: Operator>: AbstractGroup<O> {
   // TODO: Write default impl using repeated squaring.
-  fn pow(&self, exp: BigUint) -> Self;
+  fn pow(&self, exp: &BigUint) -> Self;
 }

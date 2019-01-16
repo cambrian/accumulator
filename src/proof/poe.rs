@@ -17,7 +17,7 @@ where
   // let z = hash::blake2(base, None);
   let l = BigUint::from(1 as u8); // HPrime(exp, base, result);
   let q = exp / l;
-  PoE { q: base.pow(q) }
+  PoE { q: base.pow(&q) }
 }
 
 pub fn verify_poe<O, G: AbstractGroup<O> + Pow<O>>(
@@ -33,7 +33,7 @@ where
   let l = BigUint::from(1 as u8); // HPrime(exp, base, result);
   let r = exp % l;
   let l = BigUint::from(23 as u8); // BigInt::from(l as U256);
-  let w = proof.q.pow(l);
+  let w = proof.q.pow(&l);
   // let w = w.op(Multiplicative, &base.pow(l));
   false
 }

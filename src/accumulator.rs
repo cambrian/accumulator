@@ -2,11 +2,16 @@
 
 use super::group::Generator;
 use super::group::Pow;
+use super::proof::poe;
 use super::proof::PoE;
 use super::proof::PoKE2;
 use alga::general::AbstractGroup;
 use alga::general::Operator;
 use num::BigUint;
+
+fn product(elems: &[BigUint]) -> BigUint {
+  elems.iter().fold(BigUint::new(vec![1]), |a, b| a * b)
+}
 
 pub fn setup<O, G: AbstractGroup<O> + Generator<O>>() -> G
 where
@@ -15,11 +20,14 @@ where
   G::generator()
 }
 
-pub fn add<O, G: AbstractGroup<O> + Pow<O>>(_acc: &G, _elems: &[BigUint]) -> (G, PoE<G>)
+pub fn add<O, G: AbstractGroup<O> + Pow<O>>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
 where
   O: Operator,
 {
-  unimplemented!()
+  let x = product(elems);
+  let new_acc = acc.pow(&x);
+  let poe_proof = poe::compute_poe(acc, &x, &new_acc);
+  (new_acc, poe_proof)
 }
 
 pub fn delete<O, G: AbstractGroup<O> + Pow<O>>(
