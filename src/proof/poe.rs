@@ -1,9 +1,5 @@
 // TODO
 
-struct PoE<G> {
-  q: G,
-}
-
 // x, u, w: u^x = w
 // pub fn compute_poe<G: Group> (G base, U256 exp, G result) -> PoE<G> {
 //   let l = Hprime (exp, base, result);
