@@ -8,9 +8,14 @@ authors = [
   "Sanjay Kannan <sanjay@vest.com>",
   "Eddie Wang <eddie@vest.com>"
 ]
+description = "Accumulators and associated cryptographic primitives in Rust."
+keywords = ["cryptography", "crypto", "accumulator", "rsa"]
+readme = "README.md"
+repository = "https://github.com/1protocol/crypto"
 
 [dependencies]
 alga = "0.7.2"
 bigint = "4.4.1"
+blake2-rfc = "0.2.18"
 num = "0.2.0"
 ring = "0.14.1"
