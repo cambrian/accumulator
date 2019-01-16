@@ -15,7 +15,8 @@ repository = "https://github.com/1protocol/crypto"
 
 [dependencies]
 alga = "0.7.2"
-bigint = "4.4.1"
+uint = "0.6.1"
 blake2-rfc = "0.2.18"
 num = "0.2.0"
 ring = "0.14.1"
+sha2 = "0.8.0"
