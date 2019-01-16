@@ -7,7 +7,6 @@ use alga::general::Multiplicative;
 use alga::general::Operator;
 use bigint::uint::U256;
 use num::BigUint;
-use serde_json;
 
 // x, u, w: u^x = w
 pub fn compute_poe<O, G: AbstractGroup<O> + Pow<O>>(base: &G, exp: &BigUint, result: &G) -> PoE<G>
