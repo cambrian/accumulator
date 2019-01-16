@@ -7,9 +7,10 @@ use alga::general::Multiplicative;
 use alga::general::Operator;
 use bigint::uint::U256;
 use num::BigUint;
+use serde_json;
 
 // x, u, w: u^x = w
-pub fn compute_poe<O, G: AbstractGroup<O> + Pow<O>>(base: G, exp: BigUint, result: G) -> PoE<G>
+pub fn compute_poe<O, G: AbstractGroup<O> + Pow<O>>(base: &G, exp: &BigUint, result: &G) -> PoE<G>
 where
   O: Operator,
 {
@@ -21,10 +22,10 @@ where
 }
 
 pub fn verify_poe<O, G: AbstractGroup<O> + Pow<O>>(
-  base: G,
-  exp: BigUint,
-  result: G,
-  proof: PoE<G>,
+  base: &G,
+  exp: &BigUint,
+  result: &G,
+  proof: &PoE<G>,
 ) -> bool
 where
   O: Operator,
@@ -35,5 +36,5 @@ where
   let l = BigUint::from(23 as u8); // BigInt::from(l as U256);
   let w = proof.q.pow(l);
   // let w = w.op(Multiplicative, &base.pow(l));
-  w == result
+  false
 }
