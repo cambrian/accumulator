@@ -9,3 +9,7 @@ pub fn compute_poke2<G>(base: G, exp: BigUint, result: G) -> PoKE2<G> {
     r: exp,
   }
 }
+
+pub fn verify_poke2<G>(base: G, result: G, proof: PoKE2<G>) -> bool {
+  false
+}
