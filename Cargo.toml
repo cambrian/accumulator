@@ -1,8 +1,13 @@
 [package]
 name = "crypto"
 version = "0.1.0"
-authors = ["Eddie Wang <eddie@vest.com>, Pablo Aldape <pablo@vest.com>"]
 edition = "2018"
+authors = [
+  "Pablo Aldape <pablo@vest.com>",
+  "Lucas Ege <lucas@vest.com>",
+  "Sanjay Kannan <sanjay@vest.com>",
+  "Eddie Wang <eddie@vest.com>"
+]
 
 [dependencies]
 alga = "0.7.2"
