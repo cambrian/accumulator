@@ -28,7 +28,7 @@ pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
 /// REVIEW: instead of returning None when elem_witnesses is emtpy, instead return an identity
 /// "delete".
 /// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
-pub fn delete<G: InvertibleGroup + Serialize + Clone>(
+pub fn delete<G: InvertibleGroup + Serialize>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
 ) -> Option<(G, PoE<G>)>
@@ -63,7 +63,7 @@ pub fn delete<G: InvertibleGroup + Serialize + Clone>(
 
 /// See `delete`.
 /// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
-pub fn prove_membership<G: InvertibleGroup + Serialize + Clone>(
+pub fn prove_membership<G: InvertibleGroup + Serialize>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
 ) -> Option<(G, PoE<G>)>

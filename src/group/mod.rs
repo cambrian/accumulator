@@ -10,12 +10,13 @@ pub mod rsa;
 /// Abstract group interface
 /// Not using alga because we need to include some performance optimizations
 /// TODO: see which references can/should be made consuming to work with ring.
-pub trait Group: Sized + Eq {
+pub trait Group: Sized + Eq + Clone {
   fn identity() -> Self;
   fn op(&self, rhs: &Self) -> Self;
 
   /// May be overridden for performant specializations
   /// (e.g. to do montgomery multiplication for rsa group)
+  /// TODO: default implementation with repeated squaring
   fn exp(&self, n: &BigUint) -> Self;
 }
 
