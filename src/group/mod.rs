@@ -13,14 +13,11 @@ pub trait Generator<O: Operator>: AbstractGroup<O> {
 
 /// Efficient computation of group inverses.
 pub trait Inverse<O: Operator>: Pow<O> {
-  fn inverse(&self, exp: &BigUint) -> Self;
+  fn efficient_inverse(&self, exp: &BigUint) -> Self;
   fn pow_signed(&self, exp: &BigInt) -> Self {
     match exp.to_biguint() {
       Some(value) => self.pow(&value),
-      None => Inverse::inverse(
-        self,
-        &(-exp).to_biguint().expect("negative BigInt expected"),
-      ),
+      None => self.efficient_inverse(&(-exp).to_biguint().expect("negative BigInt expected"))
     }
   }
 }

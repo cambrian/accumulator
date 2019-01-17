@@ -1,7 +1,6 @@
 // NOTE: Remove underscores on variable names when implementing!
-
 use super::group::{Generator, Inverse, Pow};
-use super::proof::{poe, PoE, PoKE2};
+use super::proof::{poe, poke2, PoE, PoKE2};
 use alga::general::{AbstractGroup, Operator};
 use num;
 use num::BigInt;
@@ -40,20 +39,27 @@ fn product(elems: &[BigUint]) -> BigUint {
   elems.iter().fold(num::one(), |a, b| a * b)
 }
 
-/// Computes the (xy)th root of g given the xth and yth roots of g.
+/// Computes the (xy)th root of g given the xth and yth roots of g and (x, y) coprime).
 fn shamir_trick<O, G: AbstractGroup<O> + Inverse<O>>(
   xth_root: &G,
   yth_root: &G,
   x: &BigUint,
   y: &BigUint,
-) -> G
+) -> Option<G>
 where
   O: Operator,
 {
-  assert!(xth_root.pow(&x) == yth_root.pow(&y));
+  if xth_root.pow(&x) != yth_root.pow(&y) {
+    return None;
+  }
+
   let (a, b, gcd) = bezout(&x, &y);
-  assert!(gcd.is_one());
-  xth_root.pow_signed(&b).operate(&yth_root.pow_signed(&a))
+
+  if !gcd.is_one() {
+    return None;
+  }
+
+  Some(xth_root.pow_signed(&b).operate(&yth_root.pow_signed(&a)))
 }
 
 pub fn setup<O, G: AbstractGroup<O> + Generator<O>>() -> G
@@ -95,7 +101,12 @@ where
       return None;
     }
 
-    acc_next = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
+    let acc_next_option = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
+    match acc_next_option {
+      Some(acc_next_value) => acc_next = acc_next_value,
+      None => return None,
+    };
+
     elem_aggregate = elem_aggregate * elem;
   }
 
@@ -113,22 +124,42 @@ where
   delete(acc, elem_witnesses)
 }
 
-pub fn verify_membership<O, G: AbstractGroup<O> + Pow<O>>(
-  _witness: &G,
-  _elems: &[BigUint],
-  _result: &G,
-  _proof: &PoE<G>,
-) -> Option<(G, G, PoKE2<G>, PoE<G>)>
+pub fn verify_membership<O, G: AbstractGroup<O> + Pow<O> + Serialize>(
+  witness: &G,
+  elems: &[BigUint],
+  result: &G,
+  proof: &PoE<G>,
+) -> bool
 where
   O: Operator,
 {
-  unimplemented!()
+  let exp = product(elems);
+  poe::verify_poe(witness, &exp, result, proof)
 }
 
-pub fn prove_nonmembership<O, G: AbstractGroup<O> + Pow<O>>(_acc: &G, _elems: &[BigUint]) -> bool
+pub fn prove_nonmembership<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
+  acc: &G,
+  acc_set: &[BigUint],
+  elems: &[BigUint],
+) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
 where
   O: Operator,
 {
+  let x = product(elems);
+  let s = product(acc_set);
+  let (a, b, gcd) = bezout(&x, &s);
+
+  if !gcd.is_one() {
+    return None;
+  }
+
+  let g = G::generator();
+  let d = g.pow_signed(&a);
+  let v = acc.pow_signed(&b);
+  let gv_inverse = g.operate(&v.efficient_inverse(&num::one()));
+
+  // let poke2_proof = poke2::compute_poke2(acc, &b, &v);
+  let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
   unimplemented!()
 }
 
