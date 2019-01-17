@@ -1,18 +1,11 @@
 use super::super::group::Group;
 use super::super::hash::hashes;
 use super::PoE;
-use alga::general::AbstractGroup;
-use alga::general::Operator;
 use num::BigUint;
 use serde::ser::Serialize;
 
 /// See page 16 of B&B.
-/// REVIEW: rename to prove_poe
-pub fn compute_poe<G: Group + Serialize>(
-  base: &G,
-  exp: &BigUint,
-  result: &G,
-) -> PoE<G> {
+pub fn prove_poe<G: Group + Serialize>(base: &G, exp: &BigUint, result: &G) -> PoE<G> {
   let l = hash_prime(exp, base, result);
   let q = exp / l;
   PoE { q: base.exp(&q) }
@@ -32,8 +25,7 @@ pub fn verify_poe<G: Group + Serialize>(
   w == *result
 }
 
-fn hash_prime<G: Group + Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint
-{
+fn hash_prime<G: Group + Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
   let mut hash_string = exp.to_str_radix(16);
   hash_string.push_str(&serde_json::to_string(&base).unwrap());
   hash_string.push_str(&serde_json::to_string(&result).unwrap());

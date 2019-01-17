@@ -1,6 +1,5 @@
-use super::group::{Group, InvertibleGroup, CyclicGroup};
+use super::group::{CyclicGroup, Group, InvertibleGroup};
 use super::proof::{poe, poke2, PoE, PoKE2};
-use alga::general::{AbstractGroup, Operator};
 use num;
 use num::BigInt;
 use num::BigUint;
@@ -10,17 +9,15 @@ use num_traits::identities::Zero;
 use serde::ser::Serialize;
 
 /// Initializes the accumulator to a group element.
-pub fn setup<G: CyclicGroup>() -> G
-{
+pub fn setup<G: CyclicGroup>() -> G {
   G::generator()
 }
 
 /// Adds `elems` to the accumulator `acc`.
-pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
-{
+pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>) {
   let x = product(elems);
   let new_acc = acc.exp(&x);
-  let poe_proof = poe::compute_poe(acc, &x, &new_acc);
+  let poe_proof = poe::prove_poe(acc, &x, &new_acc);
   (new_acc, poe_proof)
 }
 
@@ -31,8 +28,7 @@ pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
 pub fn delete<G: InvertibleGroup + Serialize>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
-{
+) -> Option<(G, PoE<G>)> {
   if elem_witnesses.is_empty() {
     return None;
   }
@@ -57,7 +53,7 @@ pub fn delete<G: InvertibleGroup + Serialize>(
     elem_aggregate = elem_aggregate * elem;
   }
 
-  let poe_proof = poe::compute_poe(&acc_next, &elem_aggregate, acc);
+  let poe_proof = poe::prove_poe(&acc_next, &elem_aggregate, acc);
   Some((acc_next, poe_proof))
 }
 
@@ -66,8 +62,7 @@ pub fn delete<G: InvertibleGroup + Serialize>(
 pub fn prove_membership<G: InvertibleGroup + Serialize>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
-{
+) -> Option<(G, PoE<G>)> {
   delete(acc, elem_witnesses)
 }
 
@@ -77,8 +72,7 @@ pub fn verify_membership<G: Group + Serialize>(
   elems: &[BigUint],
   result: &G,
   proof: &PoE<G>,
-) -> bool
-{
+) -> bool {
   let exp = product(elems);
   poe::verify_poe(witness, &exp, result, proof)
 }
@@ -92,8 +86,7 @@ pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
   acc: &G,
   acc_set: &[BigUint],
   elems: &[BigUint],
-) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
-{
+) -> Option<(G, G, G, PoKE2<G>, PoE<G>)> {
   let x = product(elems);
   let s = product(acc_set);
   let (a, b, gcd) = bezout(&x, &s);
@@ -107,8 +100,8 @@ pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
   let v = acc.exp_signed(&b);
   let gv_inverse = g.op(&v.inv());
 
-  let poke2_proof = poke2::compute_poke2(acc, &b, &v);
-  let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
+  let poke2_proof = poke2::prove_poke2(acc, &b, &v);
+  let poe_proof = poe::prove_poe(&d, &x, &gv_inverse);
   Some((d, v, gv_inverse, poke2_proof, poe_proof))
 }
 
@@ -121,8 +114,7 @@ pub fn verify_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
   gv_inverse: &G,
   poke2_proof: &PoKE2<G>,
   poe_proof: &PoE<G>,
-) -> bool
-{
+) -> bool {
   let x = product(elems);
   poke2::verify_poke2(acc, v, poke2_proof) && poe::verify_poe(d, &x, gv_inverse, poe_proof)
 }
@@ -162,8 +154,7 @@ fn shamir_trick<G: InvertibleGroup>(
   yth_root: &G,
   x: &BigUint,
   y: &BigUint,
-) -> Option<G>
-{
+) -> Option<G> {
   if xth_root.exp(&x) != yth_root.exp(&y) {
     return None;
   }
