@@ -7,10 +7,10 @@ const SMALL_PRIMES: [u64; 50] = [
 ];
 
 // Baillie-PSW probabilistic primality test:
-// 1. filter composites with small divisors
-// 2. do Miller-Rabin base 2
-// 3. filter squares
-// 4. do Lucas
+// 1. Filter composites with small divisors.
+// 2. Do Miller-Rabin base 2.
+// 3. Filter squares.
+// 4. Do Lucas.
 pub fn is_prob_prime(n: &BigUint) -> bool {
   !has_small_prime_factor(n) && passes_miller_rabin_base_2(n) && !is_square(n) && passes_lucas(n)
 }

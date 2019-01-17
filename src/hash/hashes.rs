@@ -4,7 +4,7 @@ use num::bigint::BigUint;
 // 32 bytes = 256 bits.
 const HASH_LENGTH_IN_BYTES: usize = 32;
 
-// optional key can be used as a nonce for data in hash function
+// Optional key can be used as a nonce for data in hash function.
 fn blake2(data: &[u8], key: Option<&[u8]>) -> BigUint {
   let key: &[u8] = match key {
     Some(bytes) => bytes,

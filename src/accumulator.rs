@@ -1,17 +1,59 @@
 // NOTE: Remove underscores on variable names when implementing!
 
-use super::group::Generator;
-use super::group::Pow;
-use super::proof::poe;
-use super::proof::PoE;
-use super::proof::PoKE2;
-use alga::general::AbstractGroup;
-use alga::general::Operator;
+use super::group::{Generator, Inverse, Pow};
+use super::proof::{poe, PoE, PoKE2};
+use alga::general::{AbstractGroup, Operator};
+use num;
+use num::BigInt;
 use num::BigUint;
+use num_bigint::Sign::Plus;
+use num_traits::identities::One;
+use num_traits::identities::Zero;
 use serde::ser::Serialize;
 
+/// Returns (a, b, GCD(x, y)).
+fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
+  let (mut s, mut old_s): (BigInt, BigInt) = (num::zero(), num::one());
+  let (mut t, mut old_t): (BigInt, BigInt) = (num::one(), num::zero());
+  let (mut r, mut old_r) = (
+    BigInt::from_biguint(Plus, y.clone()),
+    BigInt::from_biguint(Plus, x.clone()),
+  );
+
+  while !r.is_zero() {
+    let quotient = &old_r / &r;
+    let (temp_r, temp_s, temp_t) = (r, s, t);
+
+    r = &old_r - &quotient * &temp_r;
+    s = &old_s - &quotient * &temp_s;
+    t = &old_t - &quotient * &temp_t;
+
+    old_r = temp_r;
+    old_s = temp_s;
+    old_t = temp_t;
+  }
+
+  (old_s, old_t, old_r)
+}
+
 fn product(elems: &[BigUint]) -> BigUint {
-  elems.iter().fold(BigUint::new(vec![1]), |a, b| a * b)
+  elems.iter().fold(num::one(), |a, b| a * b)
+}
+
+/// Computes the (xy)th root of g given the xth and yth roots of g.
+fn shamir_trick<O, G: AbstractGroup<O> + Inverse<O>>(
+  xth_root: &G,
+  yth_root: &G,
+  x: &BigUint,
+  y: &BigUint,
+) -> G
+where
+  O: Operator,
+{
+  assert!(xth_root.pow(&x) == yth_root.pow(&y));
+  let (a, b, gcd) = bezout(&x, &y);
+  assert!(gcd.is_one());
+  xth_root.pow_signed(&b).operate(&yth_root.pow_signed(&a))
 }
 
 pub fn setup<O, G: AbstractGroup<O> + Generator<O>>() -> G
@@ -31,17 +73,37 @@ where
   (new_acc, poe_proof)
 }
 
-pub fn delete<O, G: AbstractGroup<O> + Pow<O>>(
-  _acc: &G,
-  _elem_witnesses: &[(BigUint, G)],
+pub fn delete<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
+  acc: &G,
+  elem_witnesses: &[(BigUint, G)],
 ) -> Option<(G, PoE<G>)>
 where
   O: Operator,
 {
-  unimplemented!()
+  if elem_witnesses.is_empty() {
+    return None;
+  }
+
+  let (mut elem_aggregate, mut acc_next) = (&elem_witnesses[0]).clone();
+
+  for (elem, witness) in elem_witnesses
+    .split_first() // Chop off first entry.
+    .expect("unexpected witnesses")
+    .1
+  {
+    if &witness.pow(elem) != acc {
+      return None;
+    }
+
+    acc_next = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
+    elem_aggregate = elem_aggregate * elem;
+  }
+
+  let poe_proof = poe::compute_poe(&acc_next, &elem_aggregate, acc);
+  Some((acc_next, poe_proof))
 }
 
-pub fn prove_membership<O, G: AbstractGroup<O> + Pow<O>>(
+pub fn prove_membership<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
 ) -> Option<(G, PoE<G>)>
