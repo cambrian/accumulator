@@ -188,15 +188,14 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
-  use num_traits::cast::FromPrimitive;
 
   #[test]
   fn test_bezout_simple() {
-    let x = BigUint::from_u64(7).expect("unexpected error");
-    let y = BigUint::from_u64(165).expect("unexpected error");
+    let x = BigUint::from(7 as u16);
+    let y = BigUint::from(165 as u16);
     let (a, b, gcd) = bezout(&x, &y);
     assert!(gcd.is_one());
-    assert!(a == BigInt::from_i64(-47).expect("unexpected error"));
-    assert!(b == BigInt::from_i64(2).expect("unexpected error"));
+    assert!(a == BigInt::from(-47 as i16));
+    assert!(b == BigInt::from(2 as i16));
   }
 }
