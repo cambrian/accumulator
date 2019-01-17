@@ -25,6 +25,9 @@ pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
 }
 
 /// Removes the elements in `elem_witnesses` from the accumulator `acc.
+/// REVIEW: instead of returning None when elem_witnesses is emtpy, instead return an identity
+/// "delete".
+/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
 pub fn delete<G: InvertibleGroup + Serialize + Clone>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
@@ -59,6 +62,7 @@ pub fn delete<G: InvertibleGroup + Serialize + Clone>(
 }
 
 /// See `delete`.
+/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
 pub fn prove_membership<G: InvertibleGroup + Serialize + Clone>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
@@ -83,6 +87,7 @@ pub fn verify_membership<G: Group + Serialize>(
 /// REVIEW: I might be wrong about this but I'm pretty sure you should do this without asking for
 /// the acc_set. If you have the entire set of accumulated values why do you need to do special math
 /// to prove nonmembership?
+/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
 pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
   acc: &G,
   acc_set: &[BigUint],
