@@ -2,28 +2,37 @@ use alga::general::AbstractGroup;
 use alga::general::Operator;
 use num::BigInt;
 use num::BigUint;
+use std::marker::Sized;
 
 pub mod class;
 pub mod rsa;
 
-/// Selection of an element in the generating set.
-pub trait Generator<O: Operator>: AbstractGroup<O> {
-  fn generator() -> Self;
+/// Abstract group interface
+/// Not using alga because we need to include some performance optimizations
+/// TODO: see which references can/should be made consuming to work with ring.
+pub trait Group: Sized + Eq {
+  fn identity() -> Self;
+  fn op(&self, rhs: &Self) -> Self;
+
+  /// May be overridden for performant specializations
+  /// (e.g. to do montgomery multiplication for rsa group)
+  fn exp(&self, n: &BigUint) -> Self;
 }
 
-/// Efficient computation of group inverses.
-pub trait Inverse<O: Operator>: Pow<O> {
-  fn efficient_inverse(&self, exp: &BigUint) -> Self;
-  fn pow_signed(&self, exp: &BigInt) -> Self {
-    match exp.to_biguint() {
-      Some(value) => self.pow(&value),
-      None => self.efficient_inverse(&(-exp).to_biguint().expect("negative BigInt expected"))
+/// Groups that support efficient inversions.
+/// E.g. RSA groups using Fermat's Little Theorem
+pub trait InvertibleGroup: Group {
+  fn inv(&self) -> Self;
+  fn exp_signed(&self, n: &BigInt) -> Self {
+    // REVIEW: check sign to avoid converting bigint->biguint twice in the negative case.
+    match n.to_biguint() {
+      Some(value) => self.exp(&value),
+      None => self.inv().exp(&(-n).to_biguint().expect("negative BigInt expected"))
     }
   }
 }
 
-/// Efficient exponentiation in a group.
-pub trait Pow<O: Operator>: AbstractGroup<O> {
-  // TODO: Write default impl using repeated squaring.
-  fn pow(&self, exp: &BigUint) -> Self;
+/// Groups that have generators
+pub trait CyclicGroup: Group {
+  fn generator() -> Self;
 }

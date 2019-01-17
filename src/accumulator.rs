@@ -1,5 +1,5 @@
 // NOTE: Remove underscores on variable names when implementing!
-use super::group::{Generator, Inverse, Pow};
+use super::group::{Group, InvertibleGroup, CyclicGroup};
 use super::proof::{poe, poke2, PoE, PoKE2};
 use alga::general::{AbstractGroup, Operator};
 use num;
@@ -40,16 +40,14 @@ fn product(elems: &[BigUint]) -> BigUint {
 }
 
 /// Computes the (xy)th root of g given the xth and yth roots of g and (x, y) coprime).
-fn shamir_trick<O, G: AbstractGroup<O> + Inverse<O>>(
+fn shamir_trick<G: InvertibleGroup>(
   xth_root: &G,
   yth_root: &G,
   x: &BigUint,
   y: &BigUint,
 ) -> Option<G>
-where
-  O: Operator,
 {
-  if xth_root.pow(&x) != yth_root.pow(&y) {
+  if xth_root.exp(&x) != yth_root.exp(&y) {
     return None;
   }
 
@@ -59,45 +57,39 @@ where
     return None;
   }
 
-  Some(xth_root.pow_signed(&b).operate(&yth_root.pow_signed(&a)))
+  Some(xth_root.exp_signed(&b).op(&yth_root.exp_signed(&a)))
 }
 
-pub fn setup<O, G: AbstractGroup<O> + Generator<O>>() -> G
-where
-  O: Operator,
+pub fn setup<G: CyclicGroup>() -> G
 {
   G::generator()
 }
 
-pub fn add<O, G: AbstractGroup<O> + Pow<O> + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
-where
-  O: Operator,
+pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
 {
   let x = product(elems);
-  let new_acc = acc.pow(&x);
+  let new_acc = acc.exp(&x);
   let poe_proof = poe::compute_poe(acc, &x, &new_acc);
   (new_acc, poe_proof)
 }
 
-pub fn delete<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
+pub fn delete<G: InvertibleGroup + Serialize + Clone>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
 ) -> Option<(G, PoE<G>)>
-where
-  O: Operator,
 {
   if elem_witnesses.is_empty() {
     return None;
   }
 
-  let (mut elem_aggregate, mut acc_next) = (&elem_witnesses[0]).clone();
+  let (mut elem_aggregate, mut acc_next) = elem_witnesses[0].clone();
 
   for (elem, witness) in elem_witnesses
     .split_first() // Chop off first entry.
     .expect("unexpected witnesses")
     .1
   {
-    if &witness.pow(elem) != acc {
+    if &witness.exp(elem) != acc {
       return None;
     }
 
@@ -114,36 +106,30 @@ where
   Some((acc_next, poe_proof))
 }
 
-pub fn prove_membership<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
+pub fn prove_membership<G: InvertibleGroup + Serialize + Clone>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
 ) -> Option<(G, PoE<G>)>
-where
-  O: Operator,
 {
   delete(acc, elem_witnesses)
 }
 
-pub fn verify_membership<O, G: AbstractGroup<O> + Pow<O> + Serialize>(
+pub fn verify_membership<G: Group + Serialize>(
   witness: &G,
   elems: &[BigUint],
   result: &G,
   proof: &PoE<G>,
 ) -> bool
-where
-  O: Operator,
 {
   let exp = product(elems);
   poe::verify_poe(witness, &exp, result, proof)
 }
 
-pub fn prove_nonmembership<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
+pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
   acc: &G,
   acc_set: &[BigUint],
   elems: &[BigUint],
 ) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
-where
-  O: Operator,
 {
   let x = product(elems);
   let s = product(acc_set);
@@ -154,16 +140,16 @@ where
   }
 
   let g = G::generator();
-  let d = g.pow_signed(&a);
-  let v = acc.pow_signed(&b);
-  let gv_inverse = g.operate(&v.efficient_inverse(&num::one()));
+  let d = g.exp_signed(&a);
+  let v = acc.exp_signed(&b);
+  let gv_inverse = g.op(&v.inv());
 
   // let poke2_proof = poke2::compute_poke2(acc, &b, &v);
   let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
   unimplemented!()
 }
 
-pub fn verify_nonmembership<O, G: AbstractGroup<O> + Pow<O>>(
+pub fn verify_nonmembership<G: Group>(
   _acc: &G,
   _elems: &[BigUint],
   _d: &G,
@@ -171,8 +157,6 @@ pub fn verify_nonmembership<O, G: AbstractGroup<O> + Pow<O>>(
   _poke_proof: &PoKE2<G>,
   _poe_proof: &PoE<G>,
 ) -> bool
-where
-  O: Operator,
 {
   unimplemented!()
 }
