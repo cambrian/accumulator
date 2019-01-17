@@ -1,4 +1,4 @@
-use num::BigUint;
+use num::BigInt;
 pub mod poe;
 pub mod poke2;
 
@@ -9,5 +9,5 @@ pub struct PoE<G> {
 pub struct PoKE2<G> {
   z: G,
   q: G,
-  r: BigUint,
+  r: BigInt,
 }
