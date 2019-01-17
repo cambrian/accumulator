@@ -71,22 +71,27 @@ fn passes_lucas(_n: &BigUint) -> bool {
   false
 }
 
-#[test]
-fn test_small_prime_factor() {
-  let n_prime = BigUint::from(233u64);
-  let n_composite = BigUint::from(50_621u64);
-  let n_composite_large = BigUint::from(104_927u64);
+#[cfg(test)]
+mod tests {
+  use super::*;
 
-  assert!(n_composite == BigUint::from(223u64) * BigUint::from(227u64));
-  assert!(n_composite_large == BigUint::from(317u64) * BigUint::from(331u64));
+  #[test]
+  fn test_small_prime_factor() {
+    let n_prime = BigUint::from(233u64);
+    let n_composite = BigUint::from(50_621u64);
+    let n_composite_large = BigUint::from(104_927u64);
 
-  assert!(!has_small_prime_factor(&n_prime));
-  assert!(has_small_prime_factor(&n_composite));
-  assert!(!has_small_prime_factor(&n_composite_large));
-}
+    assert!(n_composite == BigUint::from(223u64) * BigUint::from(227u64));
+    assert!(n_composite_large == BigUint::from(317u64) * BigUint::from(331u64));
 
-#[test]
-fn test_miller_rabin() {
-  assert!(passes_miller_rabin_base_2(&BigUint::from(13u64)));
-  assert!(!passes_miller_rabin_base_2(&BigUint::from(65u64)));
+    assert!(!has_small_prime_factor(&n_prime));
+    assert!(has_small_prime_factor(&n_composite));
+    assert!(!has_small_prime_factor(&n_composite_large));
+  }
+
+  #[test]
+  fn test_miller_rabin() {
+    assert!(passes_miller_rabin_base_2(&BigUint::from(13u64)));
+    assert!(!passes_miller_rabin_base_2(&BigUint::from(65u64)));
+  }
 }

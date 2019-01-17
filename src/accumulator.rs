@@ -1,4 +1,3 @@
-// NOTE: Remove underscores on variable names when implementing!
 use super::group::{Generator, Inverse, Pow};
 use super::proof::{poe, poke2, PoE, PoKE2};
 use alga::general::{AbstractGroup, Operator};
@@ -184,4 +183,19 @@ where
   }
 
   Some(xth_root.pow_signed(&b).operate(&yth_root.pow_signed(&a)))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_bezout_simple() {
+    let x = BigUint::from(7 as u16);
+    let y = BigUint::from(165 as u16);
+    let (a, b, gcd) = bezout(&x, &y);
+    assert!(gcd.is_one());
+    assert!(a == BigInt::from(-47 as i16));
+    assert!(b == BigInt::from(2 as i16));
+  }
 }
