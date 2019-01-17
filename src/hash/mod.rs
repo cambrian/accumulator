@@ -1,2 +1,2 @@
-mod hashes;
+pub mod hashes;
 mod primality;
