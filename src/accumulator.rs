@@ -1,4 +1,3 @@
-// NOTE: Remove underscores on variable names when implementing!
 use super::group::{Generator, Inverse, Pow};
 use super::proof::{poe, poke2, PoE, PoKE2};
 use alga::general::{AbstractGroup, Operator};
