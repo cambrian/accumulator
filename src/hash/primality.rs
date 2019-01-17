@@ -61,15 +61,8 @@ fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   false
 }
 
-<<<<<<< HEAD
-// Threefold integer-only square test for BigUint, after https://stackoverflow.com/a/424936:
-// 1. Rule out n for which hex representation does not end in 0, 1, 4 or 9
-// 2. ...
-fn is_square(n: &BigUint) -> bool {
-=======
 #[allow(dead_code)]
 fn is_square(_n: &BigUint) -> bool {
->>>>>>> refs/remotes/origin/master
   true
 }
 
