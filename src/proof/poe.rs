@@ -6,6 +6,8 @@ use alga::general::Operator;
 use num::BigUint;
 use serde::ser::Serialize;
 
+/// See page 16 of B&B.
+/// REVIEW: rename to prove_poe
 pub fn compute_poe<G: Group + Serialize>(
   base: &G,
   exp: &BigUint,
@@ -16,6 +18,7 @@ pub fn compute_poe<G: Group + Serialize>(
   PoE { q: base.exp(&q) }
 }
 
+/// See page 16 of B&B.
 pub fn verify_poe<G: Group + Serialize>(
   base: &G,
   exp: &BigUint,

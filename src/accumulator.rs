@@ -1,4 +1,3 @@
-// NOTE: Remove underscores on variable names when implementing!
 use super::group::{Group, InvertibleGroup, CyclicGroup};
 use super::proof::{poe, poke2, PoE, PoKE2};
 use alga::general::{AbstractGroup, Operator};
@@ -9,6 +8,119 @@ use num_bigint::Sign::Plus;
 use num_traits::identities::One;
 use num_traits::identities::Zero;
 use serde::ser::Serialize;
+
+/// Initializes the accumulator to a group element.
+pub fn setup<G: CyclicGroup>() -> G
+{
+  G::generator()
+}
+
+/// Adds `elems` to the accumulator `acc`.
+pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
+{
+  let x = product(elems);
+  let new_acc = acc.exp(&x);
+  let poe_proof = poe::compute_poe(acc, &x, &new_acc);
+  (new_acc, poe_proof)
+}
+
+/// Removes the elements in `elem_witnesses` from the accumulator `acc.
+pub fn delete<G: InvertibleGroup + Serialize + Clone>(
+  acc: &G,
+  elem_witnesses: &[(BigUint, G)],
+) -> Option<(G, PoE<G>)>
+{
+  if elem_witnesses.is_empty() {
+    return None;
+  }
+
+  let (mut elem_aggregate, mut acc_next) = elem_witnesses[0].clone();
+
+  for (elem, witness) in elem_witnesses
+    .split_first() // Chop off first entry.
+    .expect("unexpected witnesses")
+    .1
+  {
+    if &witness.exp(elem) != acc {
+      return None;
+    }
+
+    let acc_next_option = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
+    match acc_next_option {
+      Some(acc_next_value) => acc_next = acc_next_value,
+      None => return None,
+    };
+
+    elem_aggregate = elem_aggregate * elem;
+  }
+
+  let poe_proof = poe::compute_poe(&acc_next, &elem_aggregate, acc);
+  Some((acc_next, poe_proof))
+}
+
+/// See `delete`.
+pub fn prove_membership<G: InvertibleGroup + Serialize + Clone>(
+  acc: &G,
+  elem_witnesses: &[(BigUint, G)],
+) -> Option<(G, PoE<G>)>
+{
+  delete(acc, elem_witnesses)
+}
+
+/// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
+pub fn verify_membership<G: Group + Serialize>(
+  witness: &G,
+  elems: &[BigUint],
+  result: &G,
+  proof: &PoE<G>,
+) -> bool
+{
+  let exp = product(elems);
+  poe::verify_poe(witness, &exp, result, proof)
+}
+
+/// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
+/// REVIEW: I might be wrong about this but I'm pretty sure you should do this without asking for
+/// the acc_set. If you have the entire set of accumulated values why do you need to do special math
+/// to prove nonmembership?
+pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
+  acc: &G,
+  acc_set: &[BigUint],
+  elems: &[BigUint],
+) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
+{
+  let x = product(elems);
+  let s = product(acc_set);
+  let (a, b, gcd) = bezout(&x, &s);
+
+  if !gcd.is_one() {
+    return None;
+  }
+
+  let g = G::generator();
+  let d = g.exp_signed(&a);
+  let v = acc.exp_signed(&b);
+  let gv_inverse = g.op(&v.inv());
+
+  let poke2_proof = poke2::compute_poke2(acc, &b, &v);
+  let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
+  Some((d, v, gv_inverse, poke2_proof, poe_proof))
+}
+
+/// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
+pub fn verify_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
+  acc: &G,
+  elems: &[BigUint],
+  d: &G,
+  v: &G,
+  gv_inverse: &G,
+  poke2_proof: &PoKE2<G>,
+  poe_proof: &PoE<G>,
+) -> bool
+{
+  let x = product(elems);
+  poke2::verify_poke2(acc, v, poke2_proof) && poe::verify_poe(d, &x, gv_inverse, poe_proof)
+}
 
 /// Returns (a, b, GCD(x, y)).
 fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
@@ -60,103 +172,17 @@ fn shamir_trick<G: InvertibleGroup>(
   Some(xth_root.exp_signed(&b).op(&yth_root.exp_signed(&a)))
 }
 
-pub fn setup<G: CyclicGroup>() -> G
-{
-  G::generator()
-}
+#[cfg(test)]
+mod tests {
+  use super::*;
 
-pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
-{
-  let x = product(elems);
-  let new_acc = acc.exp(&x);
-  let poe_proof = poe::compute_poe(acc, &x, &new_acc);
-  (new_acc, poe_proof)
-}
-
-pub fn delete<G: InvertibleGroup + Serialize + Clone>(
-  acc: &G,
-  elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
-{
-  if elem_witnesses.is_empty() {
-    return None;
+  #[test]
+  fn test_bezout_simple() {
+    let x = BigUint::from(7 as u16);
+    let y = BigUint::from(165 as u16);
+    let (a, b, gcd) = bezout(&x, &y);
+    assert!(gcd.is_one());
+    assert!(a == BigInt::from(-47 as i16));
+    assert!(b == BigInt::from(2 as i16));
   }
-
-  let (mut elem_aggregate, mut acc_next) = elem_witnesses[0].clone();
-
-  for (elem, witness) in elem_witnesses
-    .split_first() // Chop off first entry.
-    .expect("unexpected witnesses")
-    .1
-  {
-    if &witness.exp(elem) != acc {
-      return None;
-    }
-
-    let acc_next_option = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
-    match acc_next_option {
-      Some(acc_next_value) => acc_next = acc_next_value,
-      None => return None,
-    };
-
-    elem_aggregate = elem_aggregate * elem;
-  }
-
-  let poe_proof = poe::compute_poe(&acc_next, &elem_aggregate, acc);
-  Some((acc_next, poe_proof))
-}
-
-pub fn prove_membership<G: InvertibleGroup + Serialize + Clone>(
-  acc: &G,
-  elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
-{
-  delete(acc, elem_witnesses)
-}
-
-pub fn verify_membership<G: Group + Serialize>(
-  witness: &G,
-  elems: &[BigUint],
-  result: &G,
-  proof: &PoE<G>,
-) -> bool
-{
-  let exp = product(elems);
-  poe::verify_poe(witness, &exp, result, proof)
-}
-
-pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
-  acc: &G,
-  acc_set: &[BigUint],
-  elems: &[BigUint],
-) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
-{
-  let x = product(elems);
-  let s = product(acc_set);
-  let (a, b, gcd) = bezout(&x, &s);
-
-  if !gcd.is_one() {
-    return None;
-  }
-
-  let g = G::generator();
-  let d = g.exp_signed(&a);
-  let v = acc.exp_signed(&b);
-  let gv_inverse = g.op(&v.inv());
-
-  // let poke2_proof = poke2::compute_poke2(acc, &b, &v);
-  let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
-  unimplemented!()
-}
-
-pub fn verify_nonmembership<G: Group>(
-  _acc: &G,
-  _elems: &[BigUint],
-  _d: &G,
-  _v: &G,
-  _poke_proof: &PoKE2<G>,
-  _poe_proof: &PoE<G>,
-) -> bool
-{
-  unimplemented!()
 }

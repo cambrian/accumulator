@@ -9,6 +9,7 @@ use num_bigint::Sign::Plus;
 use serde::ser::Serialize;
 
 /// REVIEW: rename to prove_poke2
+/// See page 16 of B&B.
 pub fn compute_poke2<G: InvertibleGroup + CyclicGroup + Serialize>(
   base: &G,
   exp: &BigInt,
@@ -27,6 +28,7 @@ pub fn compute_poke2<G: InvertibleGroup + CyclicGroup + Serialize>(
   }
 }
 
+/// See page 16 of B&B.
 pub fn verify_poke2<G: InvertibleGroup + CyclicGroup + Serialize>(
   base: &G,
   result: &G,
