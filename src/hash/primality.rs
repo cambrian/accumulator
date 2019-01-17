@@ -30,7 +30,30 @@ fn has_small_prime_factor(n: &BigUint) -> bool {
 
 // WIP
 fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
-  //
+  let one = BigUint::from(1u64);
+  let two = BigUint::from(2u64);
+
+  // write n-1 = 2^r * d
+  let mut d = n - 1u64;
+  let mut r = 0;
+  while &d % 2u64 == BigUint::from(0u64) {
+    d /= 2u64;
+    r += 1;
+  }
+  println!("{} = 2^{} * {}", n, r, d);
+  let mut x = two.modpow(&d, n);
+  if x == one || x == n - &one {
+    return true;
+  }
+  for _ in 0..(r - 1) {
+    x = x.modpow(&two, n);
+    if x == one {
+      return false;
+    }
+    if x == n - &one {
+      return true;
+    }
+  }
   false
 }
 
@@ -49,4 +72,10 @@ fn test_trial_div() {
   assert!(n_composite == BigUint::from(223u64) * BigUint::from(227u64));
   assert!(!has_small_prime_factor(&n_prime));
   assert!(has_small_prime_factor(&n_composite));
+}
+
+#[test]
+fn test_miller_rabin() {
+  assert!(passes_miller_rabin_base_2(&BigUint::from(13u64)));
+  assert!(!passes_miller_rabin_base_2(&BigUint::from(65u64)));
 }
