@@ -10,6 +10,130 @@ use num_traits::identities::One;
 use num_traits::identities::Zero;
 use serde::ser::Serialize;
 
+/// Initializes the accumulator to a group element.
+pub fn setup<O, G: AbstractGroup<O> + Generator<O>>() -> G
+where
+  O: Operator,
+{
+  G::generator()
+}
+
+/// Adds `elems` to the accumulator set of `acc`.
+pub fn add<O, G: AbstractGroup<O> + Pow<O> + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
+where
+  O: Operator,
+{
+  let x = product(elems);
+  let new_acc = acc.pow(&x);
+  let poe_proof = poe::compute_poe(acc, &x, &new_acc);
+  (new_acc, poe_proof)
+}
+
+/// Provably removes the elements in `elem_witnesses` from the accumulator set.
+pub fn delete<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
+  acc: &G,
+  elem_witnesses: &[(BigUint, G)],
+) -> Option<(G, PoE<G>)>
+where
+  O: Operator,
+{
+  if elem_witnesses.is_empty() {
+    return None;
+  }
+
+  let (mut elem_aggregate, mut acc_next) = (&elem_witnesses[0]).clone();
+
+  for (elem, witness) in elem_witnesses
+    .split_first() // Chop off first entry.
+    .expect("unexpected witnesses")
+    .1
+  {
+    if &witness.pow(elem) != acc {
+      return None;
+    }
+
+    let acc_next_option = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
+    match acc_next_option {
+      Some(acc_next_value) => acc_next = acc_next_value,
+      None => return None,
+    };
+
+    elem_aggregate = elem_aggregate * elem;
+  }
+
+  let poe_proof = poe::compute_poe(&acc_next, &elem_aggregate, acc);
+  Some((acc_next, poe_proof))
+}
+
+/// See `delete`.
+pub fn prove_membership<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
+  acc: &G,
+  elem_witnesses: &[(BigUint, G)],
+) -> Option<(G, PoE<G>)>
+where
+  O: Operator,
+{
+  delete(acc, elem_witnesses)
+}
+
+/// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
+pub fn verify_membership<O, G: AbstractGroup<O> + Pow<O> + Serialize>(
+  witness: &G,
+  elems: &[BigUint],
+  result: &G,
+  proof: &PoE<G>,
+) -> bool
+where
+  O: Operator,
+{
+  let exp = product(elems);
+  poe::verify_poe(witness, &exp, result, proof)
+}
+
+/// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
+pub fn prove_nonmembership<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
+  acc: &G,
+  acc_set: &[BigUint],
+  elems: &[BigUint],
+) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
+where
+  O: Operator,
+{
+  let x = product(elems);
+  let s = product(acc_set);
+  let (a, b, gcd) = bezout(&x, &s);
+
+  if !gcd.is_one() {
+    return None;
+  }
+
+  let g = G::generator();
+  let d = g.pow_signed(&a);
+  let v = acc.pow_signed(&b);
+  let gv_inverse = g.operate(&v.efficient_inverse(&num::one()));
+
+  let poke2_proof = poke2::compute_poke2(acc, &b, &v);
+  let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
+  Some((d, v, gv_inverse, poke2_proof, poe_proof))
+}
+
+/// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
+pub fn verify_nonmembership<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
+  acc: &G,
+  elems: &[BigUint],
+  d: &G,
+  v: &G,
+  gv_inverse: &G,
+  poke2_proof: &PoKE2<G>,
+  poe_proof: &PoE<G>,
+) -> bool
+where
+  O: Operator,
+{
+  let x = product(elems);
+  poke2::verify_poke2(acc, v, poke2_proof) && poe::verify_poe(d, &x, gv_inverse, poe_proof)
+}
+
 /// Returns (a, b, GCD(x, y)).
 fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
   let (mut s, mut old_s): (BigInt, BigInt) = (num::zero(), num::one());
@@ -60,119 +184,4 @@ where
   }
 
   Some(xth_root.pow_signed(&b).operate(&yth_root.pow_signed(&a)))
-}
-
-pub fn setup<O, G: AbstractGroup<O> + Generator<O>>() -> G
-where
-  O: Operator,
-{
-  G::generator()
-}
-
-pub fn add<O, G: AbstractGroup<O> + Pow<O> + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
-where
-  O: Operator,
-{
-  let x = product(elems);
-  let new_acc = acc.pow(&x);
-  let poe_proof = poe::compute_poe(acc, &x, &new_acc);
-  (new_acc, poe_proof)
-}
-
-pub fn delete<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
-  acc: &G,
-  elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
-where
-  O: Operator,
-{
-  if elem_witnesses.is_empty() {
-    return None;
-  }
-
-  let (mut elem_aggregate, mut acc_next) = (&elem_witnesses[0]).clone();
-
-  for (elem, witness) in elem_witnesses
-    .split_first() // Chop off first entry.
-    .expect("unexpected witnesses")
-    .1
-  {
-    if &witness.pow(elem) != acc {
-      return None;
-    }
-
-    let acc_next_option = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
-    match acc_next_option {
-      Some(acc_next_value) => acc_next = acc_next_value,
-      None => return None,
-    };
-
-    elem_aggregate = elem_aggregate * elem;
-  }
-
-  let poe_proof = poe::compute_poe(&acc_next, &elem_aggregate, acc);
-  Some((acc_next, poe_proof))
-}
-
-pub fn prove_membership<O, G: AbstractGroup<O> + Inverse<O> + Serialize>(
-  acc: &G,
-  elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
-where
-  O: Operator,
-{
-  delete(acc, elem_witnesses)
-}
-
-pub fn verify_membership<O, G: AbstractGroup<O> + Pow<O> + Serialize>(
-  witness: &G,
-  elems: &[BigUint],
-  result: &G,
-  proof: &PoE<G>,
-) -> bool
-where
-  O: Operator,
-{
-  let exp = product(elems);
-  poe::verify_poe(witness, &exp, result, proof)
-}
-
-pub fn prove_nonmembership<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
-  acc: &G,
-  acc_set: &[BigUint],
-  elems: &[BigUint],
-) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
-where
-  O: Operator,
-{
-  let x = product(elems);
-  let s = product(acc_set);
-  let (a, b, gcd) = bezout(&x, &s);
-
-  if !gcd.is_one() {
-    return None;
-  }
-
-  let g = G::generator();
-  let d = g.pow_signed(&a);
-  let v = acc.pow_signed(&b);
-  let gv_inverse = g.operate(&v.efficient_inverse(&num::one()));
-
-  // let poke2_proof = poke2::compute_poke2(acc, &b, &v);
-  let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
-  unimplemented!()
-}
-
-pub fn verify_nonmembership<O, G: AbstractGroup<O> + Pow<O>>(
-  _acc: &G,
-  _elems: &[BigUint],
-  _d: &G,
-  _v: &G,
-  _poke_proof: &PoKE2<G>,
-  _poe_proof: &PoE<G>,
-) -> bool
-where
-  O: Operator,
-{
-  unimplemented!()
 }

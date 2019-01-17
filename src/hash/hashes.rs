@@ -15,7 +15,7 @@ pub fn blake2(data: &[u8], key: Option<&[u8]>) -> BigUint {
   BigUint::from_bytes_be(res_bytes)
 }
 
-pub fn blake2_prime(data: &[u8]) -> BigUint {
+pub fn blake2_prime(_data: &[u8]) -> BigUint {
   unimplemented!()
 }
 

@@ -9,6 +9,7 @@ use num::BigUint;
 use num_bigint::Sign::Plus;
 use serde::ser::Serialize;
 
+/// See page 16 of B&B.
 pub fn compute_poke2<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
   base: &G,
   exp: &BigInt,
@@ -30,6 +31,7 @@ where
   }
 }
 
+/// See page 16 of B&B.
 pub fn verify_poke2<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
   base: &G,
   result: &G,
