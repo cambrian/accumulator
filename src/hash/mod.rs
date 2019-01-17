@@ -1,4 +1,4 @@
-mod hashes;
+pub mod hashes;
 mod primality;
 
 // define U256 type as 4 words of length 64

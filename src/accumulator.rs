@@ -8,6 +8,7 @@ use super::proof::PoKE2;
 use alga::general::AbstractGroup;
 use alga::general::Operator;
 use num::BigUint;
+use serde::ser::Serialize;
 
 fn product(elems: &[BigUint]) -> BigUint {
   elems.iter().fold(BigUint::new(vec![1]), |a, b| a * b)
@@ -20,7 +21,7 @@ where
   G::generator()
 }
 
-pub fn add<O, G: AbstractGroup<O> + Pow<O>>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
+pub fn add<O, G: AbstractGroup<O> + Pow<O> + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
 where
   O: Operator,
 {
