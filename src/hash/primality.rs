@@ -28,7 +28,6 @@ fn has_small_prime_factor(n: &BigUint) -> bool {
   false
 }
 
-// WIP
 fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   let one = BigUint::from(1u64);
   let two = BigUint::from(2u64);
@@ -40,7 +39,7 @@ fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
     d /= 2u64;
     r += 1;
   }
-  println!("{} = 2^{} * {}", n, r, d);
+  // println!("{} = 2^{} * {}", n, r, d);
   let mut x = two.modpow(&d, n);
   if x == one || x == n - &one {
     return true;
@@ -57,6 +56,9 @@ fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   false
 }
 
+// Threefold integer-only square test for BigUint, after https://stackoverflow.com/a/424936:
+// 1. Rule out n for which hex representation does not end in 0, 1, 4 or 9
+// 2. ...
 fn is_square(n: &BigUint) -> bool {
   true
 }
@@ -66,12 +68,17 @@ fn passes_lucas(n: &BigUint) -> bool {
 }
 
 #[test]
-fn test_trial_div() {
+fn test_small_prime_factor() {
   let n_prime = BigUint::from(233u64);
-  let n_composite = BigUint::from(50621u64);
+  let n_composite = BigUint::from(50_621u64);
+  let n_composite_large = BigUint::from(104_927u64);
+
   assert!(n_composite == BigUint::from(223u64) * BigUint::from(227u64));
+  assert!(n_composite_large == BigUint::from(317u64) * BigUint::from(331u64));
+
   assert!(!has_small_prime_factor(&n_prime));
   assert!(has_small_prime_factor(&n_composite));
+  assert!(!has_small_prime_factor(&n_composite_large));
 }
 
 #[test]
