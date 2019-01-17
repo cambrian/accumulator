@@ -1,39 +1,52 @@
-use super::U256;
-const MAX_TRIAL_DIVISION_DIVISOR: u64 = 100;
+use num::bigint::BigUint;
 
-#[test]
-fn make_uint() {
-  let p = U256::from_dec_str(
-    "38873241744847760218045702002058062581688990428170398542849190507947196700873",
-  )
-  .expect("lol");
-  println!("{}", p);
+const SMALL_PRIMES: [u64; 50] = [
+  2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+  101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193,
+  197, 199, 211, 223, 227, 229,
+];
+
+// Baillie-PSW probabilistic primality test:
+// 1. filter composites with small divisors
+// 2. do Miller-Rabin base 2
+// 3. filter squares
+// 4. do Lucas
+pub fn is_prob_prime(n: &BigUint) -> bool {
+  !has_small_prime_factor(n) && passes_miller_rabin_base_2(n) && !is_square(n) && passes_lucas(n)
 }
 
-pub fn is_prob_prime(n: U256) -> bool {
-  if !passes_trial_division(n, MAX_TRIAL_DIVISION_DIVISOR) {
-    return false;
-  }
-  true
-}
-
-// WIP
-fn passes_trial_division(n: U256, max_divisor: u64) -> bool {
-  for divisor in 1..=max_divisor {
-    let divisor: U256 = divisor.into();
+fn has_small_prime_factor(n: &BigUint) -> bool {
+  for &divisor in SMALL_PRIMES.iter() {
+    let divisor = &BigUint::from(divisor);
     if divisor > n {
       break;
     }
+    if n % divisor == BigUint::from(0u64) {
+      return true;
+    }
   }
+  false
+}
+
+// WIP
+fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
+  //
+  false
+}
+
+fn is_square(n: &BigUint) -> bool {
   true
+}
+
+fn passes_lucas(n: &BigUint) -> bool {
+  false
 }
 
 #[test]
 fn test_trial_div() {
-  let n_prime: U256 = 10000019.into();
-  // 3209 * 3659
-  let n_composite: U256 = 11741731.into();
-  assert!(passes_trial_division(n_prime, 5000));
-  assert!(!passes_trial_division(n_composite, 5000));
-  assert!(passes_trial_division(n_composite, 3000));
+  let n_prime = BigUint::from(233u64);
+  let n_composite = BigUint::from(50621u64);
+  assert!(n_composite == BigUint::from(223u64) * BigUint::from(227u64));
+  assert!(!has_small_prime_factor(&n_prime));
+  assert!(has_small_prime_factor(&n_composite));
 }

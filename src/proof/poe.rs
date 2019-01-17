@@ -5,7 +5,6 @@ use super::PoE;
 use alga::general::AbstractGroup;
 use alga::general::Multiplicative;
 use alga::general::Operator;
-use bigint::uint::U256;
 use num::BigUint;
 
 // x, u, w: u^x = w
