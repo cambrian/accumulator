@@ -1,34 +1,38 @@
 use super::super::group::Generator;
-use super::super::group::Pow;
+use super::super::group::Inverse;
 use super::super::hash::hashes;
 use super::PoKE2;
 use alga::general::AbstractGroup;
 use alga::general::Operator;
+use num::BigInt;
 use num::BigUint;
+use num_bigint::Sign::Plus;
 use serde::ser::Serialize;
 
-pub fn compute_poke2<O, G: AbstractGroup<O> + Generator<O> + Pow<O> + Serialize>(
+/// See page 16 of B&B.
+pub fn compute_poke2<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
   base: &G,
-  exp: &BigUint,
+  exp: &BigInt,
   result: &G,
 ) -> PoKE2<G>
 where
   O: Operator,
 {
   let g = G::generator();
-  let z = g.pow(exp);
+  let z = g.pow_signed(exp);
   let l = hash_prime(base, result, &z);
   let alpha = hash_inputs(base, result, &z, &l);
-  let q = exp / l.clone();
-  let r = exp % l;
+  let q = exp / BigInt::from_biguint(Plus, l.clone());
+  let r = exp % BigInt::from_biguint(Plus, l);
   PoKE2 {
     z,
-    q: base.operate(&g.pow(&alpha)).pow(&q),
+    q: base.operate(&g.pow(&alpha)).pow_signed(&q),
     r,
   }
 }
 
-pub fn verify_poke2<O, G: AbstractGroup<O> + Generator<O> + Pow<O> + Serialize>(
+/// See page 16 of B&B.
+pub fn verify_poke2<O, G: AbstractGroup<O> + Generator<O> + Inverse<O> + Serialize>(
   base: &G,
   result: &G,
   proof: &PoKE2<G>,
@@ -40,7 +44,9 @@ where
   let g = G::generator();
   let l = hash_prime(base, result, &z);
   let alpha = hash_inputs(base, result, &z, &l);
-  let lhs = q.pow(&l).operate(&(base.operate(&g.pow(&alpha))).pow(&r));
+  let lhs = q
+    .pow(&l)
+    .operate(&(base.operate(&g.pow(&alpha))).pow_signed(&r));
   let rhs = result.operate(&z.pow(&alpha));
   lhs == rhs
 }

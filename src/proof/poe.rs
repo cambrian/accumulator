@@ -6,6 +6,7 @@ use alga::general::Operator;
 use num::BigUint;
 use serde::ser::Serialize;
 
+/// See page 16 of B&B.
 pub fn compute_poe<O, G: AbstractGroup<O> + Pow<O> + Serialize>(
   base: &G,
   exp: &BigUint,
@@ -19,6 +20,7 @@ where
   PoE { q: base.pow(&q) }
 }
 
+/// See page 16 of B&B.
 pub fn verify_poe<O, G: AbstractGroup<O> + Pow<O> + Serialize>(
   base: &G,
   exp: &BigUint,

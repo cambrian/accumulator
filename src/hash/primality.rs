@@ -1,5 +1,6 @@
 use num::bigint::BigUint;
 
+#[allow(dead_code)]
 const SMALL_PRIMES: [u64; 50] = [
   2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
   101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193,
@@ -11,10 +12,12 @@ const SMALL_PRIMES: [u64; 50] = [
 // 2. Do Miller-Rabin base 2.
 // 3. Filter squares.
 // 4. Do Lucas.
+#[allow(dead_code)]
 pub fn is_prob_prime(n: &BigUint) -> bool {
   !has_small_prime_factor(n) && passes_miller_rabin_base_2(n) && !is_square(n) && passes_lucas(n)
 }
 
+#[allow(dead_code)]
 fn has_small_prime_factor(n: &BigUint) -> bool {
   for &divisor in SMALL_PRIMES.iter() {
     let divisor = &BigUint::from(divisor);
@@ -28,6 +31,8 @@ fn has_small_prime_factor(n: &BigUint) -> bool {
   false
 }
 
+// WIP
+#[allow(dead_code)]
 fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   let one = BigUint::from(1u64);
   let two = BigUint::from(2u64);
@@ -56,14 +61,20 @@ fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   false
 }
 
+<<<<<<< HEAD
 // Threefold integer-only square test for BigUint, after https://stackoverflow.com/a/424936:
 // 1. Rule out n for which hex representation does not end in 0, 1, 4 or 9
 // 2. ...
 fn is_square(n: &BigUint) -> bool {
+=======
+#[allow(dead_code)]
+fn is_square(_n: &BigUint) -> bool {
+>>>>>>> refs/remotes/origin/master
   true
 }
 
-fn passes_lucas(n: &BigUint) -> bool {
+#[allow(dead_code)]
+fn passes_lucas(_n: &BigUint) -> bool {
   false
 }
 
