@@ -1,4 +1,3 @@
-// TODO
 use super::super::group::Generator;
 use super::super::group::Pow;
 use super::super::hash::hashes;
@@ -53,10 +52,7 @@ where
   let mut hash_string = serde_json::to_string(&u).unwrap();
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
   hash_string.push_str(&serde_json::to_string(&z).unwrap());
-  let mut target = vec![0u8; 32];
-  // TODO: Use HPrime function when defined
-  let _ = hashes::blake2(hash_string.as_bytes(), None).to_big_endian(&mut target);
-  BigUint::from_bytes_be(&target[..])
+  hashes::blake2_prime(hash_string.as_bytes())
 }
 
 fn hash_inputs<O, G: AbstractGroup<O> + Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint
@@ -67,7 +63,5 @@ where
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
   hash_string.push_str(&serde_json::to_string(&z).unwrap());
   hash_string.push_str(&l.to_str_radix(16));
-  let mut target = vec![0u8; 32];
-  let _ = hashes::blake2(hash_string.as_bytes(), None).to_big_endian(&mut target);
-  BigUint::from_bytes_be(&target[..])
+  hashes::blake2(hash_string.as_bytes(), None)
 }
