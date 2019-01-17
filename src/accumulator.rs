@@ -184,3 +184,19 @@ where
 
   Some(xth_root.pow_signed(&b).operate(&yth_root.pow_signed(&a)))
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use num_traits::cast::FromPrimitive;
+
+  #[test]
+  fn test_bezout_simple() {
+    let x = BigUint::from_u64(7).expect("unexpected error");
+    let y = BigUint::from_u64(165).expect("unexpected error");
+    let (a, b, gcd) = bezout(&x, &y);
+    assert!(gcd.is_one());
+    assert!(a == BigInt::from_i64(-47).expect("unexpected error"));
+    assert!(b == BigInt::from_i64(2).expect("unexpected error"));
+  }
+}

@@ -44,6 +44,6 @@ mod tests {
   fn test_sha256() {
     let _data = b"hello world";
     // let hash = sha256(data, None);
-    //assert_eq!(hash, b"94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+    // assert_eq!(hash, b"94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
   }
 }
