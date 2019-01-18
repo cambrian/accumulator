@@ -1,17 +1,19 @@
-//! Dummy RSA group for 64-bit numbers
-//! Use this group for testing while we figure out ring integration
+//! Dummy RSA group for 64-bit numbers.
+//! Use this group for testing while we figure out ring integration.
 
-use std::u64;
+use super::super::util;
 use super::{Group, InvertibleGroup};
+use num::BigUint;
+use num_traits::cast::ToPrimitive;
+use num_traits::identities::One;
+use std::u64;
 
-// you might need to add something to support inversion
-// (e.g. p or q for use with euler's theorem)
 pub struct DummyRSA {
-  modulus: u64
+  modulus: u64,
 }
 
-const P: u64 = 3_728_871_397;
-const Q: u64 = 2_235_920_447;
+const P: u64 = 226_022_213;
+const Q: u64 = 12_364_769;
 
 const DUMMY_RSA: DummyRSA = DummyRSA { modulus: P*Q };
 
@@ -20,7 +22,7 @@ impl Group for DummyRSA {
   fn get() -> Self {
     DUMMY_RSA
   }
-  fn op_(&self, a: &u64, b: &u64) -> u64{
+  fn op_(&self, a: &u64, b: &u64) -> u64 {
     ((*a as u128 * *b as u128) % self.modulus as u128) as u64
   }
   fn id_(&self) -> u64 {
@@ -31,12 +33,17 @@ impl Group for DummyRSA {
   }
 }
 
-// TODO
-// impl InvertibleGroup for DummyRSA {
-//   fn inv_(&self, a: &u64) {
-
-//   }
-// }
+impl InvertibleGroup for DummyRSA {
+  // TODO: a potentially faster algorithm exists via Euler's theorem
+  fn inv_(&self, x: &u64) -> u64 {
+    let x_big = BigUint::from(*x);
+    let mod_big = BigUint::from(DummyRSA::get().modulus);
+    let (a, _, gcd) = util::bezout(&x_big, &mod_big);
+    dbg!(&a);
+    assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
+    a.to_u64().expect("should be in u64 range")
+  }
+}
 
 #[cfg(test)]
 mod tests {
@@ -44,25 +51,23 @@ mod tests {
 
   #[test]
   fn test_op() {
-    let a = 2;
-    let b = 3;
-    let c = DummyRSA::op(&a, &b);
-    assert!(c == 6);
-    let x = P+1;
-    let y = Q+1;
-    let z = DummyRSA::op(&x, &y);
-    assert!(z == P+Q+1);
+    let a = DummyRSA::op(&2, &3);
+    assert!(a == 6);
+    let b = DummyRSA::op(&(P+1), &(Q+1));
+    assert!(b == P+Q+1);
   }
 
   #[test]
   fn test_exp() {
-    let a = 2;
-    let na = From::<u64>::from(3);
-    let ra = DummyRSA::exp(&a, &na);
-    assert!(ra == 8);
-    let b = 2;
-    let nb = From::<u64>::from(128);
-    let rb = DummyRSA::exp(&b, &nb);
-    assert!(rb == 3_902_709_244_137_443_127);
+    let a = DummyRSA::exp(&2, &From::<u64>::from(3));
+    assert!(a == 8);
+    let b = DummyRSA::exp(&2, &From::<u64>::from(128));
+    assert!(b == 782_144_413_693_680);
+  }
+
+  #[test]
+  fn test_inv() {
+    let r = DummyRSA::inv(&2);
+    assert!(r == 1397356226306899);
   }
 }
