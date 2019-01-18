@@ -18,20 +18,23 @@ pub fn blake2(data: &[u8], key: Option<&[u8]>) -> BigUint {
 }
 
 #[allow(dead_code)]
-pub fn sha256(data: &[u8], _key: Option<&[u8]>) -> BigUint {
+pub fn sha256(data: &[u8], key: Option<&[u8]>) -> BigUint {
   let mut hasher = Sha256::new();
+  if let Some(bytes) = key {
+    hasher.input(bytes)
+  };
   hasher.input(data);
   let res_bytes: &[u8] = &hasher.result()[..];
   BigUint::from_bytes_be(res_bytes)
 }
 
 #[allow(dead_code)]
-pub fn blake2_prime(data: &[u8]) -> BigUint {
+pub fn h_prime(h: &Fn(&[u8], Option<&[u8]>) -> BigUint, data: &[u8]) -> BigUint {
   let mut counter = BigUint::from(0u64);
   loop {
-    let h = blake2(data, Some(&counter.to_bytes_be()));
-    if is_prob_prime(&h) {
-      return h;
+    let hash_val = h(data, Some(&counter.to_bytes_be()));
+    if is_prob_prime(&hash_val) {
+      return hash_val;
     }
     counter += 1u64;
   }
@@ -50,12 +53,8 @@ mod tests {
   #[test]
   fn test_sha256() {
     let data = b"hello world";
-    let data2 = b"wut";
-    assert_ne!(sha256(data, None), sha256(data2, None));
-    // assert_eq!(
-    //   sha256(data, None),
-    //   b"94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
-    // );
+    assert_ne!(sha256(data, None), sha256(data, Some(&[1])));
+    assert_ne!(sha256(data, Some(&[1])), sha256(data, Some(&[2])));
   }
 
   // WIP: benchmarking blake2, sha256, and eventually *_prime

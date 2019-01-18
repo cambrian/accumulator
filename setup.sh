@@ -6,3 +6,4 @@ rustup update
 # Install useful extensions.
 cargo install cargo-watch
 cargo install cargo-edit
+rustup component add clippy

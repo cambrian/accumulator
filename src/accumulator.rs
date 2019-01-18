@@ -53,7 +53,7 @@ pub fn delete<G: InvertibleGroup>(
       None => return Err(AccError::InputsNotCoPrime),
     };
 
-    elem_aggregate = elem_aggregate * elem;
+    elem_aggregate *= elem;
   }
 
   let poe_proof = poe::prove_poe::<G>(&acc_next, &elem_aggregate, acc);
@@ -80,10 +80,7 @@ pub fn verify_membership<G: Group>(
 }
 
 /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
-/// REVIEW: I might be wrong about this but I'm pretty sure you should do this without asking for
-/// the acc_set. If you have the entire set of accumulated values why do you need to do special math
-/// to prove nonmembership?
-/// ^ pending further discussion but keeping the review around
+#[allow(clippy::type_complexity)]
 pub fn prove_nonmembership<G: InvertibleGroup>(
   acc: &G::Elem,
   acc_set: &[BigUint],
@@ -118,7 +115,8 @@ pub fn verify_nonmembership<G: InvertibleGroup>(
   poe_proof: &PoE<G::Elem>,
 ) -> bool {
   let x = product(elems);
-  poke2::verify_poke2::<G>(acc, v, poke2_proof) && poe::verify_poe::<G>(d, &x, gv_inverse, poe_proof)
+  poke2::verify_poke2::<G>(acc, v, poke2_proof)
+    && poe::verify_poe::<G>(d, &x, gv_inverse, poe_proof)
 }
 
 /// Returns `(a, b, GCD(x, y))` s.t. `ax + by = GCD(x, y)`.
@@ -157,17 +155,20 @@ fn shamir_trick<G: InvertibleGroup>(
   x: &BigUint,
   y: &BigUint,
 ) -> Option<G::Elem> {
-  if G::exp(xth_root, &x) != G::exp(yth_root, &y) {
+  if G::exp(xth_root, x) != G::exp(yth_root, y) {
     return None;
   }
 
-  let (a, b, gcd) = bezout(&x, &y);
+  let (a, b, gcd) = bezout(x, y);
 
   if !gcd.is_one() {
     return None;
   }
 
-  Some(G::op(&G::exp_signed(xth_root, &b), &G::exp_signed(&yth_root, &a)))
+  Some(G::op(
+    &G::exp_signed(xth_root, &b),
+    &G::exp_signed(yth_root, &a),
+  ))
 }
 
 #[cfg(test)]
