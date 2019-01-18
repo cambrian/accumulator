@@ -1,18 +1,42 @@
-// //! Dummy RSA implementation for really small numbers
-// //! Use this group for testing while we figure out ring integration
+//! Dummy RSA group for 64-bit numbers
+//! Use this group for testing while we figure out ring integration
 
-// struct DummyRSA {
-//   modulus: u64;
-// };
+use std::u64;
+use super::{Group, InvertibleGroup};
 
-// struct DummyRSAElem<M> {
-//   val: u64;
-//   modulus: DummyRSA;
-// };
+// you might need to add something to support inversion
+// (e.g. p or q for use with euler's theorem)
+pub struct DummyRSA {
+  modulus: u64
+}
 
-// impl
+const P: u64 = 2_413_575_613;
+const Q: u64 = 1_090_574_917;
 
-// impl Group for DummyRSA {
-//   type Elem = u64;
+const DUMMY_RSA: DummyRSA = DummyRSA { modulus: 2_632_185_023_820_699_121};
 
+#[derive(PartialEq, Eq, Clone, Serialize)]
+struct DummyRSAElem (pub u64);
+
+impl Group for DummyRSA {
+  type Elem = u64;
+  fn get() -> Self {
+    DUMMY_RSA
+  }
+  fn op_(&self, a: &u64, b: &u64) -> u64{
+    (a * b) % self.modulus
+  }
+  fn id_(&self) -> u64 {
+    1
+  }
+  fn base_elem_(&self) -> u64 {
+    2
+  }
+}
+
+// TODO
+// impl InvertibleGroup for DummyRSA {
+//   fn inv_(&self, a: &u64) {
+
+//   }
 // }
