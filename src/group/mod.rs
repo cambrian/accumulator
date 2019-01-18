@@ -12,15 +12,17 @@ pub mod rsa;
 /// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
 /// We treat Groups as singletons to get as close to mimicking type-level programming as possible.
 pub trait Group: Sized {
-  type Elem: Eq + Serialize + Clone + Sized; // Would be nice to have this implement a trait so we get dot-notation for group operations. Not sure how to do that tho
+  // Consider: Add an operator trait (e.g. Mul for *) to Elem that defines the op itself?
+  type Elem: Eq + Serialize + Clone + Sized;
+
   fn init() -> Self;
   fn op_(&self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
   fn id_(&self) -> Self::Elem;
   /// E.g. 2, for RSA groups.
   fn base_elem_(&self) -> Self::Elem;
 
-  // Convenience functions below
-  fn get() -> Self; // read singleton, or call init if not yet initialized
+  // Convenience functions below:
+  fn get() -> Self; // Read singleton, or call `init` if not yet initialized.
   fn id() -> Self::Elem {
     Self::id_(&Self::get())
   }
@@ -39,8 +41,9 @@ pub trait InvertibleGroup: Group {
     Self::inv_(&Self::get(), a)
   }
   fn exp_signed(a: &Self::Elem, n: &BigInt) -> Self::Elem {
-    // For Pablo: Sanjay mentioned an optimization that suggests changing one of these fn
-    // signatures?
+    // After further discussion: Writing a specialized inv() that takes an exponent is only a
+    // marginal speedup over inv() then exp() in the negative exponent case. (That is, the
+    // complexity does not change.)
     if n >= &BigInt::zero() {
       Self::exp(a, &n.to_biguint().expect("positive BigInt expected"))
     } else {
