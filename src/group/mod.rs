@@ -48,7 +48,7 @@ pub trait InvertibleGroup: Group {
       Self::exp(a, &n.to_biguint().expect("positive BigInt expected"))
     } else {
       Self::exp(
-        &Self::inv(&a),
+        &Self::inv(a),
         &(-n).to_biguint().expect("negative BigInt expected"),
       )
     }

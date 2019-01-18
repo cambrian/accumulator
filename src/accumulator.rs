@@ -155,11 +155,11 @@ fn shamir_trick<G: InvertibleGroup>(
   x: &BigUint,
   y: &BigUint,
 ) -> Option<G::Elem> {
-  if G::exp(xth_root, &x) != G::exp(yth_root, &y) {
+  if G::exp(xth_root, x) != G::exp(yth_root, y) {
     return None;
   }
 
-  let (a, b, gcd) = bezout(&x, &y);
+  let (a, b, gcd) = bezout(x, y);
 
   if !gcd.is_one() {
     return None;
@@ -167,7 +167,7 @@ fn shamir_trick<G: InvertibleGroup>(
 
   Some(G::op(
     &G::exp_signed(xth_root, &b),
-    &G::exp_signed(&yth_root, &a),
+    &G::exp_signed(yth_root, &a),
   ))
 }
 
