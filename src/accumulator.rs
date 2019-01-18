@@ -1,6 +1,5 @@
-use super::group::{Group, InvertibleGroup, CyclicGroup};
+use super::group::{Group, GroupElem, InvertibleGroup, InvertibleGroupElem};
 use super::proof::{poe, poke2, PoE, PoKE2};
-use alga::general::{AbstractGroup, Operator};
 use num;
 use num::BigInt;
 use num::BigUint;
@@ -10,13 +9,13 @@ use num_traits::identities::Zero;
 use serde::ser::Serialize;
 
 /// Initializes the accumulator to a group element.
-pub fn setup<G: CyclicGroup>() -> G
+pub fn setup<G: Group>() -> GroupElem<G>
 {
-  G::generator()
+  G::base_elem()
 }
 
 /// Adds `elems` to the accumulator `acc`.
-pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
+pub fn add<G:Group>(acc: &GroupElem<G>, elems: &[BigUint]) -> (GroupElem<G>, PoE<GroupElem<G>>)
 {
   let x = product(elems);
   let new_acc = acc.exp(&x);
@@ -28,10 +27,10 @@ pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>)
 /// REVIEW: instead of returning None when elem_witnesses is emtpy, instead return an identity
 /// "delete".
 /// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
-pub fn delete<G: InvertibleGroup + Serialize>(
-  acc: &G,
-  elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
+pub fn delete<G: InvertibleGroup>(
+  acc: &InvertibleGroupElem<G>,
+  elem_witnesses: &[(BigUint, InvertibleGroupElem<G>)],
+) -> Option<(InvertibleGroupElem<G>, PoE<InvertibleGroupElem<G>>)>
 {
   if elem_witnesses.is_empty() {
     return None;
@@ -63,20 +62,20 @@ pub fn delete<G: InvertibleGroup + Serialize>(
 
 /// See `delete`.
 /// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
-pub fn prove_membership<G: InvertibleGroup + Serialize>(
-  acc: &G,
-  elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)>
+pub fn prove_membership<G: InvertibleGroup>(
+  acc: &InvertibleGroupElem<G>,
+  elem_witnesses: &[(BigUint, InvertibleGroupElem<G>)],
+) -> Option<(InvertibleGroupElem<G>, PoE<InvertibleGroupElem<G>>)>
 {
   delete(acc, elem_witnesses)
 }
 
 /// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
-pub fn verify_membership<G: Group + Serialize>(
-  witness: &G,
+pub fn verify_membership<G: Group>(
+  witness: &GroupElem<G>,
   elems: &[BigUint],
-  result: &G,
-  proof: &PoE<G>,
+  result: &GroupElem<G>,
+  proof: &PoE<GroupElem<G>>,
 ) -> bool
 {
   let exp = product(elems);
@@ -88,11 +87,11 @@ pub fn verify_membership<G: Group + Serialize>(
 /// the acc_set. If you have the entire set of accumulated values why do you need to do special math
 /// to prove nonmembership?
 /// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
-pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
-  acc: &G,
+pub fn prove_nonmembership<G: InvertibleGroup>(
+  acc: &InvertibleGroupElem<G>,
   acc_set: &[BigUint],
   elems: &[BigUint],
-) -> Option<(G, G, G, PoKE2<G>, PoE<G>)>
+) -> Option<(InvertibleGroupElem<G>, InvertibleGroupElem<G>, InvertibleGroupElem<G>, PoKE2<InvertibleGroupElem<G>>, PoE<InvertibleGroupElem<G>>)>
 {
   let x = product(elems);
   let s = product(acc_set);
@@ -113,14 +112,14 @@ pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
 }
 
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
-pub fn verify_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
-  acc: &G,
+pub fn verify_nonmembership<G: InvertibleGroup>(
+  acc: &InvertibleGroupElem<G>,
   elems: &[BigUint],
-  d: &G,
-  v: &G,
-  gv_inverse: &G,
-  poke2_proof: &PoKE2<G>,
-  poe_proof: &PoE<G>,
+  d: &InvertibleGroupElem<G>,
+  v: &InvertibleGroupElem<G>,
+  gv_inverse: &InvertibleGroupElem<G>,
+  poke2_proof: &PoKE2<InvertibleGroupElem<G>>,
+  poe_proof: &PoE<InvertibleGroupElem<G>>,
 ) -> bool
 {
   let x = product(elems);
@@ -158,11 +157,11 @@ fn product(elems: &[BigUint]) -> BigUint {
 
 /// Computes the (xy)th root of g given the xth and yth roots of g and (x, y) coprime).
 fn shamir_trick<G: InvertibleGroup>(
-  xth_root: &G,
-  yth_root: &G,
+  xth_root: &InvertibleGroupElem<G>,
+  yth_root: &InvertibleGroupElem<G>,
   x: &BigUint,
   y: &BigUint,
-) -> Option<G>
+) -> Option<InvertibleGroupElem<G>>
 {
   if xth_root.exp(&x) != yth_root.exp(&y) {
     return None;

@@ -1,21 +1,18 @@
-use super::super::group::{Group, InvertibleGroup, CyclicGroup};
+use super::super::group::{Group, InvertibleGroup, GroupElem, InvertibleGroupElem};
 use super::super::hash::hashes;
 use super::PoKE2;
-use alga::general::AbstractGroup;
-use alga::general::Operator;
 use num::BigInt;
 use num::BigUint;
 use num_bigint::Sign::Plus;
-use serde::ser::Serialize;
 
 /// REVIEW: rename to prove_poke2
 /// See page 16 of B&B.
-pub fn compute_poke2<G: InvertibleGroup + CyclicGroup + Serialize>(
-  base: &G,
+pub fn compute_poke2<G: InvertibleGroup>(
+  base: &InvertibleGroupElem<G>,
   exp: &BigInt,
-  result: &G,
-) -> PoKE2<G> {
-  let g = G::generator();
+  result: &InvertibleGroupElem<G>,
+) -> PoKE2<InvertibleGroupElem<G>> {
+  let g = G::base_elem();
   let z = g.exp_signed(exp);
   let l = hash_prime(base, result, &z);
   let alpha = hash_inputs(base, result, &z, &l);
@@ -29,14 +26,14 @@ pub fn compute_poke2<G: InvertibleGroup + CyclicGroup + Serialize>(
 }
 
 /// See page 16 of B&B.
-pub fn verify_poke2<G: InvertibleGroup + CyclicGroup + Serialize>(
-  base: &G,
-  result: &G,
-  proof: &PoKE2<G>,
+pub fn verify_poke2<G: InvertibleGroup>(
+  base: &InvertibleGroupElem<G>,
+  result: &InvertibleGroupElem<G>,
+  proof: &PoKE2<InvertibleGroupElem<G>>,
 ) -> bool
 {
   let PoKE2 { z, q, r } = proof;
-  let g = G::generator();
+  let g = G::base_elem();
   let l = hash_prime(base, result, &z);
   let alpha = hash_inputs(base, result, &z, &l);
   let lhs = q
@@ -46,7 +43,7 @@ pub fn verify_poke2<G: InvertibleGroup + CyclicGroup + Serialize>(
   lhs == rhs
 }
 
-fn hash_prime<G: Group + Serialize>(u: &G, w: &G, z: &G) -> BigUint
+fn hash_prime<G: Group>(u: &GroupElem<G>, w: &GroupElem<G>, z: &GroupElem<G>) -> BigUint
 {
   let mut hash_string = serde_json::to_string(&u).unwrap();
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
@@ -54,7 +51,7 @@ fn hash_prime<G: Group + Serialize>(u: &G, w: &G, z: &G) -> BigUint
   hashes::blake2_prime(hash_string.as_bytes())
 }
 
-fn hash_inputs<G: Group + Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint
+fn hash_inputs<G: Group>(u: &GroupElem<G>, w: &GroupElem<G>, z: &GroupElem<G>, l: &BigUint) -> BigUint
 {
   let mut hash_string = serde_json::to_string(&u).unwrap();
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
