@@ -33,6 +33,8 @@ impl Group for DummyRSA {
   }
 }
 
+/// Trait for groups that support efficient inverse calculations.
+/// NOT used to mean a cyclic group (where every element has an inverse).
 impl InvertibleGroup for DummyRSA {
   // TODO: a potentially faster algorithm exists via Euler's theorem
   fn inv_(&self, x: &u64) -> u64 {
@@ -72,11 +74,5 @@ mod tests {
   fn test_inv() {
     let r = DummyRSA::inv(&2);
     assert!(r == 1_397_356_226_306_899);
-  }
-
-  #[test]
-  fn test_inv_large() {
-    let r = DummyRSA::inv(&32_416_188_490);
-    assert!(r == 173_039_603_491_119);
   }
 }

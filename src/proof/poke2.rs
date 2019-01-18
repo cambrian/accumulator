@@ -26,6 +26,8 @@ pub fn prove_poke2<G: InvertibleGroup>(
 }
 
 /// See page 16 of B&B.
+/// REVIEW: PoKE2::r should be a uint, this should depend only on G being a Group, not an
+/// InvertibleGroup
 pub fn verify_poke2<G: InvertibleGroup>(
   base: &G::Elem,
   result: &G::Elem,

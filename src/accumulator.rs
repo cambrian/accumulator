@@ -104,6 +104,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
 }
 
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
+/// depend on G: Group, not G: InvertibleGroup
 pub fn verify_nonmembership<G: InvertibleGroup>(
   acc: &G::Elem,
   elems: &[BigUint],
