@@ -1,4 +1,4 @@
-use super::group::{Group, GroupElem, InvertibleGroup, InvertibleGroupElem};
+use super::group::{Group, InvertibleGroup};
 use super::proof::{poe, poke2, PoE, PoKE2};
 use num;
 use num::BigInt;
@@ -6,34 +6,34 @@ use num::BigUint;
 use num_bigint::Sign::Plus;
 use num_traits::identities::One;
 use num_traits::identities::Zero;
-use serde::ser::Serialize;
+
+#[derive(Debug)]
+pub enum AccError {
+  BadWitness,
+  InputsNotCoPrime,
+}
 
 /// Initializes the accumulator to a group element.
-pub fn setup<G: Group>() -> GroupElem<G>
-{
+pub fn setup<G: Group>() -> G::Elem {
   G::base_elem()
 }
 
 /// Adds `elems` to the accumulator `acc`.
-pub fn add<G:Group>(acc: &GroupElem<G>, elems: &[BigUint]) -> (GroupElem<G>, PoE<GroupElem<G>>)
-{
+pub fn add<G: Group>(acc: &G::Elem, elems: &[BigUint]) -> (G::Elem, PoE<G::Elem>) {
   let x = product(elems);
-  let new_acc = acc.exp(&x);
-  let poe_proof = poe::compute_poe(acc, &x, &new_acc);
+  let new_acc = G::exp(acc, &x);
+  let poe_proof = poe::prove_poe::<G>(acc, &x, &new_acc);
   (new_acc, poe_proof)
 }
 
-/// Removes the elements in `elem_witnesses` from the accumulator `acc.
-/// REVIEW: instead of returning None when elem_witnesses is emtpy, instead return an identity
-/// "delete".
-/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
+/// Removes the elements in `elem_witnesses` from the accumulator `acc`.
 pub fn delete<G: InvertibleGroup>(
-  acc: &InvertibleGroupElem<G>,
-  elem_witnesses: &[(BigUint, InvertibleGroupElem<G>)],
-) -> Option<(InvertibleGroupElem<G>, PoE<InvertibleGroupElem<G>>)>
-{
+  acc: &G::Elem,
+  elem_witnesses: &[(BigUint, G::Elem)],
+) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
   if elem_witnesses.is_empty() {
-    return None;
+    let poe_proof = poe::prove_poe::<G>(acc, &BigUint::zero(), acc);
+    return Ok((acc.clone(), poe_proof));
   }
 
   let (mut elem_aggregate, mut acc_next) = elem_witnesses[0].clone();
@@ -43,90 +43,85 @@ pub fn delete<G: InvertibleGroup>(
     .expect("unexpected witnesses")
     .1
   {
-    if &witness.exp(elem) != acc {
-      return None;
+    if &G::exp(&witness, elem) != acc {
+      return Err(AccError::BadWitness);
     }
 
-    let acc_next_option = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
+    let acc_next_option = shamir_trick::<G>(&acc_next, witness, &elem_aggregate, elem);
     match acc_next_option {
       Some(acc_next_value) => acc_next = acc_next_value,
-      None => return None,
+      None => return Err(AccError::InputsNotCoPrime),
     };
 
     elem_aggregate = elem_aggregate * elem;
   }
 
-  let poe_proof = poe::compute_poe(&acc_next, &elem_aggregate, acc);
-  Some((acc_next, poe_proof))
+  let poe_proof = poe::prove_poe::<G>(&acc_next, &elem_aggregate, acc);
+  Ok((acc_next, poe_proof))
 }
 
 /// See `delete`.
-/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
 pub fn prove_membership<G: InvertibleGroup>(
-  acc: &InvertibleGroupElem<G>,
-  elem_witnesses: &[(BigUint, InvertibleGroupElem<G>)],
-) -> Option<(InvertibleGroupElem<G>, PoE<InvertibleGroupElem<G>>)>
-{
-  delete(acc, elem_witnesses)
+  acc: &G::Elem,
+  elem_witnesses: &[(BigUint, G::Elem)],
+) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
+  delete::<G>(acc, elem_witnesses)
 }
 
 /// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
 pub fn verify_membership<G: Group>(
-  witness: &GroupElem<G>,
+  witness: &G::Elem,
   elems: &[BigUint],
-  result: &GroupElem<G>,
-  proof: &PoE<GroupElem<G>>,
-) -> bool
-{
+  result: &G::Elem,
+  proof: &PoE<G::Elem>,
+) -> bool {
   let exp = product(elems);
-  poe::verify_poe(witness, &exp, result, proof)
+  poe::verify_poe::<G>(witness, &exp, result, proof)
 }
 
 /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
 /// REVIEW: I might be wrong about this but I'm pretty sure you should do this without asking for
 /// the acc_set. If you have the entire set of accumulated values why do you need to do special math
 /// to prove nonmembership?
-/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
+/// ^ pending further discussion but keeping the review around
 pub fn prove_nonmembership<G: InvertibleGroup>(
-  acc: &InvertibleGroupElem<G>,
+  acc: &G::Elem,
   acc_set: &[BigUint],
   elems: &[BigUint],
-) -> Option<(InvertibleGroupElem<G>, InvertibleGroupElem<G>, InvertibleGroupElem<G>, PoKE2<InvertibleGroupElem<G>>, PoE<InvertibleGroupElem<G>>)>
-{
+) -> Result<(G::Elem, G::Elem, G::Elem, PoKE2<G::Elem>, PoE<G::Elem>), AccError> {
   let x = product(elems);
   let s = product(acc_set);
   let (a, b, gcd) = bezout(&x, &s);
 
   if !gcd.is_one() {
-    return None;
+    return Err(AccError::InputsNotCoPrime);
   }
 
-  let g = G::generator();
-  let d = g.exp_signed(&a);
-  let v = acc.exp_signed(&b);
-  let gv_inverse = g.op(&v.inv());
+  let g = G::base_elem();
+  let d = G::exp_signed(&g, &a);
+  let v = G::exp_signed(&acc, &b);
+  let gv_inverse = G::op(&g, &G::inv(&v));
 
-  let poke2_proof = poke2::compute_poke2(acc, &b, &v);
-  let poe_proof = poe::compute_poe(&d, &x, &gv_inverse);
-  Some((d, v, gv_inverse, poke2_proof, poe_proof))
+  let poke2_proof = poke2::prove_poke2::<G>(acc, &b, &v);
+  let poe_proof = poe::prove_poe::<G>(&d, &x, &gv_inverse);
+  Ok((d, v, gv_inverse, poke2_proof, poe_proof))
 }
 
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
 pub fn verify_nonmembership<G: InvertibleGroup>(
-  acc: &InvertibleGroupElem<G>,
+  acc: &G::Elem,
   elems: &[BigUint],
-  d: &InvertibleGroupElem<G>,
-  v: &InvertibleGroupElem<G>,
-  gv_inverse: &InvertibleGroupElem<G>,
-  poke2_proof: &PoKE2<InvertibleGroupElem<G>>,
-  poe_proof: &PoE<InvertibleGroupElem<G>>,
-) -> bool
-{
+  d: &G::Elem,
+  v: &G::Elem,
+  gv_inverse: &G::Elem,
+  poke2_proof: &PoKE2<G::Elem>,
+  poe_proof: &PoE<G::Elem>,
+) -> bool {
   let x = product(elems);
-  poke2::verify_poke2(acc, v, poke2_proof) && poe::verify_poe(d, &x, gv_inverse, poe_proof)
+  poke2::verify_poke2::<G>(acc, v, poke2_proof) && poe::verify_poe::<G>(d, &x, gv_inverse, poe_proof)
 }
 
-/// Returns (a, b, GCD(x, y)).
+/// Returns `(a, b, GCD(x, y))` s.t. `ax + by = GCD(x, y)`.
 fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
   let (mut s, mut old_s): (BigInt, BigInt) = (num::zero(), num::one());
   let (mut t, mut old_t): (BigInt, BigInt) = (num::one(), num::zero());
@@ -155,15 +150,14 @@ fn product(elems: &[BigUint]) -> BigUint {
   elems.iter().fold(num::one(), |a, b| a * b)
 }
 
-/// Computes the (xy)th root of g given the xth and yth roots of g and (x, y) coprime).
+/// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
 fn shamir_trick<G: InvertibleGroup>(
-  xth_root: &InvertibleGroupElem<G>,
-  yth_root: &InvertibleGroupElem<G>,
+  xth_root: &G::Elem,
+  yth_root: &G::Elem,
   x: &BigUint,
   y: &BigUint,
-) -> Option<InvertibleGroupElem<G>>
-{
-  if xth_root.exp(&x) != yth_root.exp(&y) {
+) -> Option<G::Elem> {
+  if G::exp(xth_root, &x) != G::exp(yth_root, &y) {
     return None;
   }
 
@@ -173,7 +167,7 @@ fn shamir_trick<G: InvertibleGroup>(
     return None;
   }
 
-  Some(xth_root.exp_signed(&b).op(&yth_root.exp_signed(&a)))
+  Some(G::op(&G::exp_signed(xth_root, &b), &G::exp_signed(&yth_root, &a)))
 }
 
 #[cfg(test)]

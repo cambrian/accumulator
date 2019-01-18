@@ -1,58 +1,56 @@
-use super::super::group::{Group, InvertibleGroup, GroupElem, InvertibleGroupElem};
+use super::super::group::{Group, InvertibleGroup};
 use super::super::hash::hashes;
 use super::PoKE2;
 use num::BigInt;
 use num::BigUint;
 use num_bigint::Sign::Plus;
 
-/// REVIEW: rename to prove_poke2
 /// See page 16 of B&B.
-pub fn compute_poke2<G: InvertibleGroup>(
-  base: &InvertibleGroupElem<G>,
+pub fn prove_poke2<G: InvertibleGroup>(
+  base: &G::Elem,
   exp: &BigInt,
-  result: &InvertibleGroupElem<G>,
-) -> PoKE2<InvertibleGroupElem<G>> {
+  result: &G::Elem,
+) -> PoKE2<G::Elem> {
   let g = G::base_elem();
-  let z = g.exp_signed(exp);
-  let l = hash_prime(base, result, &z);
-  let alpha = hash_inputs(base, result, &z, &l);
+  let z = G::exp_signed(&g, exp);
+  let l = hash_prime::<G>(base, result, &z);
+  let alpha = hash_inputs::<G>(base, result, &z, &l);
   let q = exp / BigInt::from_biguint(Plus, l.clone());
   let r = exp % BigInt::from_biguint(Plus, l);
   PoKE2 {
     z,
-    q: base.op(&g.exp(&alpha)).exp_signed(&q),
+    q: G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q),
     r,
   }
 }
 
 /// See page 16 of B&B.
 pub fn verify_poke2<G: InvertibleGroup>(
-  base: &InvertibleGroupElem<G>,
-  result: &InvertibleGroupElem<G>,
-  proof: &PoKE2<InvertibleGroupElem<G>>,
-) -> bool
-{
+  base: &G::Elem,
+  result: &G::Elem,
+  proof: &PoKE2<G::Elem>,
+) -> bool {
   let PoKE2 { z, q, r } = proof;
   let g = G::base_elem();
-  let l = hash_prime(base, result, &z);
-  let alpha = hash_inputs(base, result, &z, &l);
-  let lhs = q
-    .exp(&l)
-    .op(&(base.op(&g.exp(&alpha))).exp_signed(&r));
-  let rhs = result.op(&z.exp(&alpha));
+  let l = hash_prime::<G>(base, result, &z);
+  let alpha = hash_inputs::<G>(base, result, &z, &l);
+  let lhs = G::op(&G::exp(q, &l), &G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &r));
+  let rhs = G::op(result, &G::exp(&z, &alpha));
   lhs == rhs
 }
 
-fn hash_prime<G: Group>(u: &GroupElem<G>, w: &GroupElem<G>, z: &GroupElem<G>) -> BigUint
-{
+/// Review: simplify Group element requirement fromt u,w,z to Serialize, and remove unnecessary
+/// group qualifications from callsites
+fn hash_prime<G: Group>(u: &G::Elem, w: &G::Elem, z: &G::Elem) -> BigUint {
   let mut hash_string = serde_json::to_string(&u).unwrap();
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
   hash_string.push_str(&serde_json::to_string(&z).unwrap());
   hashes::blake2_prime(hash_string.as_bytes())
 }
 
-fn hash_inputs<G: Group>(u: &GroupElem<G>, w: &GroupElem<G>, z: &GroupElem<G>, l: &BigUint) -> BigUint
-{
+/// Review: simplify Group element requirement fromt u,w,z to Serialize, and remove unnecessary
+/// group qualifications from callsites
+fn hash_inputs<G: Group>(u: &G::Elem, w: &G::Elem, z: &G::Elem, l: &BigUint) -> BigUint {
   let mut hash_string = serde_json::to_string(&u).unwrap();
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
   hash_string.push_str(&serde_json::to_string(&z).unwrap());

@@ -6,8 +6,7 @@ use sha2::{Digest, Sha256};
 // 32 bytes = 256 bits.
 const HASH_LENGTH_IN_BYTES: usize = 32;
 
-// optional key can be used as a nonce for data in hash function
-#[allow(dead_code)]
+// Optional key can be used as a nonce for data in hash function.
 pub fn blake2(data: &[u8], key: Option<&[u8]>) -> BigUint {
   let key: &[u8] = match key {
     Some(bytes) => bytes,
@@ -38,25 +37,30 @@ pub fn blake2_prime(data: &[u8]) -> BigUint {
   }
 }
 
-#[test]
-fn test_blake2() {
-  let data = b"test";
-  assert_ne!(blake2(data, None), blake2(data, Some(&[1])));
-}
+#[cfg(test)]
+mod tests {
+  use super::*;
 
-#[test]
-fn test_sha256() {
-  let data = b"hello world";
-  let data2 = b"wut";
-  assert_ne!(sha256(data, None), sha256(data2, None));
-  // assert_eq!(
-  //   sha256(data, None),
-  //   b"94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
-  // );
-}
+  #[test]
+  fn test_blake2() {
+    let data = b"test";
+    assert_ne!(blake2(data, None), blake2(data, Some(&[1])));
+  }
 
-// WIP: benchmarking blake2, sha256, and eventually *_prime
-// #[bench]
-// fn bench_blake2(b: &mut Bencher) {
-//   unimplemented!()
-// }
+  #[test]
+  fn test_sha256() {
+    let data = b"hello world";
+    let data2 = b"wut";
+    assert_ne!(sha256(data, None), sha256(data2, None));
+    // assert_eq!(
+    //   sha256(data, None),
+    //   b"94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+    // );
+  }
+
+  // WIP: benchmarking blake2, sha256, and eventually *_prime
+  // #[bench]
+  // fn bench_blake2(b: &mut Bencher) {
+  //   unimplemented!()
+  // }
+}

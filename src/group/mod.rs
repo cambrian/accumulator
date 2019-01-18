@@ -1,5 +1,3 @@
-use alga::general::AbstractGroup;
-use alga::general::Operator;
 use num::BigInt;
 use num::BigUint;
 use std::marker::Sized;
@@ -12,8 +10,8 @@ pub mod dummy;
 /// We need a runtime representation for the group itself because reading in group parameters
 /// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
 /// We treat Groups as singletons to get as close to mimicking type-level programming as possible.
-pub trait Group {
-  type Elem; // Would be nice to have this implement a trait so we get dot-notation for group operations. Not sure how to do that tho
+pub trait Group: Sized {
+  type Elem: Eq + Serialize + Clone + Sized; // Would be nice to have this implement a trait so we get dot-notation for group operations. Not sure how to do that tho
   fn init(/* TODO */) -> Self;
   fn op_(&self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
   fn id_(&self) -> Self::Elem;
