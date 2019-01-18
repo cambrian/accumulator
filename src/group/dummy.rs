@@ -15,7 +15,7 @@ pub struct DummyRSA {
 const P: u64 = 226_022_213;
 const Q: u64 = 12_364_769;
 
-const DUMMY_RSA: DummyRSA = DummyRSA { modulus: P*Q };
+const DUMMY_RSA: DummyRSA = DummyRSA { modulus: P * Q };
 
 impl Group for DummyRSA {
   type Elem = u64;
@@ -23,7 +23,7 @@ impl Group for DummyRSA {
     DUMMY_RSA
   }
   fn op_(&self, a: &u64, b: &u64) -> u64 {
-    ((*a as u128 * *b as u128) % self.modulus as u128) as u64
+    ((u128::from(*a) * u128::from(*b)) % u128::from(self.modulus)) as u64
   }
   fn id_(&self) -> u64 {
     1
@@ -37,11 +37,14 @@ impl InvertibleGroup for DummyRSA {
   // TODO: a potentially faster algorithm exists via Euler's theorem
   fn inv_(&self, x: &u64) -> u64 {
     let x_big = BigUint::from(*x);
-    let mod_big = BigUint::from(DummyRSA::get().modulus);
+    let mod_big = BigUint::from(DUMMY_RSA.modulus);
     let (a, _, gcd) = util::bezout(&x_big, &mod_big);
-    dbg!(&a);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
-    a.to_u64().expect("should be in u64 range")
+
+    // This ugly expression will be replaced with mod_euc in the future.
+    ((a % DUMMY_RSA.modulus + DUMMY_RSA.modulus) % DUMMY_RSA.modulus)
+      .to_u64()
+      .expect("should be in u64 range")
   }
 }
 
@@ -53,8 +56,8 @@ mod tests {
   fn test_op() {
     let a = DummyRSA::op(&2, &3);
     assert!(a == 6);
-    let b = DummyRSA::op(&(P+1), &(Q+1));
-    assert!(b == P+Q+1);
+    let b = DummyRSA::op(&(P + 1), &(Q + 1));
+    assert!(b == P + Q + 1);
   }
 
   #[test]
@@ -68,6 +71,12 @@ mod tests {
   #[test]
   fn test_inv() {
     let r = DummyRSA::inv(&2);
-    assert!(r == 1397356226306899);
+    assert!(r == 1_397_356_226_306_899);
+  }
+
+  #[test]
+  fn test_inv_large() {
+    let r = DummyRSA::inv(&32_416_188_490);
+    assert!(r == 173_039_603_491_119);
   }
 }
