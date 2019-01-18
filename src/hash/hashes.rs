@@ -20,9 +20,8 @@ pub fn blake2(data: &[u8], key: Option<&[u8]>) -> BigUint {
 #[allow(dead_code)]
 pub fn sha256(data: &[u8], key: Option<&[u8]>) -> BigUint {
   let mut hasher = Sha256::new();
-  match key {
-    Some(bytes) => hasher.input(bytes),
-    None => (),
+  if let Some(bytes) = key {
+    hasher.input(bytes)
   };
   hasher.input(data);
   let res_bytes: &[u8] = &hasher.result()[..];

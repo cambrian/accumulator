@@ -44,7 +44,7 @@ pub trait InvertibleGroup: Group {
     // After further discussion: Writing a specialized inv() that takes an exponent is only a
     // marginal speedup over inv() then exp() in the negative exponent case. (That is, the
     // complexity does not change.)
-    if n >= &BigInt::zero() {
+    if *n >= BigInt::zero() {
       Self::exp(a, &n.to_biguint().expect("positive BigInt expected"))
     } else {
       Self::exp(

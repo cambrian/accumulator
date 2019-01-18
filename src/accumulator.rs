@@ -53,7 +53,7 @@ pub fn delete<G: InvertibleGroup>(
       None => return Err(AccError::InputsNotCoPrime),
     };
 
-    elem_aggregate = elem_aggregate * elem;
+    elem_aggregate *= elem;
   }
 
   let poe_proof = poe::prove_poe::<G>(&acc_next, &elem_aggregate, acc);
@@ -80,6 +80,7 @@ pub fn verify_membership<G: Group>(
 }
 
 /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
+#[allow(clippy::type_complexity)]
 pub fn prove_nonmembership<G: InvertibleGroup>(
   acc: &G::Elem,
   acc_set: &[BigUint],
