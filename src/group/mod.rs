@@ -1,6 +1,7 @@
 use num::BigInt;
 use num::BigUint;
 use num_traits::identities::Zero;
+use num_traits::identities::One;
 use serde::ser::Serialize;
 use num::integer::Integer;
 use std::marker::Sized;
@@ -11,7 +12,9 @@ pub mod rsa;
 
 /// We need a runtime representation for the group itself because reading in group parameters
 /// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
+///
 /// We treat Groups as singletons to get as close to mimicking type-level programming as possible.
+///
 /// TODO: Would be nice to have this implement a trait to get dot-notation for group operations.
 /// Not sure how to do that tho
 pub trait Group: Sized {
@@ -35,9 +38,11 @@ pub trait Group: Sized {
   fn op(a: &Self::Elem, b: &Self::Elem) -> Self::Elem {
     Self::op_(&Self::get(), a, b)
   }
+  /// Repeated squaring algorithm. Implementations may override this (e.g. Montgomery multiplication
+  /// for RSA groups) for performance reasons.
   fn exp(a: &Self::Elem, n: &BigUint) -> Self::Elem {
-    if n == &From::<u32>::from(0) { Self::id() }
-    else if n == &From::<u32>::from(1) { a.clone() }
+    if *n == BigUint::zero() { Self::id() }
+    else if *n == BigUint::one() { a.clone() }
     else if n.is_odd() { Self::op(a, &Self::exp(&Self::op(a, a), &(n >> 1))) }
     else { Self::exp(&Self::op(a, a), &(n >> 1)) }
   }
