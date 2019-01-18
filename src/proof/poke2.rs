@@ -34,7 +34,10 @@ pub fn verify_poke2<G: InvertibleGroup>(
   let g = G::base_elem();
   let l = hash_prime::<G>(base, result, &z);
   let alpha = hash_inputs::<G>(base, result, &z, &l);
-  let lhs = G::op(&G::exp(q, &l), &G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &r));
+  let lhs = G::op(
+    &G::exp(q, &l),
+    &G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &r),
+  );
   let rhs = G::op(result, &G::exp(&z, &alpha));
   lhs == rhs
 }
@@ -45,7 +48,7 @@ fn hash_prime<G: Group>(u: &G::Elem, w: &G::Elem, z: &G::Elem) -> BigUint {
   let mut hash_string = serde_json::to_string(&u).unwrap();
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
   hash_string.push_str(&serde_json::to_string(&z).unwrap());
-  hashes::blake2_prime(hash_string.as_bytes())
+  hashes::h_prime(&hashes::blake2, hash_string.as_bytes())
 }
 
 /// Review: simplify Group element requirement fromt u,w,z to Serialize, and remove unnecessary

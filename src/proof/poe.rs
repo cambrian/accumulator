@@ -7,7 +7,9 @@ use num::BigUint;
 pub fn prove_poe<G: Group>(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G::Elem> {
   let l = hash_prime::<G>(exp, base, result);
   let q = exp / l;
-  PoE { q: G::exp(&base, &q) }
+  PoE {
+    q: G::exp(&base, &q),
+  }
 }
 
 /// See page 16 of B&B.
@@ -30,5 +32,5 @@ fn hash_prime<G: Group>(exp: &BigUint, base: &G::Elem, result: &G::Elem) -> BigU
   let mut hash_string = exp.to_str_radix(16);
   hash_string.push_str(&serde_json::to_string(&base).unwrap());
   hash_string.push_str(&serde_json::to_string(&result).unwrap());
-  hashes::blake2_prime(hash_string.as_bytes())
+  hashes::h_prime(&hashes::blake2, hash_string.as_bytes())
 }

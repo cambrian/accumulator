@@ -31,7 +31,6 @@ fn has_small_prime_factor(n: &BigUint) -> bool {
   false
 }
 
-// WIP
 #[allow(dead_code)]
 fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   let one = BigUint::from(1u64);
