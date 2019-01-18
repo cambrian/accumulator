@@ -118,7 +118,7 @@ pub fn verify_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
   poke2::verify_poke2(acc, v, poke2_proof) && poe::verify_poe(d, &x, gv_inverse, poe_proof)
 }
 
-/// Returns (a, b, GCD(x, y)).
+/// Returns `(a, b, GCD(x, y))` s.t. `ax + by = GCD(x, y)`.
 fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
   let (mut s, mut old_s): (BigInt, BigInt) = (num::zero(), num::one());
   let (mut t, mut old_t): (BigInt, BigInt) = (num::one(), num::zero());
@@ -147,7 +147,7 @@ fn product(elems: &[BigUint]) -> BigUint {
   elems.iter().fold(num::one(), |a, b| a * b)
 }
 
-/// Computes the (xy)th root of g given the xth and yth roots of g and (x, y) coprime).
+/// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
 fn shamir_trick<G: InvertibleGroup>(
   xth_root: &G,
   yth_root: &G,
