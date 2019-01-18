@@ -18,6 +18,8 @@ macro_rules! bi {
   };
 }
 
+const MAX_JACOBI_ITERS: u64 = 1 >> 63;
+
 // Baillie-PSW probabilistic primality test:
 // 1. Filter composites with small divisors.
 // 2. Do Miller-Rabin base 2.
@@ -34,8 +36,10 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
   if is_prob_square(n) {
     return false;
   } // FIX
-  let d = choose_d(n);
-  passes_lucas(n, &d)
+  match choose_d(n, MAX_JACOBI_ITERS) {
+    Some(d) => passes_lucas(n, &d),
+    None => false,
+  }
 }
 
 #[allow(dead_code)]
@@ -153,11 +157,18 @@ fn is_prob_square(n: &BigUint) -> bool {
   true
 }
 
-// find first D in [5, -7, 9, ...] for which Jacobi symbol (D/n) = -1
-fn choose_d(n: &BigUint) -> BigInt {
+// Finds and returns first D in [5, -7, 9, ..., 5 + 2*max_iter] for which Jacobi symbol (D/n) = -1,
+// or None if no such D exists. In the case that n is square, there is no such D even with max_iter
+// infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a low value
+// to max_iter to avoid wasting too much time.
+fn choose_d(n: &BigUint, max_iter: u64) -> Option<BigInt> {
   let n_signed = &BigInt::from_biguint(Sign::Plus, n.clone());
   let mut d = bi!(5);
-  while jacobi_symbol(&d, n_signed) != -1 {
+
+  for _ in 0..max_iter {
+    if jacobi_symbol(&d, n_signed) == -1 {
+      return Some(d);
+    }
     if d > bi!(0) {
       d += bi!(2);
     } else {
@@ -165,12 +176,12 @@ fn choose_d(n: &BigUint) -> BigInt {
     }
     d *= bi!(-1);
   }
-  d
+  None
 }
 
 // Jacobi symbol (a/n)
 fn jacobi_symbol(a: &BigInt, n: &BigInt) -> i64 {
-  // unfortunately cannot be written as large match block since BigUint::from is not pattern
+  // base cases
   if n == &bi!(1) {
     return 1;
   }
@@ -185,8 +196,10 @@ fn jacobi_symbol(a: &BigInt, n: &BigInt) -> i64 {
     } else if n_mod_8 == bi!(1) || n_mod_8 == bi!(7) {
       return 1;
     }
-  } else if *a < bi!(0) {
-    // return (-1)^((n-1)/2) (-a/n)
+  }
+  // recursive cases
+  if *a < bi!(0) {
+    // symbol is (-1)^((n-1)/2) (-a/n)
     let j = jacobi_symbol(&(a * &bi!(-1)), n);
     let exp_mod_2 = ((n - bi!(1)) / bi!(2)) % 2;
     if exp_mod_2 == bi!(0) {
@@ -196,11 +209,14 @@ fn jacobi_symbol(a: &BigInt, n: &BigInt) -> i64 {
     }
   }
   if a % 2 == bi!(0) {
-    return jacobi_symbol(&bi!(2), n) * jacobi_symbol(&(a / &bi!(2)), n);
-  } else if &(a % n) != a {
-    return jacobi_symbol(&(a % n), n);
+    jacobi_symbol(&bi!(2), n) * jacobi_symbol(&(a / &bi!(2)), n)
+  } else if a % n != *a {
+    jacobi_symbol(&(a % n), n)
+  } else if a % 4 == bi!(3) && n % 4 == bi!(3) {
+    -jacobi_symbol(n, a)
+  } else {
+    jacobi_symbol(n, a)
   }
-  0
 }
 
 #[allow(dead_code)]
@@ -272,5 +288,14 @@ mod tests {
   fn test_miller_rabin() {
     assert!(passes_miller_rabin_base_2(&bu!(13u64)));
     assert!(!passes_miller_rabin_base_2(&bu!(65u64)));
+  }
+
+  #[test]
+  fn test_jacobi() {
+    assert_eq!(jacobi_symbol(&bi!(0), &bi!(1)), 1);
+    assert_eq!(jacobi_symbol(&bi!(15), &bi!(17)), 1);
+    assert_eq!(jacobi_symbol(&bi!(14), &bi!(17)), -1);
+    assert_eq!(jacobi_symbol(&bi!(30), &bi!(59)), -1);
+    assert_eq!(jacobi_symbol(&bi!(27), &bi!(57)), 0);
   }
 }
