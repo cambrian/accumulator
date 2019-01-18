@@ -8,6 +8,12 @@ use num_traits::identities::One;
 use num_traits::identities::Zero;
 use serde::ser::Serialize;
 
+#[derive(Debug)]
+pub enum AccError {
+  BadWitness,
+  InputsNotCoPrime,
+}
+
 /// Initializes the accumulator to a group element.
 pub fn setup<G: CyclicGroup>() -> G {
   G::generator()
@@ -21,16 +27,14 @@ pub fn add<G: Group + Serialize>(acc: &G, elems: &[BigUint]) -> (G, PoE<G>) {
   (new_acc, poe_proof)
 }
 
-/// Removes the elements in `elem_witnesses` from the accumulator `acc.
-/// REVIEW: instead of returning None when elem_witnesses is emtpy, instead return an identity
-/// "delete".
-/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
+/// Removes the elements in `elem_witnesses` from the accumulator `acc`.
 pub fn delete<G: InvertibleGroup + Serialize>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)> {
+) -> Result<(G, PoE<G>), AccError> {
   if elem_witnesses.is_empty() {
-    return None;
+    let poe_proof = poe::prove_poe(acc, &BigUint::zero(), acc);
+    return Ok((acc.clone(), poe_proof));
   }
 
   let (mut elem_aggregate, mut acc_next) = elem_witnesses[0].clone();
@@ -41,28 +45,27 @@ pub fn delete<G: InvertibleGroup + Serialize>(
     .1
   {
     if &witness.exp(elem) != acc {
-      return None;
+      return Err(AccError::BadWitness);
     }
 
     let acc_next_option = shamir_trick(&acc_next, witness, &elem_aggregate, elem);
     match acc_next_option {
       Some(acc_next_value) => acc_next = acc_next_value,
-      None => return None,
+      None => return Err(AccError::InputsNotCoPrime),
     };
 
     elem_aggregate = elem_aggregate * elem;
   }
 
   let poe_proof = poe::prove_poe(&acc_next, &elem_aggregate, acc);
-  Some((acc_next, poe_proof))
+  Ok((acc_next, poe_proof))
 }
 
 /// See `delete`.
-/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
 pub fn prove_membership<G: InvertibleGroup + Serialize>(
   acc: &G,
   elem_witnesses: &[(BigUint, G)],
-) -> Option<(G, PoE<G>)> {
+) -> Result<(G, PoE<G>), AccError> {
   delete(acc, elem_witnesses)
 }
 
@@ -78,21 +81,17 @@ pub fn verify_membership<G: Group + Serialize>(
 }
 
 /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
-/// REVIEW: I might be wrong about this but I'm pretty sure you should do this without asking for
-/// the acc_set. If you have the entire set of accumulated values why do you need to do special math
-/// to prove nonmembership?
-/// REVIEW: use Result<(G,PoE<G>), ErrType> instead of Option
 pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
   acc: &G,
   acc_set: &[BigUint],
   elems: &[BigUint],
-) -> Option<(G, G, G, PoKE2<G>, PoE<G>)> {
+) -> Result<(G, G, G, PoKE2<G>, PoE<G>), AccError> {
   let x = product(elems);
   let s = product(acc_set);
   let (a, b, gcd) = bezout(&x, &s);
 
   if !gcd.is_one() {
-    return None;
+    return Err(AccError::InputsNotCoPrime);
   }
 
   let g = G::generator();
@@ -102,7 +101,7 @@ pub fn prove_nonmembership<G: InvertibleGroup + CyclicGroup + Serialize>(
 
   let poke2_proof = poke2::prove_poke2(acc, &b, &v);
   let poe_proof = poe::prove_poe(&d, &x, &gv_inverse);
-  Some((d, v, gv_inverse, poke2_proof, poe_proof))
+  Ok((d, v, gv_inverse, poke2_proof, poe_proof))
 }
 
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
