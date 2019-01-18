@@ -1,18 +1,19 @@
 use num::BigInt;
 use num::BigUint;
-use std::marker::Sized;
+use num_traits::identities::Zero;
 use serde::ser::Serialize;
+use std::marker::Sized;
 
 pub mod class;
-pub mod rsa;
 pub mod dummy;
+pub mod rsa;
 
 /// We need a runtime representation for the group itself because reading in group parameters
 /// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
 /// We treat Groups as singletons to get as close to mimicking type-level programming as possible.
 pub trait Group: Sized {
   type Elem: Eq + Serialize + Clone + Sized; // Would be nice to have this implement a trait so we get dot-notation for group operations. Not sure how to do that tho
-  fn init(/* TODO */) -> Self;
+  fn init() -> Self;
   fn op_(&self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
   fn id_(&self) -> Self::Elem;
   /// E.g. 2, for RSA groups.
@@ -38,12 +39,15 @@ pub trait InvertibleGroup: Group {
     Self::inv_(&Self::get(), a)
   }
   fn exp_signed(a: &Self::Elem, n: &BigInt) -> Self::Elem {
-    // REVIEW: check sign to avoid converting bigint->biguint twice in the negative case.
     // For Pablo: Sanjay mentioned an optimization that suggests changing one of these fn
     // signatures?
-    match n.to_biguint() {
-      Some(value) => Self::exp(a, &value),
-      None => Self::exp(&Self::inv(&a), &(-n).to_biguint().expect("negative BigInt expected"))
+    if n >= &BigInt::zero() {
+      Self::exp(a, &n.to_biguint().expect("positive BigInt expected"))
+    } else {
+      Self::exp(
+        &Self::inv(&a),
+        &(-n).to_biguint().expect("negative BigInt expected"),
+      )
     }
   }
 }
