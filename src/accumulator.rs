@@ -1,10 +1,9 @@
 use super::group::{Group, InvertibleGroup};
-use super::proof::{poe, poke2, PoE, PoKE2};
+use super::proof::{poe, poe::PoE, poke2, poke2::PoKE2};
 use super::util;
 use num;
 use num::BigUint;
-use num_traits::identities::One;
-use num_traits::identities::Zero;
+use num_traits::identities::{One, Zero};
 
 #[derive(Debug)]
 pub enum AccError {
