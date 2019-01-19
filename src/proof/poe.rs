@@ -51,13 +51,13 @@ mod tests {
     let dummy = DummyRSA::get();
     let base = DummyRSA::base_elem_(&dummy);
     let exp = BigUint::from(20 as u8);
-    let result = DummyRSA::op(&DummyRSAElem::of(1_048_576), &DummyRSAElem::of(1));
+    let result = DummyRSAElem::of(1_048_576);
     let proof = prove_poe::<DummyRSA>(&base, &exp, &result);
     assert!(verify_poe::<DummyRSA>(&base, &exp, &result, &proof));
 
     // 2^35 = 34359738368
     let exp_2 = BigUint::from(35 as u8);
-    let result_2 = DummyRSA::op(&DummyRSAElem::of(34_359_738_368), &DummyRSAElem::of(1));
+    let result_2 = DummyRSAElem::of(34_359_738_368);
     let proof_2 = prove_poe::<DummyRSA>(&base, &exp_2, &result_2);
     assert!(verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof_2));
     // Cannot verify wrong base/exp/result triple with wrong pair.
