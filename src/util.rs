@@ -52,12 +52,18 @@ mod tests {
   use num_traits::identities::One;
 
   #[test]
-  fn test_bezout_simple() {
+  fn test_bezout() {
     let x = BigUint::from(7 as u16);
     let y = BigUint::from(165 as u16);
     let (a, b, gcd) = bezout(&x, &y);
     assert!(gcd.is_one());
     assert!(a == BigInt::from(-47 as i16));
     assert!(b == BigInt::from(2 as i16));
+  }
+
+  #[test]
+  fn test_mod_euc_big() {
+    let r = mod_euc_big(&BigInt::from(-8), &(3 as u8));
+    assert!(r == BigUint::one());
   }
 }
