@@ -64,15 +64,14 @@ impl Group for DummyRSA {
 
 /// Trait for groups that support efficient inverse calculations.
 /// NOT used to mean a cyclic group (where every element has an inverse).
-/// REVIEW: (nitpick) use self instead of DUMMY_RSA
 impl InvertibleGroup for DummyRSA {
   fn inv_(&self, x: &DummyRSAElem) -> DummyRSAElem {
     let x_big = BigUint::from(x.val);
-    let mod_big = BigUint::from(DUMMY_RSA.modulus);
+    let mod_big = BigUint::from(self.modulus);
     let (a, _, gcd) = util::bezout(&x_big, &mod_big);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
     DummyRSAElem::of(
-      util::mod_euc_big(&a, &DUMMY_RSA.modulus)
+      util::mod_euc_big(&a, &self.modulus)
         .to_u64()
         .expect("u64-sized BigInt expected"),
     )
