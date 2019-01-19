@@ -4,6 +4,8 @@ use num::BigUint;
 use ring::rsa::bigint::{Modulus, Elem as RingElem, elem_mul};
 use ring::arithmetic::montgomery::R;
 use serde::ser::{Serialize, Serializer};
+use untrusted::Input;
+use std::result::Result;
 
 const P: u64 = 226_022_213;
 const Q: u64 = 12_364_769;
@@ -44,8 +46,8 @@ impl Group for Modulus<RSA2048> {
     RSA2048Elem(self.oneR_elem())
   }
   fn base_elem_(&self) -> RSA2048Elem {
-    unimplemented!()
-    //self.oneRR().decode_once(&self)
+    let unencoded_2 = RingElem::from_be_bytes_padded(Input::from(&[2 as u8]), Self::get()).unwrap();
+    RSA2048Elem(elem_mul(&unencoded_2, Self::get().oneRR().as_ref().clone(), Self::get()))
   }
   fn op_(&self, RSA2048Elem(a): &RSA2048Elem, RSA2048Elem(b): &RSA2048Elem) -> RSA2048Elem {
     RSA2048Elem(elem_mul(&a, b.clone(), &self))
