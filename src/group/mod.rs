@@ -17,26 +17,26 @@ pub mod rsa;
 ///
 /// TODO: Would be nice to have this implement a trait to get dot-notation for group operations.
 /// Not sure how to do that tho
-pub trait Group: Sized {
+pub trait Group: Sized + 'static {
   // Consider: Add an operator trait (e.g. Mul for *) to Elem that defines the op itself?
   type Elem: Eq + Serialize + Clone + Sized;
   /// This function should return either a const or lazy_static group representation.
   /// This should be replaced by a const fn when they are added to Rust.
-  fn get() -> Self;
-  fn op_(&self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
-  fn id_(&self) -> Self::Elem;
+  fn get() -> &'static Self;
+  fn op_(&'static self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
+  fn id_(&'static self) -> Self::Elem;
   /// E.g. 2, for RSA groups.
-  fn base_elem_(&self) -> Self::Elem;
+  fn base_elem_(&'static self) -> Self::Elem;
 
   // Convenience functions below
   fn id() -> Self::Elem {
-    Self::id_(&Self::get())
+    Self::id_(Self::get())
   }
   fn base_elem() -> Self::Elem {
-    Self::base_elem_(&Self::get())
+    Self::base_elem_(Self::get())
   }
   fn op(a: &Self::Elem, b: &Self::Elem) -> Self::Elem {
-    Self::op_(&Self::get(), a, b)
+    Self::op_(Self::get(), a, b)
   }
   /// Repeated squaring algorithm. Implementations may override this (e.g. Montgomery multiplication
   /// for RSA groups) for performance reasons.
@@ -51,7 +51,7 @@ pub trait Group: Sized {
 pub trait InvertibleGroup: Group where {
   fn inv_(&self, a: &Self::Elem) -> Self::Elem;
   fn inv(a: &Self::Elem) -> Self::Elem {
-    Self::inv_(&Self::get(), a)
+    Self::inv_(Self::get(), a)
   }
   fn exp_signed(a: &Self::Elem, n: &BigInt) -> Self::Elem {
     // After further discussion: Writing a specialized inv() that takes an exponent is only a

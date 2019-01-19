@@ -19,8 +19,8 @@ const DUMMY_RSA: DummyRSA = DummyRSA { modulus: P * Q };
 
 impl Group for DummyRSA {
   type Elem = u64;
-  fn get() -> Self {
-    DUMMY_RSA
+  fn get() -> &'static Self {
+    &DUMMY_RSA
   }
   fn op_(&self, a: &u64, b: &u64) -> u64 {
     ((u128::from(*a) * u128::from(*b)) % u128::from(self.modulus)) as u64
@@ -35,6 +35,7 @@ impl Group for DummyRSA {
 
 /// Trait for groups that support efficient inverse calculations.
 /// NOT used to mean a cyclic group (where every element has an inverse).
+/// REVIEW: (nitpick) use self instead of DUMMY_RSA
 impl InvertibleGroup for DummyRSA {
   // TODO: a potentially faster algorithm exists via Euler's theorem
   fn inv_(&self, x: &u64) -> u64 {
