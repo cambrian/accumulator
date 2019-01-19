@@ -31,7 +31,7 @@ pub fn verify_poe<G: Group>(
 }
 
 fn hash_prime<G: Serialize>(_exp: &BigUint, _base: &G, _result: &G) -> BigUint {
-  // TODO: replace with commented out when hash_prime is implemented
+  // TODO: Replace with commented out when hash_prime is implemented.
   BigUint::from(13 as u8)
   // let mut hash_string = exp.to_str_radix(16);
   // hash_string.push_str(&serde_json::to_string(&base).unwrap());
@@ -48,8 +48,7 @@ mod tests {
   #[test]
   fn test_poe() {
     // 2^20 = 1048576
-    let dummy = DummyRSA::get();
-    let base = DummyRSA::base_elem_(&dummy);
+    let base = DummyRSA::base_elem();
     let exp = BigUint::from(20 as u8);
     let result = DummyRSAElem::of(1_048_576);
     let proof = prove_poe::<DummyRSA>(&base, &exp, &result);
