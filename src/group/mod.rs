@@ -1,9 +1,9 @@
+use num::integer::Integer;
 use num::BigInt;
 use num::BigUint;
-use num_traits::identities::Zero;
 use num_traits::identities::One;
+use num_traits::identities::Zero;
 use serde::ser::Serialize;
-use num::integer::Integer;
 use std::marker::Sized;
 
 pub mod class;
@@ -16,9 +16,7 @@ pub mod rsa;
 /// We treat Groups as singletons to get as close to mimicking type-level programming as possible.
 ///
 /// TODO: Would be nice to have this implement a trait to get dot-notation for group operations.
-/// Not sure how to do that tho
 pub trait Group: Sized + 'static {
-  // Consider: Add an operator trait (e.g. Mul for *) to Elem that defines the op itself?
   type Elem: Eq + Serialize + Clone + Sized;
   /// This function should return either a const or lazy_static group representation.
   /// This should be replaced by a const fn when they are added to Rust.
@@ -28,7 +26,7 @@ pub trait Group: Sized + 'static {
   /// E.g. 2, for RSA groups.
   fn base_elem_(&'static self) -> Self::Elem;
 
-  // Convenience functions below
+  // Convenience functions below:
   fn id() -> Self::Elem {
     Self::id_(Self::get())
   }
@@ -41,14 +39,19 @@ pub trait Group: Sized + 'static {
   /// Repeated squaring algorithm. Implementations may override this (e.g. Montgomery multiplication
   /// for RSA groups) for performance reasons.
   fn exp(a: &Self::Elem, n: &BigUint) -> Self::Elem {
-    if *n == BigUint::zero() { Self::id() }
-    else if *n == BigUint::one() { a.clone() }
-    else if n.is_odd() { Self::op(a, &Self::exp(&Self::op(a, a), &(n >> 1))) }
-    else { Self::exp(&Self::op(a, a), &(n >> 1)) }
+    if *n == BigUint::zero() {
+      Self::id()
+    } else if *n == BigUint::one() {
+      a.clone()
+    } else if n.is_odd() {
+      Self::op(a, &Self::exp(&Self::op(a, a), &(n >> 1)))
+    } else {
+      Self::exp(&Self::op(a, a), &(n >> 1))
+    }
   }
 }
 
-pub trait InvertibleGroup: Group where {
+pub trait InvertibleGroup: Group {
   fn inv_(&self, a: &Self::Elem) -> Self::Elem;
   fn inv(a: &Self::Elem) -> Self::Elem {
     Self::inv_(Self::get(), a)

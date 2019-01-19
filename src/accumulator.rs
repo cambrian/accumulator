@@ -144,3 +144,22 @@ fn shamir_trick<G: InvertibleGroup>(
     &G::exp_signed(yth_root, &a),
   ))
 }
+
+#[cfg(test)]
+mod tests {
+  use super::super::group::dummy::DummyRSA;
+  use super::*;
+
+  #[test]
+  fn test_shamir_trick() {
+    let (x, y, z) = (
+      BigUint::from(13 as u8),
+      BigUint::from(17 as u8),
+      BigUint::from(19 as u8),
+    );
+    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[y.clone(), z.clone()]));
+    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[x.clone(), z.clone()]));
+    let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), &z.clone());
+    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, &x, &y) == Some(xyth_root));
+  }
+}
