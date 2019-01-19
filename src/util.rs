@@ -1,5 +1,4 @@
-use num::BigInt;
-use num::BigUint;
+use num::{BigInt, BigUint, Unsigned};
 use num_bigint::Sign::Plus;
 use num_traits::identities::Zero;
 
@@ -28,10 +27,28 @@ pub fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
   (old_s, old_t, old_r)
 }
 
+// pub fn mod_euc<S: Signed, U: Unsigned + Clone>(x: &S, m: &U) -> U
+// where
+//   S: From<U>,
+//   U: TryFrom<S>,
+// {
+//   let m_big = S::from(m.clone());
+//   U::from((*x % m_big + m_big) % m_big)
+// }
+
+pub fn mod_euc_big<U: Unsigned + Clone>(x: &BigInt, m: &U) -> BigUint
+where
+  BigInt: From<U>,
+{
+  let m_big = BigInt::from(m.clone());
+  ((x % &m_big + &m_big) % &m_big)
+    .to_biguint()
+    .expect("positive BigInt expected")
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
-  use num::BigInt;
   use num_traits::identities::One;
 
   #[test]

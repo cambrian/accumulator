@@ -66,23 +66,26 @@ fn hash_inputs<G: Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint {
 
 #[cfg(test)]
 mod tests {
-  use super::super::super::group::dummy;
+  use super::super::super::group::dummy::DummyRSA;
+  use super::super::super::group::dummy::DummyRSAElem;
   use super::*;
+
   #[test]
   fn test_poke2() {
-    let dummy = dummy::DummyRSA::get();
-    let base = dummy::DummyRSA::base_elem_(&dummy);
-    let exp = BigInt::from(20 as u8);
-    let result = dummy::DummyRSA::op(&1_048_576, &1);
-    let proof = prove_poke2::<dummy::DummyRSA>(&base, &exp, &result);
     // 2^20 = 1048576
-    assert!(verify_poke2::<dummy::DummyRSA>(&base, &result, &proof));
-    let exp_2 = BigInt::from(35 as u8);
-    let result_2 = dummy::DummyRSA::op(&34_359_738_368, &1);
-    let proof_2 = prove_poke2::<dummy::DummyRSA>(&base, &exp_2, &result_2);
+    let dummy = DummyRSA::get();
+    let base = DummyRSA::base_elem_(&dummy);
+    let exp = BigInt::from(20 as u8);
+    let result = DummyRSA::op(&DummyRSAElem::of(1_048_576), &DummyRSAElem::of(1));
+    let proof = prove_poke2::<DummyRSA>(&base, &exp, &result);
+    assert!(verify_poke2::<DummyRSA>(&base, &result, &proof));
+
     // 2^35 = 34359738368
-    assert!(verify_poke2::<dummy::DummyRSA>(&base, &result_2, &proof_2));
+    let exp_2 = BigInt::from(35 as u8);
+    let result_2 = DummyRSA::op(&DummyRSAElem::of(34_359_738_368), &DummyRSAElem::of(1));
+    let proof_2 = prove_poke2::<DummyRSA>(&base, &exp_2, &result_2);
+    assert!(verify_poke2::<DummyRSA>(&base, &result_2, &proof_2));
     // Cannot verify wrong base/exp/result triple with wrong pair
-    assert!(!verify_poke2::<dummy::DummyRSA>(&base, &result_2, &proof));
+    assert!(!verify_poke2::<DummyRSA>(&base, &result_2, &proof));
   }
 }
