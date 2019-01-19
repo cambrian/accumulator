@@ -1,6 +1,7 @@
 use super::super::group::Group;
 use super::super::group::InvertibleGroup;
 use super::super::hash::hashes;
+use super::super::util;
 use num::BigInt;
 use num::BigUint;
 use num_bigint::Sign::Plus;
@@ -23,9 +24,7 @@ pub fn prove_poke2<G: InvertibleGroup>(
   let l = hash_prime(base, result, &z);
   let alpha = hash_inputs(base, result, &z, &l);
   let q = exp / BigInt::from_biguint(Plus, l.clone());
-  // Should be a safe unwrap because Rem is implemented for BigInt as
-  // `BigInt::from_biguint(self.sign, self.data % other)
-  let r = (exp % BigInt::from_biguint(Plus, l)).to_biguint().unwrap();
+  let r = util::mod_euc_big(exp, &l);
   PoKE2 {
     z,
     q: G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q),
