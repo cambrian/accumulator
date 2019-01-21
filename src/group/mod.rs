@@ -27,6 +27,9 @@ pub trait Group: Sized + 'static {
   fn get() -> &'static Self;
   fn op_(&'static self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
   fn id_(&'static self) -> Self::Elem;
+  /// Returns an element with unknown order.
+  /// REVIEW: consider renaming Group such that it's clear that the group supports this fn.
+  /// REVIEW: consider changing to unknown_order_elem
   /// E.g. 2, for RSA groups.
   fn base_elem_(&'static self) -> Self::Elem;
 
@@ -34,6 +37,7 @@ pub trait Group: Sized + 'static {
   fn id() -> Self::Elem {
     Self::id_(Self::get())
   }
+
   fn base_elem() -> Self::Elem {
     Self::base_elem_(Self::get())
   }

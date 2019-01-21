@@ -7,9 +7,6 @@ use serde::ser::{Serialize, Serializer};
 use untrusted::Input;
 use std::result::Result;
 
-const P: u64 = 226_022_213;
-const Q: u64 = 12_364_769;
-
 #[derive (PartialEq, Eq)]
 enum RSA2048 {}
 
