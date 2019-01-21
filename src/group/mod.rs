@@ -14,9 +14,9 @@ pub mod rsa;
 /// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
 ///
 /// We mimic type-level programming by using the singleton pattern here. For each group, there
-/// should be a single, constant, static instance of the group representation accessible at
-/// all times. This way, we can "reflect" information about the group type by accessing the
-/// singleton. Refer to dummy.rs for an example.
+/// should be a single, constant, static instance of the group representation accessible at all
+/// times. This way, we can "reflect" information about the group type by accessing the singleton.
+/// Refer to dummy.rs for an example.
 pub trait Group: Sized + 'static {
   /// In theory the association Group::Elem is bijective, such that it makes sense to write
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
