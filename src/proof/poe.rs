@@ -3,8 +3,9 @@ use super::super::group::Group;
 use num::BigUint;
 use serde::ser::Serialize;
 
+#[allow(non_snake_case)]
 pub struct PoE<T> {
-  q: T,
+  Q: T,
 }
 
 /// See page 16 of B&B.
@@ -12,7 +13,7 @@ pub fn prove_poe<G: Group>(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> P
   let l = hash_prime(exp, base, result);
   let q = exp / l;
   PoE {
-    q: G::exp(&base, &q),
+    Q: G::exp(&base, &q),
   }
 }
 
@@ -26,7 +27,7 @@ pub fn verify_poe<G: Group>(
   let l = hash_prime(exp, base, result);
   let r = exp % l.clone();
   // w = Q^l * u^r
-  let w = G::op(&G::exp(&proof.q, &l), &G::exp(&base, &r));
+  let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
   w == *result
 }
 
@@ -42,7 +43,6 @@ fn hash_prime<G: Serialize>(_exp: &BigUint, _base: &G, _result: &G) -> BigUint {
 #[cfg(test)]
 mod tests {
   use super::super::super::group::dummy::DummyRSA;
-  use super::super::super::group::dummy::DummyRSAElem;
   use super::*;
 
   #[test]
@@ -50,13 +50,13 @@ mod tests {
     // 2^20 = 1048576
     let base = DummyRSA::base_elem();
     let exp = BigUint::from(20 as u8);
-    let result = DummyRSAElem::of(1_048_576);
+    let result = DummyRSA::elem_of(1_048_576);
     let proof = prove_poe::<DummyRSA>(&base, &exp, &result);
     assert!(verify_poe::<DummyRSA>(&base, &exp, &result, &proof));
 
     // 2^35 = 34359738368
     let exp_2 = BigUint::from(35 as u8);
-    let result_2 = DummyRSAElem::of(34_359_738_368);
+    let result_2 = DummyRSA::elem_of(34_359_738_368);
     let proof_2 = prove_poe::<DummyRSA>(&base, &exp_2, &result_2);
     assert!(verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof_2));
     // Cannot verify wrong base/exp/result triple with wrong pair.

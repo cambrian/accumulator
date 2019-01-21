@@ -18,19 +18,17 @@ const Q: u64 = 12_364_769;
 
 const DUMMY_RSA: DummyRSA = DummyRSA { modulus: P * Q };
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct DummyRSAElem {
   val: u64,
 }
 
-impl DummyRSAElem {
-  // REVIEW: replace DummyRSAElem::of with DummyRSA::elem_of (or other suitable name)
-  // reason being that accessing the global group instance outside of Group::get() is bad style.
-  pub fn of(val_unbounded: u64) -> DummyRSAElem {
-    let val = val_unbounded % DUMMY_RSA.modulus;
+impl DummyRSA {
+  pub fn elem_of(val_unbounded: u64) -> DummyRSAElem {
+    let val = val_unbounded % Self::get().modulus;
     if val > DUMMY_RSA.modulus / 2 {
       DummyRSAElem {
-        val: util::mod_euc_big(&-BigInt::from(val), &DUMMY_RSA.modulus)
+        val: util::mod_euc_big(&-BigInt::from(val), &Self::get().modulus)
           .to_u64()
           .expect("positive BigInt expected"),
       }
@@ -39,16 +37,6 @@ impl DummyRSAElem {
     }
   }
 }
-
-// REVIEW: also make x, n-x equal
-// or replace this with #[deriving (PartialEq, Eq)]
-impl PartialEq for DummyRSAElem {
-  fn eq(&self, other: &DummyRSAElem) -> bool {
-    self.val == other.val
-  }
-}
-
-impl Eq for DummyRSAElem {}
 
 impl Group for DummyRSA {
   type Elem = DummyRSAElem;
@@ -59,25 +47,23 @@ impl Group for DummyRSA {
     // Note: This is a pretty naive implementation of op.
     let (a, b) = (a_elem.val, b_elem.val);
     let op_result = ((u128::from(a) * u128::from(b)) % u128::from(self.modulus)) as u64;
-    DummyRSAElem::of(op_result)
+    DummyRSA::elem_of(op_result)
   }
   fn id_(&self) -> DummyRSAElem {
-    DummyRSAElem::of(1)
+    DummyRSA::elem_of(1)
   }
   fn base_elem_(&self) -> DummyRSAElem {
-    DummyRSAElem::of(2)
+    DummyRSA::elem_of(2)
   }
 }
 
-/// Trait for groups that support efficient inverse calculations.
-/// NOT used to mean a cyclic group (where every element has an inverse).
 impl InvertibleGroup for DummyRSA {
   fn inv_(&self, x: &DummyRSAElem) -> DummyRSAElem {
     let x_big = BigUint::from(x.val);
     let mod_big = BigUint::from(self.modulus);
     let (a, _, gcd) = util::bezout(&x_big, &mod_big);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
-    DummyRSAElem::of(
+    DummyRSA::elem_of(
       util::mod_euc_big(&a, &self.modulus)
         .to_u64()
         .expect("u64-sized BigInt expected"),
@@ -101,33 +87,36 @@ mod tests {
 
   #[test]
   fn test_op() {
-    let a = DummyRSA::op(&DummyRSAElem::of(2), &DummyRSAElem::of(3));
-    assert!(a == DummyRSAElem::of(6));
-    let b = DummyRSA::op(&DummyRSAElem::of(P + 1), &DummyRSAElem::of(Q + 1));
-    assert!(b == DummyRSAElem::of(P + Q + 1));
+    let a = DummyRSA::op(&DummyRSA::elem_of(2), &DummyRSA::elem_of(3));
+    assert!(a == DummyRSA::elem_of(6));
+    let b = DummyRSA::op(&DummyRSA::elem_of(P + 1), &DummyRSA::elem_of(Q + 1));
+    assert!(b == DummyRSA::elem_of(P + Q + 1));
   }
 
   /// Tests that -x and x are treated as the same element.
   #[test]
   fn test_cosets() {
-    assert!(DummyRSAElem::of(2) == DummyRSAElem::of(2_794_712_452_613_795));
-    let r = DummyRSA::op(&DummyRSAElem::of(931_570_817_537_932), &DummyRSAElem::of(2));
-    assert!(r == DummyRSAElem::of(931_570_817_537_933));
+    assert!(DummyRSA::elem_of(2) == DummyRSA::elem_of(2_794_712_452_613_795));
+    let r = DummyRSA::op(
+      &DummyRSA::elem_of(931_570_817_537_932),
+      &DummyRSA::elem_of(2),
+    );
+    assert!(r == DummyRSA::elem_of(931_570_817_537_933));
   }
 
   #[test]
   fn test_exp() {
-    let a = DummyRSA::exp(&DummyRSAElem::of(2), &From::<u64>::from(3));
-    assert!(a == DummyRSAElem::of(8));
-    let b = DummyRSA::exp(&DummyRSAElem::of(2), &From::<u64>::from(128));
-    assert!(b == DummyRSAElem::of(782_144_413_693_680));
+    let a = DummyRSA::exp(&DummyRSA::elem_of(2), &From::<u64>::from(3));
+    assert!(a == DummyRSA::elem_of(8));
+    let b = DummyRSA::exp(&DummyRSA::elem_of(2), &From::<u64>::from(128));
+    assert!(b == DummyRSA::elem_of(782_144_413_693_680));
   }
 
   #[test]
   fn test_inv() {
-    let r = DummyRSA::inv(&DummyRSAElem::of(2));
-    assert!(r == DummyRSAElem::of(1_397_356_226_306_899));
-    let r = DummyRSA::inv(&DummyRSAElem::of(32_416_188_490));
-    assert!(r == DummyRSAElem::of(173_039_603_491_119));
+    let r = DummyRSA::inv(&DummyRSA::elem_of(2));
+    assert!(r == DummyRSA::elem_of(1_397_356_226_306_899));
+    let r = DummyRSA::inv(&DummyRSA::elem_of(32_416_188_490));
+    assert!(r == DummyRSA::elem_of(173_039_603_491_119));
   }
 }
