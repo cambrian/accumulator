@@ -23,6 +23,8 @@ pub struct DummyRSAElem {
 }
 
 impl DummyRSAElem {
+  // REVIEW: replace DummyRSAElem::of with DummyRSA::elem_of (or other suitable name)
+  // reason being that accessing the global group instance outside of Group::get() is bad style.
   pub fn of(val_unbounded: u64) -> DummyRSAElem {
     let val = val_unbounded % DUMMY_RSA.modulus;
     if val > DUMMY_RSA.modulus / 2 {
@@ -37,6 +39,8 @@ impl DummyRSAElem {
   }
 }
 
+// REVIEW: also make x, n-x equal
+// or replace this with #[deriving (PartialEq, Eq)]
 impl PartialEq for DummyRSAElem {
   fn eq(&self, other: &DummyRSAElem) -> bool {
     self.val == other.val

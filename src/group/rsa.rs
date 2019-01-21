@@ -57,6 +57,8 @@ impl Group for Modulus<RSA2048> {
   fn op_(&self, RSA2048Elem(a): &RSA2048Elem, RSA2048Elem(b): &RSA2048Elem) -> RSA2048Elem {
     RSA2048Elem(elem_mul(&a, b.clone(), &self))
   }
+  /// Constant-time exponentiation, via montgomery-multiplication
+  /// Can we avoid needing to re-encode the result?
   fn exp(RSA2048Elem(a): &RSA2048Elem, n: &BigUint) -> RSA2048Elem {
     let exponent = PrivateExponent::from_be_bytes_padded(Input::from(n.to_bytes_be().as_slice()), Self::get()).unwrap();
     let unencoded = elem_exp_consttime(a.clone(), &exponent, Self::get()).unwrap();
@@ -64,6 +66,7 @@ impl Group for Modulus<RSA2048> {
   }
 }
 
+/// Performs Montgomery encoding via multiplication with a doubly-encoded 1.
 fn encode(a: RingElem<RSA2048, Unencoded>) -> RingElem<RSA2048, R> {
   elem_mul(Modulus::<RSA2048>::get().oneRR().as_ref(), a, Modulus::<RSA2048>::get())
 }
