@@ -56,8 +56,10 @@ lazy_static! {
 struct RSA2048Elem(RingElem<M, R>);
 
 impl Serialize for RSA2048Elem {
-  /// TODO: the copying involved in fill_be_bytes is not strictly necessary
-  /// In fact the copying involded in serialize isn't strictly necessary either...
+  /// TODO: If we can read the limbs from the ring Elem directly, we should be able to avoid both
+  /// the clone and the allocation of a byte buffer. Since this fn is used in hashing it may be
+  /// worth the performance gains. Alternatively we can implement hashing without the indirection
+  /// of serialization. We should profile before making this decision.
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
     S: Serializer,
@@ -76,21 +78,22 @@ impl Group for RSA2048 {
   fn get() -> &'static Self {
     &RSA2048_
   }
+
   fn id_(&self) -> RSA2048Elem {
     RSA2048Elem(self.m.oneR_elem())
   }
-  // We multiply an unencoded 2 by a doubly-encoded 1 to get a singly-encoded 2. There is no other
-  // way (using only public functions from ring) to get singly-encoded values.
+
   fn base_elem_(&self) -> RSA2048Elem {
     let unencoded_2 =
       RingElem::from_be_bytes_padded(Input::from(&[2 as u8]), &Self::get().m).unwrap();
     encode(unencoded_2)
   }
+
   fn op_(&self, RSA2048Elem(a): &RSA2048Elem, RSA2048Elem(b): &RSA2048Elem) -> RSA2048Elem {
     RSA2048Elem(elem_mul(&a, b.clone(), &self.m))
   }
+
   /// Constant-time exponentiation, via montgomery-multiplication
-  /// Can we avoid needing to re-encode the result?
   fn exp(RSA2048Elem(a): &RSA2048Elem, n: &BigUint) -> RSA2048Elem {
     let exponent = PrivateExponent::from_be_bytes_padded(
       Input::from(n.to_bytes_be().as_slice()),
@@ -126,7 +129,9 @@ fn elem_from_biguint(a: &BigUint) -> RSA2048Elem {
   encode(unencoded)
 }
 
-/// Performs Montgomery encoding via multiplication with a doubly-encoded 1.
+/// Performs Montgomery encoding via multiplication with a doubly-encoded 1. This is often necessary
+/// because ring will give results in whatever encoding type is most convenient. For unencoded
+/// values we have to encode the result explicitly.
 fn encode(a: RingElem<M, Unencoded>) -> RSA2048Elem {
   RSA2048Elem(elem_mul(
     RSA2048::get().m.oneRR().as_ref(),
