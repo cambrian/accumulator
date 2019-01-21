@@ -56,8 +56,6 @@ impl Group for DummyRSA {
   }
 }
 
-/// Trait for groups that support efficient inverse calculations.
-/// NOT used to mean a cyclic group (where every element has an inverse).
 impl InvertibleGroup for DummyRSA {
   fn inv_(&self, x: &DummyRSAElem) -> DummyRSAElem {
     let x_big = BigUint::from(x.val);
