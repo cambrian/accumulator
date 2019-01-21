@@ -54,7 +54,8 @@ pub trait Group: Sized + 'static {
   }
 
   // -------------------
-  // End of required fns
+  // END OF REQUIRED FNS
+  // -------------------
 
   fn id() -> Self::Elem {
     Self::id_(Self::get())
@@ -79,7 +80,8 @@ pub trait InvertibleGroup: Group {
   fn inv_(&self, a: &Self::Elem) -> Self::Elem;
 
   // -------------------
-  // End of required fns
+  // END OF REQUIRED FNS
+  // -------------------
 
   fn inv(a: &Self::Elem) -> Self::Elem {
     Self::inv_(Self::get(), a)
