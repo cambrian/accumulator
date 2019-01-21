@@ -14,6 +14,12 @@ pub struct PoKE2<T> {
   r: BigUint,
 }
 
+// impl PartialEq for PoKE2<DummyRSA> {
+//   fn eq(&self, other: &PoKE2<DummyRSA>) -> bool {
+//     true
+//   }
+// }
+
 /// See page 16 of B&B.
 pub fn prove_poke2<G: InvertibleGroup>(
   base: &G::Elem,
@@ -78,6 +84,11 @@ mod tests {
     let result = DummyRSA::elem_of(1_048_576);
     let proof = prove_poke2::<DummyRSA>(&base, &exp, &result);
     assert!(verify_poke2::<DummyRSA>(&base, &result, &proof));
+    // assert!(proof.eq(PoKE2 {
+    //   z: DummyRSA::elem_of(1048576),
+    //   Q: DummyRSA::elem_of(130463359518971),
+    //   r: BigUint::from(7 as u8)
+    // }));
 
     // 2^35 = 34359738368
     let exp_2 = BigInt::from(35 as u8);

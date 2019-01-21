@@ -39,13 +39,13 @@ pub fn verify_pokcr<G: Group + ConvertBytes>(
 
 #[cfg(test)]
 mod tests {
-  use super::super::super::group::dummy::{DummyRSA, DummyRSAElem};
+  use super::super::super::group::dummy::DummyRSA;
   use super::*;
 
   #[test]
   fn test_pokcr() {
-    let alpha_1 = DummyRSAElem::of(4);
-    let alpha_2 = DummyRSAElem::of(9);
+    let alpha_1 = DummyRSA::elem_of(4);
+    let alpha_2 = DummyRSA::elem_of(9);
     let x_1 = BigInt::from(2 as u8);
     let x_2 = BigInt::from(2 as u8);
     let w_1 = BigInt::from(2 as u8);
