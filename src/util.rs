@@ -27,15 +27,7 @@ pub fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
   (old_s, old_t, old_r)
 }
 
-// pub fn mod_euc<S: Signed, U: Unsigned + Clone>(x: &S, m: &U) -> U
-// where
-//   S: From<U>,
-//   U: TryFrom<S>,
-// {
-//   let m_big = S::from(m.clone());
-//   U::from((*x % m_big + m_big) % m_big)
-// }
-
+/// A homebrew version of the future Rust function mod_euc.
 pub fn mod_euc_big<U: Unsigned + Clone>(x: &BigInt, m: &U) -> BigUint
 where
   BigInt: From<U>,
@@ -46,8 +38,31 @@ where
     .expect("positive BigInt expected")
 }
 
+#[allow(dead_code)]
+/// Not tested thoroughly; auditing/review welcome.
+pub fn multi_exp<G: Group>(n: u16, alphas: &[G::Elem], x: &[BigInt]) -> G::Elem {
+  if n == 1 {
+    return alphas[0].to_owned();
+  }
+  let n_half = n / 2;
+  let alpha_l = &alphas[..n_half as usize];
+  let alpha_r = &alphas[n_half as usize..];
+  let x_l = &x[..n_half as usize];
+  let x_r = &x[n_half as usize..];
+  let x_star_l = (x_l.iter().fold(BigInt::from(1 as u8), |a, b| a * b))
+    .to_biguint()
+    .unwrap();
+  let x_star_r = (x_r.iter().fold(BigInt::from(1 as u8), |a, b| a * b))
+    .to_biguint()
+    .unwrap();
+  let l = multi_exp::<G>(n_half, alpha_l, x_l);
+  let r = multi_exp::<G>(n - n_half, alpha_r, x_r);
+  G::op(&G::exp(&l, &x_star_r), &G::exp(&r, &x_star_l))
+}
+
 #[cfg(test)]
 mod tests {
+  use super::super::group::dummy::DummyRSA;
   use super::*;
   use num_traits::identities::One;
 
@@ -62,6 +77,28 @@ mod tests {
   }
 
   #[test]
+<<<<<<< HEAD
+=======
+  fn test_multi_exp() {
+    // TODO: Build more general testing framework.
+    let alpha_1 = DummyRSA::elem_of(2);
+    let alpha_2 = DummyRSA::elem_of(3);
+    let x_1 = BigInt::from(3 as u8);
+    let x_2 = BigInt::from(2 as u8);
+    let res = multi_exp::<DummyRSA>(
+      2,
+      &[alpha_1.clone(), alpha_2.clone()],
+      &[x_1.clone(), x_2.clone()],
+    );
+    assert!(res == DummyRSA::elem_of(108));
+    let alpha_3 = DummyRSA::elem_of(5);
+    let x_3 = BigInt::from(1 as u8);
+    let res_2 = multi_exp::<DummyRSA>(3, &[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
+    assert!(res_2 == DummyRSA::elem_of(1_687_500));
+  }
+
+  #[test]
+>>>>>>> a1cde47a173aab688c01465e10089ecf31562992
   fn test_mod_euc_big() {
     let r = mod_euc_big(&BigInt::from(-8), &(3 as u8));
     assert!(r == BigUint::one());

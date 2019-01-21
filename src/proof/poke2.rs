@@ -7,9 +7,10 @@ use num::BigUint;
 use num_bigint::Sign::Plus;
 use serde::ser::Serialize;
 
+#[allow(non_snake_case)]
 pub struct PoKE2<T> {
   z: T,
-  q: T,
+  Q: T,
   r: BigUint,
 }
 
@@ -27,19 +28,20 @@ pub fn prove_poke2<G: InvertibleGroup>(
   let r = util::mod_euc_big(exp, &l);
   PoKE2 {
     z,
-    q: G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q),
+    Q: G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q),
     r,
   }
 }
 
 /// See page 16 of B&B.
 pub fn verify_poke2<G: Group>(base: &G::Elem, result: &G::Elem, proof: &PoKE2<G::Elem>) -> bool {
-  let PoKE2 { z, q, r } = proof;
+  #[allow(non_snake_case)]
+  let PoKE2 { z, Q, r } = proof;
   let g = G::base_elem();
   let l = hash_prime(base, result, &z);
   let alpha = hash_inputs(base, result, &z, &l);
   let lhs = G::op(
-    &G::exp(q, &l),
+    &G::exp(Q, &l),
     &G::exp(&G::op(&base, &G::exp(&g, &alpha)), &r),
   );
   let rhs = G::op(result, &G::exp(&z, &alpha));
