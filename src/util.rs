@@ -28,15 +28,7 @@ pub fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
   (old_s, old_t, old_r)
 }
 
-// pub fn mod_euc<S: Signed, U: Unsigned + Clone>(x: &S, m: &U) -> U
-// where
-//   S: From<U>,
-//   U: TryFrom<S>,
-// {
-//   let m_big = S::from(m.clone());
-//   U::from((*x % m_big + m_big) % m_big)
-// }
-
+/// A homebrew version of the future Rust function mod_euc.
 pub fn mod_euc_big<U: Unsigned + Clone>(x: &BigInt, m: &U) -> BigUint
 where
   BigInt: From<U>,
@@ -87,7 +79,7 @@ mod tests {
 
   #[test]
   fn test_multi_exp() {
-    // TODO: Build more general testing framework
+    // TODO: Build more general testing framework.
     let alpha_1 = DummyRSA::elem_of(2);
     let alpha_2 = DummyRSA::elem_of(3);
     let x_1 = BigInt::from(3 as u8);

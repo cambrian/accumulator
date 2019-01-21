@@ -17,10 +17,10 @@ pub mod rsa;
 ///
 /// TODO: Would be nice to have this implement a trait to get dot-notation for group operations.
 pub trait Group: Sized + 'static {
-  /// In theory the associated type Elem should be bijective, such that each Elem type belongs
-  /// to exactly one group. This would allow us to write something like Elem::Group::get() which
-  /// would make infix group operations possible. But afaik bijective associated types are not
-  /// supported by Rust.
+  /// In theory the associated type Elem should be bijective, such that each Elem type belongs to
+  /// exactly one group. This would allow us to write something like Elem::Group::get() which would
+  /// make infix group operations possible. But afaik bijective associated types are not supported
+  /// by Rust.
   type Elem: Eq + Serialize + Clone + Sized;
   /// This function should return either a const or lazy_static group representation.
   /// This should be replaced by a const fn when they are added to Rust.
@@ -28,8 +28,8 @@ pub trait Group: Sized + 'static {
   fn op_(&'static self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
   fn id_(&'static self) -> Self::Elem;
   /// Returns an element with unknown order.
-  /// REVIEW: consider renaming Group such that it's clear that the group supports this fn.
-  /// REVIEW: consider changing to unknown_order_elem
+  /// REVIEW: Consider renaming Group such that it's clear that the group supports this fn.
+  /// REVIEW: Consider changing to unknown_order_elem (maybe small_unknown_order_elem).
   /// E.g. 2, for RSA groups.
   fn base_elem_(&'static self) -> Self::Elem;
 
