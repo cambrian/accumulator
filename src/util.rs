@@ -1,3 +1,4 @@
+use super::group::Group;
 use num::{BigInt, BigUint, Unsigned};
 use num_bigint::Sign::Plus;
 use num_traits::identities::Zero;
