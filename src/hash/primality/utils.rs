@@ -5,6 +5,17 @@ pub const SMALL_PRIMES: [u64; 50] = [
   197, 199, 211, 223, 227, 229,
 ];
 
+#[allow(dead_code)]
+pub const LARGE_PRIMES: [u64; 4] = [
+  553_525_575_239_331_913,
+  12_702_637_924_034_044_211,
+  378_373_571_372_703_133,
+  8_640_171_141_336_142_787,
+];
+
+#[allow(dead_code)]
+pub const EXTRA_STRONG_LUCAS_PSEUDOPRIMES: [u64; 4] = [989, 3239, 5777, 10877];
+
 pub const BAD_255: [bool; 512] = [
   false, false, true, true, false, true, true, true, true, false, true, true, true, true, true,
   false, false, true, true, false, true, false, true, true, true, false, true, true, true, true,
