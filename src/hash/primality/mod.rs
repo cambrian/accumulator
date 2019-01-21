@@ -18,7 +18,7 @@ macro_rules! bi {
   };
 }
 
-const MAX_JACOBI_ITERS: u64 = 1 >> 63;
+const MAX_JACOBI_ITERS: u64 = 500;
 
 // Baillie-PSW probabilistic primality test:
 // 1. Filter composites with small divisors.
@@ -36,6 +36,7 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
   if is_prob_square(n) {
     return false;
   } // FIX
+  let n = &BigInt::from_biguint(Sign::Plus, n.clone());
   match choose_d(n, MAX_JACOBI_ITERS) {
     Some(d) => passes_lucas(n, &d),
     None => false,
@@ -160,13 +161,13 @@ fn is_prob_square(n: &BigUint) -> bool {
 // Finds and returns first D in [5, -7, 9, ..., 5 + 2*max_iter] for which Jacobi symbol (D/n) = -1,
 // or None if no such D exists. In the case that n is square, there is no such D even with max_iter
 // infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a low value
-// to max_iter to avoid wasting too much time.
-fn choose_d(n: &BigUint, max_iter: u64) -> Option<BigInt> {
-  let n_signed = &BigInt::from_biguint(Sign::Plus, n.clone());
+// to max_iter to avoid wasting too much time. Note that the average number of iterations required
+// for nonsquare n is 1.8.
+fn choose_d(n: &BigInt, max_iter: u64) -> Option<BigInt> {
   let mut d = bi!(5);
 
   for _ in 0..max_iter {
-    if jacobi_symbol(&d, n_signed) == -1 {
+    if jacobi_symbol(&d, n) == -1 {
       return Some(d);
     }
     if d > bi!(0) {
@@ -220,10 +221,77 @@ fn jacobi_symbol(a: &BigInt, n: &BigInt) -> i64 {
 }
 
 #[allow(dead_code)]
-fn passes_lucas(_n: &BigUint, _d: &BigInt) -> bool {
-  // let p = 1;
-  // let q = (1 - d) / 4;
-  false
+// strong Lucas probable prime test (NOT the more common Lucas primality test which requires
+// factorization of n-1).
+fn passes_lucas(n: &BigInt, d: &BigInt) -> bool {
+  let p = bi!(1);
+  let q = (bi!(1) - d) / bi!(4);
+  let delta = n + &bi!(1);
+
+  let (u_delta, _v_delta) = compute_u_and_v_delta(&delta, n, &bi!(1), &p, &p, &q, d);
+  // u_delta % n != 0 proves n composite
+  u_delta == bi!(0)
+  // EXTEND TO STRONG TEST
+}
+
+fn compute_u_and_v_delta(
+  delta: &BigInt,
+  n: &BigInt,
+  u_1: &BigInt,
+  v_1: &BigInt,
+  p: &BigInt,
+  q: &BigInt,
+  d: &BigInt,
+) -> (BigInt, BigInt) {
+  let mut k = bi!(1);
+  // assume delta is even
+  let delta_bits = binary_rep(delta);
+  let mut u_k = u_1.clone();
+  let mut v_k = v_1.clone();
+  // Write binary expansion of delta_rem as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. x_1 is always
+  // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
+  // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
+  // we will have computed u_delta and v_delta in log(delta) time.
+  for bit in delta_bits.iter() {
+    u_k = u_k.clone() * v_k.clone() % n;
+    v_k = (v_k.clone() * v_k.clone() - bi!(2) * q.modpow(&k, n)) % n;
+    k *= bi!(2);
+    if *bit == 1 {
+      let pu_plus_v = p * u_k.clone() + v_k.clone();
+      let du_plus_pv = d * u_k.clone() + p * v_k.clone();
+      if &pu_plus_v % 2 == bi!(0) {
+        if &du_plus_pv % 2 == bi!(0) {
+          u_k = pu_plus_v / 2;
+          v_k = du_plus_pv / 2;
+        } else {
+          u_k = pu_plus_v / 2;
+          v_k = (du_plus_pv + n) / 2;
+        }
+      } else if &du_plus_pv % 2 == bi!(0) {
+        u_k = (pu_plus_v + n) / 2;
+        v_k = du_plus_pv / 2;
+      } else {
+        u_k = (pu_plus_v + n) / 2;
+        v_k = (du_plus_pv + n) / 2;
+      }
+      k += bi!(1);
+      u_k %= n;
+      v_k %= n;
+    }
+  }
+
+  unimplemented!()
+}
+
+fn binary_rep(n: &BigInt) -> Vec<u8> {
+  let mut bits_rev = Vec::new();
+  let mut n_rem = n.clone();
+  while n_rem > bi!(0) {
+    bits_rev.push((n_rem.clone() % 2 == bi!(1)) as u8);
+    n_rem /= 2;
+  }
+  bits_rev.reverse();
+  bits_rev
 }
 
 #[cfg(test)]
@@ -297,5 +365,11 @@ mod tests {
     assert_eq!(jacobi_symbol(&bi!(14), &bi!(17)), -1);
     assert_eq!(jacobi_symbol(&bi!(30), &bi!(59)), -1);
     assert_eq!(jacobi_symbol(&bi!(27), &bi!(57)), 0);
+  }
+
+  #[test]
+  fn test_binary_rep() {
+    assert_eq!(binary_rep(&bi!(1)), [1]);
+    assert_eq!(binary_rep(&bi!(44)), [1, 0, 1, 1, 0, 0]);
   }
 }
