@@ -103,8 +103,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
 }
 
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
-/// depend on G: Group, not G: InvertibleGroup
-pub fn verify_nonmembership<G: InvertibleGroup>(
+pub fn verify_nonmembership<G: Group>(
   acc: &G::Elem,
   elems: &[BigUint],
   d: &G::Elem,
@@ -147,17 +146,16 @@ fn shamir_trick<G: InvertibleGroup>(
 
 #[cfg(test)]
 mod tests {
-  // TODO: Clean up the cruft around using BigUints.
   use super::super::group::dummy::DummyRSA;
   use super::super::proof::poe;
   use super::*;
 
+  fn big(val: u64) -> BigUint {
+    BigUint::from(val)
+  }
+
   fn init_acc_set() -> (BigUint, BigUint, BigUint) {
-    (
-      BigUint::from(41 as u8),
-      BigUint::from(67 as u8),
-      BigUint::from(89 as u8),
-    )
+    (big(41), big(67), big(89))
   }
 
   fn init_acc<G: Group>() -> G::Elem {
@@ -167,11 +165,7 @@ mod tests {
 
   #[test]
   fn test_shamir_trick() {
-    let (x, y, z) = (
-      BigUint::from(13 as u8),
-      BigUint::from(17 as u8),
-      BigUint::from(19 as u8),
-    );
+    let (x, y, z) = (big(13), big(17), big(19));
     let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[y.clone(), z.clone()]));
     let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[x.clone(), z.clone()]));
     let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), &z.clone());
@@ -181,12 +175,8 @@ mod tests {
   /// TODO: Fix me.
   #[test]
   fn test_add() {
-    let (x, y, z) = (
-      BigUint::from(5 as u8),
-      BigUint::from(7 as u8),
-      BigUint::from(11 as u8),
-    );
     let acc = init_acc::<DummyRSA>();
+    let (x, y, z) = (big(5), big(7), big(11));
     let exp = product(&[x.clone(), y.clone(), z.clone()]);
     let (new_acc, poe) = add::<DummyRSA>(&acc, &[x.clone(), y.clone(), z.clone()]);
     assert!(poe::verify_poe::<DummyRSA>(&acc, &exp, &new_acc, &poe));

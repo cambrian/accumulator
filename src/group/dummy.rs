@@ -23,7 +23,8 @@ pub struct DummyRSAElem {
 }
 
 impl DummyRSAElem {
-  pub fn of(val: u64) -> DummyRSAElem {
+  pub fn of(val_unbounded: u64) -> DummyRSAElem {
+    let val = val_unbounded % DUMMY_RSA.modulus;
     if val > DUMMY_RSA.modulus / 2 {
       DummyRSAElem {
         val: util::mod_euc_big(&-BigInt::from(val), &DUMMY_RSA.modulus)
@@ -50,6 +51,7 @@ impl Group for DummyRSA {
     &DUMMY_RSA
   }
   fn op_(&self, a_elem: &DummyRSAElem, b_elem: &DummyRSAElem) -> DummyRSAElem {
+    // Note: This is a pretty naive implementation of op.
     let (a, b) = (a_elem.val, b_elem.val);
     let op_result = ((u128::from(a) * u128::from(b)) % u128::from(self.modulus)) as u64;
     DummyRSAElem::of(op_result)
