@@ -2,6 +2,7 @@
 //! Use this group for testing while we figure out ring integration.
 
 use super::super::util;
+use super::super::util::ConvertBytes;
 use super::{Group, InvertibleGroup};
 use num::{BigInt, BigUint};
 use num_traits::cast::ToPrimitive;
@@ -81,6 +82,16 @@ impl InvertibleGroup for DummyRSA {
         .to_u64()
         .expect("u64-sized BigInt expected"),
     )
+  }
+}
+
+impl ConvertBytes for DummyRSA {
+  fn to_le_bytes(x: &DummyRSAElem) -> Vec<u8> {
+    x.val.to_le_bytes().to_vec()
+  }
+
+  fn to_be_bytes(x: &DummyRSAElem) -> Vec<u8> {
+    x.val.to_be_bytes().to_vec()
   }
 }
 
