@@ -8,8 +8,8 @@
 //!    constant factor. op is unaffected.
 //!
 //! 2. When extracting ring elements to bytes or big[u]ints, we always perform a copy. Since hashing
-//!    depends on accessing the element bytes, this should have a significant performance impact.
-//!    We should profile before deciding how to improve this, but regardless of the solution this
+//!    depends on accessing the element bytes, this should have a significant performance penalty.
+//!    We should profile before deciding how to improve this, but regardless of solution choice this
 //!    needs to be fixed before release.
 use super::super::util;
 use super::{Group, InvertibleGroup};
