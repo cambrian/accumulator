@@ -44,8 +44,8 @@ pub trait Group: Sized + 'static {
   fn op(a: &Self::Elem, b: &Self::Elem) -> Self::Elem {
     Self::op_(Self::get(), a, b)
   }
-  /// Repeated squaring algorithm. Implementations may override this (e.g. Montgomery multiplication
-  /// for RSA groups) for performance reasons.
+  /// Exponentiation via repeated squaring. Implementations may override this
+  /// (e.g. Montgomery multiplication for RSA groups) for performance reasons.
   fn exp(a: &Self::Elem, n: &BigUint) -> Self::Elem {
     if *n == BigUint::zero() {
       Self::id()

@@ -24,11 +24,10 @@ pub struct DummyRSAElem {
 
 impl DummyRSA {
   pub fn elem_of(val_unbounded: u64) -> DummyRSAElem {
-    let self_ = Self::get();
-    let val = val_unbounded % self_.modulus;
+    let val = val_unbounded % Self::get().modulus;
     if val > DUMMY_RSA.modulus / 2 {
       DummyRSAElem {
-        val: util::mod_euc_big(&-BigInt::from(val), &self_.modulus)
+        val: util::mod_euc_big(&-BigInt::from(val), &Self::get().modulus)
           .to_u64()
           .expect("positive BigInt expected"),
       }
