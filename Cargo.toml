@@ -5,6 +5,7 @@ edition = "2018"
 authors = [
   "Pablo Aldape <pablo@vest.com>",
   "Lucas Ege <lucas@vest.com>",
+  "Noah Golub <noah@vest.com>",
   "Sanjay Kannan <sanjay@vest.com>",
   "Eddie Wang <eddie@vest.com>"
 ]
@@ -15,13 +16,14 @@ repository = "https://github.com/1protocol/crypto"
 
 [dependencies]
 blake2-rfc = "0.2.18"
+byteorder = "1.2.7"
+lazy_static = "1.2.0"
 num = "0.2.0"
 num-bigint = "0.2"
 num-traits = "0.2"
 ring = { git = "https://github.com/1protocol/ring" }
 sha2 = "0.8.0"
-byteorder = "1.2.7"
 serde = "1.0.84"
 serde_derive = "1.0.84"
 serde_json = "1.0.36"
-lazy_static = "1.2.0"
+untrusted = "0.6.2"

@@ -75,7 +75,7 @@ mod tests {
   use num_traits::identities::One;
 
   #[test]
-  fn test_bezout_simple() {
+  fn test_bezout() {
     let x = BigUint::from(7 as u16);
     let y = BigUint::from(165 as u16);
     let (a, b, gcd) = bezout(&x, &y);
@@ -86,7 +86,7 @@ mod tests {
 
   #[test]
   fn test_multi_exp() {
-    // Build more general testing framework
+    // TODO: Build more general testing framework
     let alpha_1 = DummyRSAElem::of(2);
     let alpha_2 = DummyRSAElem::of(3);
     let x_1 = BigInt::from(3 as u8);
@@ -101,5 +101,11 @@ mod tests {
     let x_3 = BigInt::from(1 as u8);
     let res_2 = multi_exp::<DummyRSA>(3, &[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
     assert!(res_2 == DummyRSAElem::of(1_687_500));
+  }
+
+  #[test]
+  fn test_mod_euc_big() {
+    let r = mod_euc_big(&BigInt::from(-8), &(3 as u8));
+    assert!(r == BigUint::one());
   }
 }

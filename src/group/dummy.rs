@@ -23,7 +23,10 @@ pub struct DummyRSAElem {
 }
 
 impl DummyRSAElem {
-  pub fn of(val: u64) -> DummyRSAElem {
+  // REVIEW: replace DummyRSAElem::of with DummyRSA::elem_of (or other suitable name)
+  // reason being that accessing the global group instance outside of Group::get() is bad style.
+  pub fn of(val_unbounded: u64) -> DummyRSAElem {
+    let val = val_unbounded % DUMMY_RSA.modulus;
     if val > DUMMY_RSA.modulus / 2 {
       DummyRSAElem {
         val: util::mod_euc_big(&-BigInt::from(val), &DUMMY_RSA.modulus)
@@ -36,6 +39,8 @@ impl DummyRSAElem {
   }
 }
 
+// REVIEW: also make x, n-x equal
+// or replace this with #[deriving (PartialEq, Eq)]
 impl PartialEq for DummyRSAElem {
   fn eq(&self, other: &DummyRSAElem) -> bool {
     self.val == other.val
@@ -45,12 +50,12 @@ impl PartialEq for DummyRSAElem {
 impl Eq for DummyRSAElem {}
 
 impl Group for DummyRSA {
-  /// TODO: The impl of Eq on Elem should be overridden such that x = -x (mod N).
   type Elem = DummyRSAElem;
-  fn get() -> Self {
-    DUMMY_RSA
+  fn get() -> &'static Self {
+    &DUMMY_RSA
   }
   fn op_(&self, a_elem: &DummyRSAElem, b_elem: &DummyRSAElem) -> DummyRSAElem {
+    // Note: This is a pretty naive implementation of op.
     let (a, b) = (a_elem.val, b_elem.val);
     let op_result = ((u128::from(a) * u128::from(b)) % u128::from(self.modulus)) as u64;
     DummyRSAElem::of(op_result)
@@ -68,11 +73,11 @@ impl Group for DummyRSA {
 impl InvertibleGroup for DummyRSA {
   fn inv_(&self, x: &DummyRSAElem) -> DummyRSAElem {
     let x_big = BigUint::from(x.val);
-    let mod_big = BigUint::from(DUMMY_RSA.modulus);
+    let mod_big = BigUint::from(self.modulus);
     let (a, _, gcd) = util::bezout(&x_big, &mod_big);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
     DummyRSAElem::of(
-      util::mod_euc_big(&a, &DUMMY_RSA.modulus)
+      util::mod_euc_big(&a, &self.modulus)
         .to_u64()
         .expect("u64-sized BigInt expected"),
     )

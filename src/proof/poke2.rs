@@ -47,7 +47,7 @@ pub fn verify_poke2<G: Group>(base: &G::Elem, result: &G::Elem, proof: &PoKE2<G:
 }
 
 fn hash_prime<G: Serialize>(_u: &G, _w: &G, _z: &G) -> BigUint {
-  // TODO: replace with commented out when hash_prime is implemented
+  // TODO: Replace with commented out when hash_prime is implemented.
   BigUint::from(13 as u8)
   // let mut hash_string = serde_json::to_string(&u).unwrap();
   // hash_string.push_str(&serde_json::to_string(&w).unwrap());
@@ -72,8 +72,7 @@ mod tests {
   #[test]
   fn test_poke2() {
     // 2^20 = 1048576
-    let dummy = DummyRSA::get();
-    let base = DummyRSA::base_elem_(&dummy);
+    let base = DummyRSA::base_elem();
     let exp = BigInt::from(20 as u8);
     let result = DummyRSAElem::of(1_048_576);
     let proof = prove_poke2::<DummyRSA>(&base, &exp, &result);
@@ -84,7 +83,7 @@ mod tests {
     let result_2 = DummyRSAElem::of(34_359_738_368);
     let proof_2 = prove_poke2::<DummyRSA>(&base, &exp_2, &result_2);
     assert!(verify_poke2::<DummyRSA>(&base, &result_2, &proof_2));
-    // Cannot verify wrong base/exp/result triple with wrong pair
+    // Cannot verify wrong base/exp/result triple with wrong pair.
     assert!(!verify_poke2::<DummyRSA>(&base, &result_2, &proof));
   }
 }

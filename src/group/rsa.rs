@@ -1,30 +1,76 @@
-// // use bigint::uint::U256;
-// // use alga::general::MultiplicativeGroup;
-// // use num::One;
-// // use std::ops::Mul;
-// use ring::rsa::bigint::Modulus;
-// use ring::arithmetic::montgomery::R;
+use super::{Group, InvertibleGroup};
+use num::BigInt;
+use num::BigUint;
+use ring::arithmetic::montgomery::{Unencoded, R};
+use ring::rsa::bigint::{elem_exp_consttime, elem_mul, Elem as RingElem, Modulus, PrivateExponent};
+use serde::ser::{Serialize, Serializer};
+use std::result::Result;
+use untrusted::Input;
 
-// const P: u64 = 226_022_213;
-// const Q: u64 = 12_364_769;
+#[derive(PartialEq, Eq)]
+enum RSA2048 {}
 
-// enum RSA2048;
+lazy_static! {
+  static ref RSA_2048: Modulus<RSA2048> = {
+    // TODO
+    unimplemented!()
+  };
+}
 
-// impl Group for Modulus<RSA2048> {
+/// We restrict our group to singly-montgomery-encoded values, to have proper closure.
+/// As a result, it's a pain to do some of the operations (see Group impl). We may want to
+/// make more substantial changes to our Ring fork to alleviate this.
+#[derive(PartialEq, Eq, Clone)]
+struct RSA2048Elem(RingElem<RSA2048, R>);
 
-// }
+impl Serialize for RSA2048Elem {
+  /// TODO: the copying involved in fill_be_bytes is not strictly necessary
+  /// In fact the copying involded in serialize isn't strictly necessary either...
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: Serializer,
+  {
+    let RSA2048Elem(e) = self.clone();
+    let mut bytes = [0; 256]; // 256 bytes, or 2048 bits
+    e.into_unencoded(Modulus::<RSA2048>::get())
+      .fill_be_bytes(&mut bytes);
+    serializer.serialize_bytes(&bytes)
+  }
+}
 
-// // TODO: use ring here
+impl Group for Modulus<RSA2048> {
+  type Elem = RSA2048Elem;
+  fn get() -> &'static Self {
+    &RSA_2048
+  }
+  fn id_(&self) -> RSA2048Elem {
+    RSA2048Elem(self.oneR_elem())
+  }
+  // We multiply an unencoded 2 by a doubly-encoded 1 to get a singly-encoded 2. There is no other
+  // way (using only public functions from ring) to get singly-encoded values.
+  fn base_elem_(&self) -> RSA2048Elem {
+    let unencoded_2 = RingElem::from_be_bytes_padded(Input::from(&[2 as u8]), Self::get()).unwrap();
+    RSA2048Elem(encode(unencoded_2))
+  }
+  fn op_(&self, RSA2048Elem(a): &RSA2048Elem, RSA2048Elem(b): &RSA2048Elem) -> RSA2048Elem {
+    RSA2048Elem(elem_mul(&a, b.clone(), &self))
+  }
+  /// Constant-time exponentiation, via montgomery-multiplication
+  /// Can we avoid needing to re-encode the result?
+  fn exp(RSA2048Elem(a): &RSA2048Elem, n: &BigUint) -> RSA2048Elem {
+    let exponent =
+      PrivateExponent::from_be_bytes_padded(Input::from(n.to_bytes_be().as_slice()), Self::get())
+        .unwrap();
+    let unencoded = elem_exp_consttime(a.clone(), &exponent, Self::get()).unwrap();
+    RSA2048Elem(encode(unencoded))
+  }
+}
 
-// // struct RSA<T>( T); // represents RSA group elements of type T. Hard-coded modulus for now.
-
-// // impl Mul for RSA<u128> {
-// //   fn mul(self, rhs: RSA<u128>) -> RSA<u128> { RSA::<u128>(self * rhs) }
-// // }
-
-// // impl<T> One for RSA<T> where T: One, RSA<T>: Mul {
-// //   fn one() -> RSA<T> { RSA::<T>(T::one()) }
-// // }
-
-// // impl MultiplicativeGroup for RSA<u128> {
-// // }
+/// Performs Montgomery encoding via multiplication with a doubly-encoded 1.
+fn encode(a: RingElem<RSA2048, Unencoded>) -> RingElem<RSA2048, R> {
+  elem_mul(
+    Modulus::<RSA2048>::get().oneRR().as_ref(),
+    a,
+    Modulus::<RSA2048>::get(),
+  )
+}
