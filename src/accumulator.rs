@@ -155,13 +155,14 @@ mod tests {
     BigUint::from(val)
   }
 
-  fn init_acc_set() -> (BigUint, BigUint, BigUint) {
-    (big(41), big(67), big(89))
+  fn init_acc<G: Group>() -> G::Elem {
+    G::exp(&setup::<G>(), &product(&[&big(41), &big(67), &big(89)]))
   }
 
-  fn init_acc<G: Group>() -> G::Elem {
-    let (x, y, z) = init_acc_set();
-    G::exp(&setup::<G>(), &product(&[&x, &y, &z]))
+  #[test]
+  fn test_product() {
+    let elems = [&big(2), &big(3), &big(4), &big(5), &big(6), &big(7)];
+    assert!(product(&elems) == big(5040));
   }
 
   #[test]
@@ -174,17 +175,47 @@ mod tests {
   }
 
   #[test]
+  fn test_shamir_trick_failure() {
+    let (x, y, z) = (&big(7), &big(14), &big(19)); // Inputs not co-prime.
+    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[y, z]));
+    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[x, z]));
+    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
+  }
+
+  #[test]
   fn test_add() {
     let acc = init_acc::<DummyRSA>();
     let new_elems = [&big(5), &big(7), &big(11)];
     let (new_acc, poe) = add::<DummyRSA>(&acc, &new_elems);
     let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(94_125_955));
     assert!(new_acc == expected_acc);
+    assert!(poe::verify_poe::<DummyRSA>(&acc, &big(385), &new_acc, &poe));
+  }
+
+  #[test]
+  fn test_delete() {
+    let acc = init_acc::<DummyRSA>();
+    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(3649));
+    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(2747));
+    let (new_acc, poe) =
+      delete::<DummyRSA>(&acc, &[(&big(67), &y_witness), (&big(89), &z_witness)])
+        .expect("valid delete expected");
+    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(41));
+    assert!(new_acc == expected_acc);
     assert!(poe::verify_poe::<DummyRSA>(
+      &new_acc,
+      &big(5963),
       &acc,
-      &big(385),
-      &expected_acc,
       &poe
     ));
+  }
+
+  #[should_panic(expected = "BadWitness")]
+  #[test]
+  fn test_delete_bad_witness() {
+    let acc = init_acc::<DummyRSA>();
+    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(3648));
+    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(2746));
+    delete::<DummyRSA>(&acc, &[(&big(67), &y_witness), (&big(89), &z_witness)]).unwrap();
   }
 }
