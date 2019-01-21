@@ -30,12 +30,15 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
   if has_small_prime_factor(n) {
     return false;
   }
+  println!("no small prime factors...");
   if !passes_miller_rabin_base_2(n) {
     return false;
   }
+  println!("passes Miller-Rabin base 2...");
   if is_prob_square(n) {
     return false;
-  } // FIX
+  }
+  println!("probably not a square...");
   let n = &BigInt::from_biguint(Sign::Plus, n.clone());
   match choose_d(n, MAX_JACOBI_ITERS) {
     Some(d) => passes_lucas(n, &d),
@@ -47,7 +50,7 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
 fn has_small_prime_factor(n: &BigUint) -> bool {
   for &divisor in utils::SMALL_PRIMES.iter() {
     let divisor = &bu!(divisor);
-    if divisor > n {
+    if divisor == n {
       break;
     }
     if n % divisor == bu!(0) {
@@ -228,6 +231,8 @@ fn passes_lucas(n: &BigInt, d: &BigInt) -> bool {
   let q = (bi!(1) - d) / bi!(4);
   let delta = n + &bi!(1);
 
+  println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
+
   let (u_delta, _v_delta) = compute_u_and_v_delta(&delta, n, &bi!(1), &p, &p, &q, d);
   // u_delta % n != 0 proves n composite
   u_delta == bi!(0)
@@ -252,11 +257,11 @@ fn compute_u_and_v_delta(
   // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
   // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
   // we will have computed u_delta and v_delta in log(delta) time.
-  for bit in delta_bits.iter() {
-    u_k = u_k.clone() * v_k.clone() % n;
-    v_k = (v_k.clone() * v_k.clone() - bi!(2) * q.modpow(&k, n)) % n;
+  for &bit in delta_bits[1..].iter() {
+    u_k = (u_k.clone() * v_k.clone() % n + n) % n;
+    v_k = ((v_k.modpow(&bi!(2), n) - bi!(2) * q.modpow(&k, n)) % n + n) % n;
     k *= bi!(2);
-    if *bit == 1 {
+    if bit == 1 {
       let pu_plus_v = p * u_k.clone() + v_k.clone();
       let du_plus_pv = d * u_k.clone() + p * v_k.clone();
       if &pu_plus_v % 2 == bi!(0) {
@@ -275,12 +280,12 @@ fn compute_u_and_v_delta(
         v_k = (du_plus_pv + n) / 2;
       }
       k += bi!(1);
-      u_k %= n;
-      v_k %= n;
+      u_k = (u_k % n + n) % n;
+      v_k = (v_k % n + n) % n;
     }
+    println!("(u_{}, v_{}) = ({}, {})", k, k, u_k, v_k);
   }
-
-  unimplemented!()
+  (u_k, v_k)
 }
 
 fn binary_rep(n: &BigInt) -> Vec<u8> {
@@ -356,6 +361,10 @@ mod tests {
   fn test_miller_rabin() {
     assert!(passes_miller_rabin_base_2(&bu!(13u64)));
     assert!(!passes_miller_rabin_base_2(&bu!(65u64)));
+    for &p in utils::LARGE_PRIMES.iter() {
+      assert!(passes_miller_rabin_base_2(&bu!(p)));
+      assert!(!passes_miller_rabin_base_2(&(bu!(p) * bu!(7))));
+    }
   }
 
   #[test]
@@ -371,5 +380,33 @@ mod tests {
   fn test_binary_rep() {
     assert_eq!(binary_rep(&bi!(1)), [1]);
     assert_eq!(binary_rep(&bi!(44)), [1, 0, 1, 1, 0, 0]);
+  }
+
+  #[test]
+  fn test_lucas() {
+    // fair inputs are odd, nonsquare, and have no small prime factors
+    let n = bi!(7);
+    match choose_d(&n, MAX_JACOBI_ITERS) {
+      Some(d) => assert!(passes_lucas(&n, &d)),
+      None => assert!(false),
+    }
+    // for &p in utils::SMALL_PRIMES.iter() {
+    //   assert!(is_prob_prime(&bu!(p)));
+    // }
+    // for &p in utils::LARGE_PRIMES.iter() {
+    //   assert!(is_prob_prime(&bu!(p)));
+    // }
+  }
+
+  #[test]
+  fn test_is_prob_prime() {
+    assert!(is_prob_prime(&bu!(2)));
+    assert!(is_prob_prime(&bu!(5)));
+    for &p in utils::SMALL_PRIMES.iter() {
+      assert!(is_prob_prime(&bu!(p)));
+    }
+    // for &p in utils::LARGE_PRIMES.iter() {
+    //   assert!(is_prob_prime(&bu!(p)));
+    // }
   }
 }
