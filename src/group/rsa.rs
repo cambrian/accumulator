@@ -1,3 +1,15 @@
+//! Integration of Brian Smith's ring library into our group interface.
+//! There are a lot of rough edges to the interface boundary. Two things to note in particular:
+//!
+//! 1. We restrict our group to singly-encoded (via Montgomery encoding) values, whereas ring
+//!    will use other unencoded, inverse, or doubly-encoded values where they are more convenient.
+//!    The performance impact of this should be minor, as it only makes the functions exp, id, and
+//!    base_elem slower by a constant factor. op is unaffected.
+//!
+//! 2. When extracting ring elements to bytes or big[u]ints, we always perform a copy. Since hashing
+//!    depends on accessing the element bytes, this should have a significant performance impact.
+//!    We should profile before deciding how to improve this, but regardless of the solution this
+//!    needs to be fixed before release.
 use super::super::util;
 use super::{Group, InvertibleGroup};
 use core::clone::Clone;
