@@ -97,8 +97,7 @@ impl Group for RSA2048 {
   }
 
   fn base_elem_(&self) -> RSA2048Elem {
-    let unencoded_2 =
-      RingElem::from_be_bytes_padded(Input::from(&[2 as u8]), &Self::get().m).unwrap();
+    let unencoded_2 = RingElem::from_be_bytes_padded(Input::from(&[2 as u8]), &self.m).unwrap();
     encode(unencoded_2)
   }
 
@@ -107,13 +106,11 @@ impl Group for RSA2048 {
   }
 
   /// Constant-time exponentiation, via montgomery-multiplication
-  fn exp(RSA2048Elem(a): &RSA2048Elem, n: &BigUint) -> RSA2048Elem {
-    let exponent = PrivateExponent::from_be_bytes_padded(
-      Input::from(n.to_bytes_be().as_slice()),
-      &Self::get().m,
-    )
-    .unwrap();
-    let unencoded = elem_exp_consttime(a.clone(), &exponent, &Self::get().m).unwrap();
+  fn exp_(&self, RSA2048Elem(a): &RSA2048Elem, n: &BigUint) -> RSA2048Elem {
+    let exponent =
+      PrivateExponent::from_be_bytes_padded(Input::from(n.to_bytes_be().as_slice()), &self.m)
+        .unwrap();
+    let unencoded = elem_exp_consttime(a.clone(), &exponent, &self.m).unwrap();
     encode(unencoded)
   }
 }

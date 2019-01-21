@@ -24,9 +24,8 @@ pub trait Group: Sized + 'static {
   /// But afaik bijective associated types are not supported by Rust.
   type Elem: Eq + Serialize + Clone + Sized;
 
+  // TODO: possible to make private??
   fn get() -> &'static Self;
-
-  fn op_(&'static self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
 
   fn id_(&'static self) -> Self::Elem;
 
@@ -36,6 +35,23 @@ pub trait Group: Sized + 'static {
   /// REVIEW: Consider renaming to unknown_order_elem (maybe small_unknown_order_elem).
   /// E.g. 2, for RSA groups.
   fn base_elem_(&'static self) -> Self::Elem;
+
+  fn op_(&'static self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
+
+  /// Default implementation of exponentiation via repeated squaring.
+  /// Group implementations may provide more performant specializations
+  /// (e.g. Montgomery multiplication for RSA groups).
+  fn exp_(&'static self, a: &Self::Elem, n: &BigUint) -> Self::Elem {
+    if *n == BigUint::zero() {
+      Self::id()
+    } else if *n == BigUint::one() {
+      a.clone()
+    } else if n.is_odd() {
+      Self::op(a, &Self::exp_(&self, &Self::op(a, a), &(n >> 1)))
+    } else {
+      Self::exp_(&self, &Self::op(a, a), &(n >> 1))
+    }
+  }
 
   // -------------------
   // End of required fns
@@ -52,19 +68,8 @@ pub trait Group: Sized + 'static {
     Self::op_(Self::get(), a, b)
   }
 
-  /// Default implementation of exponentiation via repeated squaring.
-  /// Group implementations may provide more performant specializations
-  /// (e.g. Montgomery multiplication for RSA groups).
   fn exp(a: &Self::Elem, n: &BigUint) -> Self::Elem {
-    if *n == BigUint::zero() {
-      Self::id()
-    } else if *n == BigUint::one() {
-      a.clone()
-    } else if n.is_odd() {
-      Self::op(a, &Self::exp(&Self::op(a, a), &(n >> 1)))
-    } else {
-      Self::exp(&Self::op(a, a), &(n >> 1))
-    }
+    Self::exp_(Self::get(), a, n)
   }
 }
 
