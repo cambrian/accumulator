@@ -77,8 +77,6 @@ mod tests {
   }
 
   #[test]
-<<<<<<< HEAD
-=======
   fn test_multi_exp() {
     // TODO: Build more general testing framework.
     let alpha_1 = DummyRSA::elem_of(2);
@@ -98,7 +96,6 @@ mod tests {
   }
 
   #[test]
->>>>>>> a1cde47a173aab688c01465e10089ecf31562992
   fn test_mod_euc_big() {
     let r = mod_euc_big(&BigInt::from(-8), &(3 as u8));
     assert!(r == BigUint::one());
