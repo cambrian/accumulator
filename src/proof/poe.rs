@@ -3,8 +3,9 @@ use super::super::group::Group;
 use num::BigUint;
 use serde::ser::Serialize;
 
+#[allow(non_snake_case)]
 pub struct PoE<T> {
-  q: T,
+  Q: T,
 }
 
 /// See page 16 of B&B.
@@ -12,7 +13,7 @@ pub fn prove_poe<G: Group>(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> P
   let l = hash_prime(exp, base, result);
   let q = exp / l;
   PoE {
-    q: G::exp(&base, &q),
+    Q: G::exp(&base, &q),
   }
 }
 
@@ -26,7 +27,7 @@ pub fn verify_poe<G: Group>(
   let l = hash_prime(exp, base, result);
   let r = exp % l.clone();
   // w = Q^l * u^r
-  let w = G::op(&G::exp(&proof.q, &l), &G::exp(&base, &r));
+  let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
   w == *result
 }
 

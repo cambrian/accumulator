@@ -17,7 +17,7 @@ pub fn setup<G: Group>() -> G::Elem {
 }
 
 /// Adds `elems` to the accumulator `acc`.
-pub fn add<G: Group>(acc: &G::Elem, elems: &[BigUint]) -> (G::Elem, PoE<G::Elem>) {
+pub fn add<G: Group>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G::Elem>) {
   let x = product(elems);
   let new_acc = G::exp(acc, &x);
   let poe_proof = poe::prove_poe::<G>(acc, &x, &new_acc);
@@ -27,21 +27,22 @@ pub fn add<G: Group>(acc: &G::Elem, elems: &[BigUint]) -> (G::Elem, PoE<G::Elem>
 /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
 pub fn delete<G: InvertibleGroup>(
   acc: &G::Elem,
-  elem_witnesses: &[(BigUint, G::Elem)],
+  elem_witnesses: &[(&BigUint, &G::Elem)],
 ) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
   if elem_witnesses.is_empty() {
     let poe_proof = poe::prove_poe::<G>(acc, &BigUint::zero(), acc);
     return Ok((acc.clone(), poe_proof));
   }
 
-  let (mut elem_aggregate, mut acc_next) = elem_witnesses[0].clone();
+  let mut elem_aggregate = elem_witnesses[0].0.clone();
+  let mut acc_next = elem_witnesses[0].1.clone();
 
   for (elem, witness) in elem_witnesses
     .split_first() // Chop off first entry.
     .expect("unexpected witnesses")
     .1
   {
-    if &G::exp(&witness, elem) != acc {
+    if &G::exp(witness, elem) != acc {
       return Err(AccError::BadWitness);
     }
 
@@ -51,7 +52,7 @@ pub fn delete<G: InvertibleGroup>(
       None => return Err(AccError::InputsNotCoPrime),
     };
 
-    elem_aggregate *= elem;
+    elem_aggregate *= *elem;
   }
 
   let poe_proof = poe::prove_poe::<G>(&acc_next, &elem_aggregate, acc);
@@ -61,7 +62,7 @@ pub fn delete<G: InvertibleGroup>(
 /// See `delete`.
 pub fn prove_membership<G: InvertibleGroup>(
   acc: &G::Elem,
-  elem_witnesses: &[(BigUint, G::Elem)],
+  elem_witnesses: &[(&BigUint, &G::Elem)],
 ) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
   delete::<G>(acc, elem_witnesses)
 }
@@ -69,7 +70,7 @@ pub fn prove_membership<G: InvertibleGroup>(
 /// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
 pub fn verify_membership<G: Group>(
   witness: &G::Elem,
-  elems: &[BigUint],
+  elems: &[&BigUint],
   result: &G::Elem,
   proof: &PoE<G::Elem>,
 ) -> bool {
@@ -81,8 +82,8 @@ pub fn verify_membership<G: Group>(
 #[allow(clippy::type_complexity)]
 pub fn prove_nonmembership<G: InvertibleGroup>(
   acc: &G::Elem,
-  acc_set: &[BigUint],
-  elems: &[BigUint],
+  acc_set: &[&BigUint],
+  elems: &[&BigUint],
 ) -> Result<(G::Elem, G::Elem, G::Elem, PoKE2<G::Elem>, PoE<G::Elem>), AccError> {
   let x = product(elems);
   let s = product(acc_set);
@@ -94,7 +95,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
 
   let g = G::base_elem();
   let d = G::exp_signed(&g, &a);
-  let v = G::exp_signed(&acc, &b);
+  let v = G::exp_signed(acc, &b);
   let gv_inverse = G::op(&g, &G::inv(&v));
 
   let poke2_proof = poke2::prove_poke2::<G>(acc, &b, &v);
@@ -105,7 +106,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
 pub fn verify_nonmembership<G: Group>(
   acc: &G::Elem,
-  elems: &[BigUint],
+  elems: &[&BigUint],
   d: &G::Elem,
   v: &G::Elem,
   gv_inverse: &G::Elem,
@@ -117,8 +118,8 @@ pub fn verify_nonmembership<G: Group>(
     && poe::verify_poe::<G>(d, &x, gv_inverse, poe_proof)
 }
 
-fn product(elems: &[BigUint]) -> BigUint {
-  elems.iter().fold(num::one(), |a, b| a * b)
+fn product(elems: &[&BigUint]) -> BigUint {
+  elems.iter().fold(num::one(), |a, b| a * *b)
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
@@ -160,25 +161,30 @@ mod tests {
 
   fn init_acc<G: Group>() -> G::Elem {
     let (x, y, z) = init_acc_set();
-    G::exp(&setup::<G>(), &product(&[x, y, z]))
+    G::exp(&setup::<G>(), &product(&[&x, &y, &z]))
   }
 
   #[test]
   fn test_shamir_trick() {
-    let (x, y, z) = (big(13), big(17), big(19));
-    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[y.clone(), z.clone()]));
-    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[x.clone(), z.clone()]));
-    let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), &z.clone());
-    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, &x, &y) == Some(xyth_root));
+    let (x, y, z) = (&big(13), &big(17), &big(19));
+    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[y, z]));
+    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[x, z]));
+    let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), z);
+    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
 
-  /// TODO: Fix me.
   #[test]
   fn test_add() {
     let acc = init_acc::<DummyRSA>();
-    let (x, y, z) = (big(5), big(7), big(11));
-    let exp = product(&[x.clone(), y.clone(), z.clone()]);
-    let (new_acc, poe) = add::<DummyRSA>(&acc, &[x.clone(), y.clone(), z.clone()]);
-    assert!(poe::verify_poe::<DummyRSA>(&acc, &exp, &new_acc, &poe));
+    let new_elems = [&big(5), &big(7), &big(11)];
+    let (new_acc, poe) = add::<DummyRSA>(&acc, &new_elems);
+    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(94_125_955));
+    assert!(new_acc == expected_acc);
+    assert!(poe::verify_poe::<DummyRSA>(
+      &acc,
+      &big(385),
+      &expected_acc,
+      &poe
+    ));
   }
 }
