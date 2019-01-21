@@ -5,6 +5,7 @@ edition = "2018"
 authors = [
   "Pablo Aldape <pablo@vest.com>",
   "Lucas Ege <lucas@vest.com>",
+  "Noah Golub <noah@vest.com>",
   "Sanjay Kannan <sanjay@vest.com>",
   "Eddie Wang <eddie@vest.com>"
 ]
