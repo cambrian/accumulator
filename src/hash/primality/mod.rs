@@ -36,15 +36,15 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
   if has_small_prime_factor(n) {
     return false;
   }
-  //println!("no small prime factors...");
+  println!("no small prime factors...");
   if !passes_miller_rabin_base_2(n) {
     return false;
   }
-  //println!("passes Miller-Rabin base 2...");
-  if is_prob_square(n) {
-    return false;
-  }
-  //println!("probably not a square...");
+  println!("passes Miller-Rabin base 2...");
+  // if is_prob_square(n) {
+  //   return false;
+  // }
+  // println!("probably not a square...");
   let n = &BigInt::from_biguint(Sign::Plus, n.clone());
   match choose_d(n, MAX_JACOBI_ITERS) {
     Some(d) => passes_lucas(n, &d),
@@ -237,7 +237,7 @@ fn passes_lucas(n: &BigInt, d: &BigInt) -> bool {
   let q = (bi!(1) - d) / bi!(4);
   let delta = n + &bi!(1);
 
-  // println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
+  println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
 
   let (u_delta, _v_delta) = compute_u_and_v_k(&delta, n, &bi!(1), &p, &p, &q, d);
   // u_delta % n != 0 proves n composite
@@ -318,7 +318,7 @@ fn compute_u_and_v_k(
       q_k = mod_n(&(q_k.clone() * q.clone()));
       assert!(u_k >= bi!(0) && v_k >= bi!(0));
     }
-    // println!("(u, v)_{} = ({}, {})", k, u_k, v_k);
+    println!("(u, v)_{} = ({}, {})", k, u_k, v_k);
   }
   (u_k, v_k)
 }
@@ -475,5 +475,6 @@ mod tests {
   fn jkdsaflkaflds() {
     assert!(is_prob_prime(&bu!(48131)));
     assert!(is_prob_prime(&bu!(106957)));
+    assert!(is_prob_prime(&bu!(107881)));
   }
 }
