@@ -106,7 +106,7 @@ mod tests {
   }
 
   #[test]
-  fn test_poke2_negatives() {
+  fn test_poke2_failure() {
     let base = DummyRSA::elem_of(2);
     let exp = BigInt::from((-5) as i8);
     let result = DummyRSA::exp_signed(&base, &exp);

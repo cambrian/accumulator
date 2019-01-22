@@ -31,5 +31,6 @@ untrusted = "0.6.2"
 criterion = "0.2.8"
 
 [[bench]]
-name = "my_benchmark"
+name = "poe"
+path = "benches/proof/poe.rs"
 harness = false

@@ -1,5 +1,4 @@
-/// See https://bheisler.github.io/criterion.rs/book/getting_started.html
-/// To add more benchmarks
+/// See https://bheisler.github.io/criterion.rs/book/getting_started.html to add more benchmarks.
 #[macro_use]
 extern crate criterion;
 
