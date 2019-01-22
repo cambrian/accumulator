@@ -1,6 +1,6 @@
 use super::group::{Group, InvertibleGroup};
 use super::proof::{poe::PoE, poke2::PoKE2};
-use super::util{product, bezout, shamir_trick};
+use super::util::{product, bezout, shamir_trick};
 use num;
 use num::BigUint;
 use num_traits::identities::{One, Zero};

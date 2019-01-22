@@ -30,20 +30,6 @@ impl<G: Group> PoE<G> {
   }
 }
 
-/// See page 16 of B&B.
-pub fn verify_poe<G: Group>(
-  base: &G::Elem,
-  exp: &BigUint,
-  result: &G::Elem,
-  proof: &PoE<G>,
-) -> bool {
-  let l = hash_prime(exp, base, result);
-  let r = exp % l.clone();
-  // w = Q^l * u^r
-  let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
-  w == *result
-}
-
 fn hash_prime<G: Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
   let mut hash_string = exp.to_str_radix(16);
   hash_string.push_str(&serde_json::to_string(&base).unwrap());
