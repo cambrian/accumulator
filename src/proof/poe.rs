@@ -5,13 +5,20 @@ use num_integer::Integer;
 use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
-#[derive(PartialEq)]
-pub struct PoE<T> {
-  Q: T,
+pub struct PoE<G: Group> {
+  Q: G::Elem,
 }
 
+impl<G: Group> PartialEq for PoE<G> {
+  fn eq(&self, rhs: &Self) -> bool {
+    self.Q == rhs.Q
+  }
+}
+
+impl<G: Group> Eq for PoE<G> {}
+
 /// See page 16 of B&B.
-pub fn prove_poe<G: Group>(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G::Elem> {
+pub fn prove_poe<G: Group>(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G> {
   let l = hash_prime(exp, base, result);
   let q = exp.div_floor(&l);
   PoE {
@@ -24,7 +31,7 @@ pub fn verify_poe<G: Group>(
   base: &G::Elem,
   exp: &BigUint,
   result: &G::Elem,
-  proof: &PoE<G::Elem>,
+  proof: &PoE<G>,
 ) -> bool {
   let l = hash_prime(exp, base, result);
   let r = exp % l.clone();

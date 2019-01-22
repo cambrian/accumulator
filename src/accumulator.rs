@@ -17,7 +17,7 @@ pub fn setup<G: Group>() -> G::Elem {
 }
 
 /// Adds `elems` to the accumulator `acc`.
-pub fn add<G: Group>(acc: G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G::Elem>) {
+pub fn add<G: Group>(acc: G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
   let x = util::product(elems);
   let new_acc = G::exp(&acc, &x);
   let poe_proof = poe::prove_poe::<G>(&acc, &x, &new_acc);
@@ -28,7 +28,7 @@ pub fn add<G: Group>(acc: G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G::Elem>
 pub fn delete<G: InvertibleGroup>(
   acc: G::Elem,
   elem_witnesses: &[&(BigUint, G::Elem)],
-) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
+) -> Result<(G::Elem, PoE<G>), AccError> {
   // REVIEW: It should be possible to restructure the loop in such a way that this check is
   // unnecessary
   if elem_witnesses.is_empty() {
@@ -65,7 +65,7 @@ pub fn delete<G: InvertibleGroup>(
 pub fn prove_membership<G: InvertibleGroup>(
   acc: &G::Elem,
   elem_witnesses: &[&(BigUint, G::Elem)],
-) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
+) -> Result<(G::Elem, PoE<G>), AccError> {
   delete::<G>(acc.clone(), elem_witnesses)
 }
 
@@ -74,10 +74,18 @@ pub fn verify_membership<G: Group>(
   witness: &G::Elem,
   elems: &[&BigUint],
   result: &G::Elem,
-  proof: &PoE<G::Elem>,
+  proof: &PoE<G>,
 ) -> bool {
   let exp = util::product(elems);
   poe::verify_poe::<G>(witness, &exp, result, proof)
+}
+
+pub struct NonMembershipProof<G: Group> {
+  d: G::Elem,
+  v: G::Elem,
+  gv_inv: G::Elem,
+  poke2_proof: PoKE2<G::Elem>,
+  poe_proof: PoE<G>,
 }
 
 /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
@@ -86,7 +94,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
   acc: &G::Elem,
   acc_set: &[&BigUint],
   elems: &[&BigUint],
-) -> Result<(G::Elem, G::Elem, G::Elem, PoKE2<G::Elem>, PoE<G::Elem>), AccError> {
+) -> Result<NonMembershipProof<G>, AccError> {
   let x = util::product(elems);
   let s = util::product(acc_set);
   let (a, b, gcd) = util::bezout(&x, &s);
@@ -98,26 +106,33 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
   let g = G::base_elem();
   let d = G::exp_signed(&g, &a);
   let v = G::exp_signed(acc, &b);
-  let gv_inverse = G::op(&g, &G::inv(&v));
+  let gv_inv = G::op(&g, &G::inv(&v));
 
   let poke2_proof = poke2::prove_poke2::<G>(acc, &b, &v);
-  let poe_proof = poe::prove_poe::<G>(&d, &x, &gv_inverse);
-  Ok((d, v, gv_inverse, poke2_proof, poe_proof))
+  let poe_proof = poe::prove_poe::<G>(&d, &x, &gv_inv);
+  Ok(NonMembershipProof {
+    d,
+    v,
+    gv_inv,
+    poke2_proof,
+    poe_proof,
+  })
 }
 
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
 pub fn verify_nonmembership<G: Group>(
   acc: &G::Elem,
   elems: &[&BigUint],
-  d: &G::Elem,
-  v: &G::Elem,
-  gv_inverse: &G::Elem,
-  poke2_proof: &PoKE2<G::Elem>,
-  poe_proof: &PoE<G::Elem>,
+  NonMembershipProof {
+    d,
+    v,
+    gv_inv,
+    poke2_proof,
+    poe_proof,
+  }: &NonMembershipProof<G>,
 ) -> bool {
   let x = util::product(elems);
-  poke2::verify_poke2::<G>(acc, v, poke2_proof)
-    && poe::verify_poe::<G>(d, &x, gv_inverse, poe_proof)
+  poke2::verify_poke2::<G>(acc, v, poke2_proof) && poe::verify_poe::<G>(d, &x, gv_inv, poe_proof)
 }
 
 #[cfg(test)]
@@ -193,17 +208,9 @@ mod tests {
     let acc = init_acc::<DummyRSA>();
     let acc_set = [&big(41), &big(67), &big(89)];
     let elems = [&big(5), &big(7), &big(11)];
-    let (d, v, gv_inverse, poke2_proof, poe_proof) =
+    let proof =
       prove_nonmembership::<DummyRSA>(&acc, &acc_set, &elems).expect("valid proof expected");
-    assert!(verify_nonmembership::<DummyRSA>(
-      &acc,
-      &elems,
-      &d,
-      &v,
-      &gv_inverse,
-      &poke2_proof,
-      &poe_proof
-    ));
+    assert!(verify_nonmembership::<DummyRSA>(&acc, &elems, &proof));
   }
 
   #[should_panic(expected = "InputsNotCoPrime")]
