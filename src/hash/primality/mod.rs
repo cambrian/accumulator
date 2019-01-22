@@ -237,7 +237,7 @@ fn passes_lucas(n: &BigInt, d: &BigInt) -> bool {
   let q = (bi!(1) - d) / bi!(4);
   let delta = n + &bi!(1);
 
-  //println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
+  // println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
 
   let (u_delta, _v_delta) = compute_u_and_v_k(&delta, n, &bi!(1), &p, &p, &q, d);
   // u_delta % n != 0 proves n composite
@@ -262,6 +262,7 @@ fn compute_u_and_v_k(
   let k_bits = binary_rep(k);
   let mut u_k = u_1.clone();
   let mut v_k = v_1.clone();
+  let mut q_k = q.clone();
 
   let mod_n = |x: &BigInt| {
     if *x < bi!(0) {
@@ -287,7 +288,8 @@ fn compute_u_and_v_k(
   for &bit in k_bits[1..].iter() {
     // compute (u, v)_{2k} from (u, v)_k
     u_k = mod_n(&(u_k.clone() * v_k.clone()));
-    v_k = mod_n(&(v_k.modpow(&bi!(2), n) - bi!(2) * q.modpow(&k, n)));
+    v_k = mod_n(&(v_k.modpow(&bi!(2), n) - bi!(2) * &q_k));
+    q_k = mod_n(&(&q_k * &q_k));
     k *= bi!(2);
     if bit == 1 {
       // compute (u, v)_{2k+1} from (u, v)_{2k}
@@ -313,9 +315,10 @@ fn compute_u_and_v_k(
       // v_k = (v_k % n + n) % n;
       u_k = half(&pu_plus_v);
       v_k = half(&du_plus_pv);
+      q_k = mod_n(&(q_k.clone() * q.clone()));
       assert!(u_k >= bi!(0) && v_k >= bi!(0));
     }
-    //println!("(u, v)_{} = ({}, {})", k, u_k, v_k);
+    // println!("(u, v)_{} = ({}, {})", k, u_k, v_k);
   }
   (u_k, v_k)
 }
@@ -459,9 +462,9 @@ mod tests {
       let d = choose_d(&bi!(p), 500);
       if is_prob_prime(&bu!(p)) {
         tps += 1f64;
-        println!("{:?}: success", d);
+        // println!("{}: success", d.unwrap().to_str_radix(10));
       } else {
-        println!("{:?}", d);
+        println!("{}, {}", d.unwrap().to_str_radix(10), p);
       }
     }
     println!("Small prime true positive rate: {}", tps / 456f64);
@@ -471,5 +474,6 @@ mod tests {
   #[test]
   fn jkdsaflkaflds() {
     assert!(is_prob_prime(&bu!(48131)));
+    assert!(is_prob_prime(&bu!(106957)));
   }
 }
