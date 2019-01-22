@@ -23,11 +23,9 @@ impl<G: InvertibleGroup> PoKE2<G> {
     let alpha = hash_inputs(base, result, &z, &l);
     let q = exp.div_floor(&BigInt::from_biguint(Plus, l.clone()));
     let r = util::mod_euc_big(exp, &l);
-    PoKE2 {
-      z,
-      Q: G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q),
-      r,
-    }
+    #[allow(non_snake_case)]
+    let Q = G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q);
+    PoKE2 { z, Q, r }
   }
 }
 
