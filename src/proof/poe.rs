@@ -1,5 +1,5 @@
 use super::super::group::Group;
-// use super::super::hash::hashes;
+use super::super::hash::hashes;
 use num::BigUint;
 use num_integer::Integer;
 use serde::ser::Serialize;
@@ -30,13 +30,30 @@ impl<G: Group> PoE<G> {
   }
 }
 
+<<<<<<< HEAD
 fn hash_prime<G: Serialize>(_exp: &BigUint, _base: &G, _result: &G) -> BigUint {
+=======
+/// See page 16 of B&B.
+pub fn verify_poe<G: Group>(
+  base: &G::Elem,
+  exp: &BigUint,
+  result: &G::Elem,
+  proof: &PoE<G>,
+) -> bool {
+  let l = hash_prime(exp, base, result);
+  let r = exp % l.clone();
+  // w = Q^l * u^r
+  let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
+  w == *result
+}
+
+fn hash_prime<G: Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
+>>>>>>> Using hash prime function
   // TODO: Replace with commented out when hash_prime is implemented.
-  BigUint::from(13 as u8)
-  // let mut hash_string = exp.to_str_radix(16);
-  // hash_string.push_str(&serde_json::to_string(&base).unwrap());
-  // hash_string.push_str(&serde_json::to_string(&result).unwrap());
-  // hashes::h_prime(&hashes::blake2, hash_string.as_bytes())
+  let mut hash_string = exp.to_str_radix(16);
+  hash_string.push_str(&serde_json::to_string(&base).unwrap());
+  hash_string.push_str(&serde_json::to_string(&result).unwrap());
+  hashes::h_prime(&hashes::blake2, hash_string.as_bytes())
 }
 
 #[cfg(test)]
@@ -44,6 +61,8 @@ mod tests {
   use super::super::super::group::dummy::DummyRSA;
   use super::*;
 
+  // Current exponents are far smaller than generated primes, so all PoE proofs are producing
+  // Q = 1 proofs, which is pretty useless. This will be remedied when we implement RSA2048
   #[test]
   fn test_poe() {
     // 2^20 = 1048576
@@ -55,7 +74,7 @@ mod tests {
     assert!(
       proof
         == PoE {
-          Q: DummyRSA::elem_of(2)
+          Q: DummyRSA::elem_of(1)
         }
     );
 
@@ -67,10 +86,15 @@ mod tests {
     assert!(
       proof_2
         == PoE {
-          Q: DummyRSA::elem_of(4)
+          Q: DummyRSA::elem_of(1)
         }
     );
+<<<<<<< HEAD
     // Cannot verify wrong base/exp/result triple with wrong pair.
     assert!(!PoE::verify(&base, &exp_2, &result_2, &proof));
+=======
+    // // Cannot verify wrong base/exp/result triple with wrong pair.
+    // assert!(!verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof));
+>>>>>>> Using hash prime function
   }
 }
