@@ -9,14 +9,16 @@ use num_traits::identities::One;
 use std::u64;
 
 #[derive(PartialEq, Eq)]
-pub struct DummyRSA {
+pub enum DummyRSA {}
+
+pub struct DummyRSAModulus {
   modulus: u64,
 }
 
 const P: u64 = 226_022_213;
 const Q: u64 = 12_364_769;
 
-const DUMMY_RSA: DummyRSA = DummyRSA { modulus: P * Q };
+const DUMMY_RSA_MODULUS: DummyRSAModulus = DummyRSAModulus { modulus: P * Q };
 
 #[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct DummyRSAElem {
@@ -24,17 +26,19 @@ pub struct DummyRSAElem {
 }
 
 impl Singleton for DummyRSA {
-  fn get() -> &'static Self {
-    &DUMMY_RSA
+  type Rep = DummyRSAModulus;
+  fn rep() -> &'static DummyRSAModulus {
+    &DUMMY_RSA_MODULUS
   }
 }
 
 impl DummyRSA {
   pub fn elem_of(val_unbounded: u64) -> DummyRSAElem {
-    let val = val_unbounded % Self::get().modulus;
-    if val > DUMMY_RSA.modulus / 2 {
+    let n = Self::rep().modulus;
+    let val = val_unbounded % n;
+    if val > n / 2 {
       DummyRSAElem {
-        val: util::mod_euc_big(&-bi(val), &Self::get().modulus)
+        val: util::mod_euc_big(&-bi(val), &n)
           .to_u64()
           .expect("positive BigInt expected"),
       }
@@ -46,28 +50,32 @@ impl DummyRSA {
 
 impl Group for DummyRSA {
   type Elem = DummyRSAElem;
-  fn op_(&self, a_elem: &DummyRSAElem, b_elem: &DummyRSAElem) -> DummyRSAElem {
+  fn op_(
+    DummyRSAModulus { modulus }: &DummyRSAModulus,
+    a_elem: &DummyRSAElem,
+    b_elem: &DummyRSAElem,
+  ) -> DummyRSAElem {
     // Note: This is a pretty naive implementation of op.
     let (a, b) = (a_elem.val, b_elem.val);
-    let op_result = ((u128::from(a) * u128::from(b)) % u128::from(self.modulus)) as u64;
+    let op_result = ((u128::from(a) * u128::from(b)) % u128::from(*modulus)) as u64;
     DummyRSA::elem_of(op_result)
   }
-  fn id_(&self) -> DummyRSAElem {
+  fn id_(_: &DummyRSAModulus) -> DummyRSAElem {
     DummyRSA::elem_of(1)
   }
-  fn base_elem_(&self) -> DummyRSAElem {
+  fn base_elem_(_: &DummyRSAModulus) -> DummyRSAElem {
     DummyRSA::elem_of(2)
   }
 }
 
 impl InvertibleGroup for DummyRSA {
-  fn inv_(&self, x: &DummyRSAElem) -> DummyRSAElem {
+  fn inv_(DummyRSAModulus { modulus }: &DummyRSAModulus, x: &DummyRSAElem) -> DummyRSAElem {
     let x_big = bu(x.val);
-    let mod_big = bu(self.modulus);
+    let mod_big = bu(*modulus);
     let (a, _, gcd) = util::bezout(&x_big, &mod_big);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
     DummyRSA::elem_of(
-      util::mod_euc_big(&a, &self.modulus)
+      util::mod_euc_big(&a, modulus)
         .to_u64()
         .expect("u64-sized BigInt expected"),
     )

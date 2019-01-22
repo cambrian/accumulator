@@ -12,3 +12,4 @@ pub mod group;
 pub mod hash;
 pub mod proof;
 mod util;
+pub mod vector;
