@@ -5,6 +5,7 @@ use num_integer::Integer;
 use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
+#[derive(PartialEq)]
 pub struct PoE<T> {
   Q: T,
 }
@@ -54,12 +55,24 @@ mod tests {
     let result = DummyRSA::elem_of(1_048_576);
     let proof = prove_poe::<DummyRSA>(&base, &exp, &result);
     assert!(verify_poe::<DummyRSA>(&base, &exp, &result, &proof));
+    assert!(
+      proof
+        == PoE {
+          Q: DummyRSA::elem_of(2)
+        }
+    );
 
     // 2^35 = 34359738368
     let exp_2 = BigUint::from(35 as u8);
     let result_2 = DummyRSA::elem_of(34_359_738_368);
     let proof_2 = prove_poe::<DummyRSA>(&base, &exp_2, &result_2);
     assert!(verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof_2));
+    assert!(
+      proof_2
+        == PoE {
+          Q: DummyRSA::elem_of(4)
+        }
+    );
     // Cannot verify wrong base/exp/result triple with wrong pair.
     assert!(!verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof));
   }

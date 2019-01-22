@@ -7,17 +7,12 @@ use num_integer::Integer;
 use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
+#[derive(PartialEq)]
 pub struct PoKE2<T> {
   z: T,
   Q: T,
   r: BigUint,
 }
-
-// impl PartialEq for PoKE2<DummyRSA> {
-//   fn eq(&self, other: &PoKE2<DummyRSA>) -> bool {
-//     true
-//   }
-// }
 
 /// See page 16 of B&B.
 pub fn prove_poke2<G: InvertibleGroup>(
@@ -83,11 +78,15 @@ mod tests {
     let result = DummyRSA::elem_of(1_048_576);
     let proof = prove_poke2::<DummyRSA>(&base, &exp, &result);
     assert!(verify_poke2::<DummyRSA>(&base, &result, &proof));
-    // assert!(proof.eq(PoKE2 {
-    //   z: DummyRSA::elem_of(1048576),
-    //   Q: DummyRSA::elem_of(130463359518971),
-    //   r: BigUint::from(7 as u8)
-    // }));
+    // Must compare entire structs since elements z, Q, and r are private
+    assert!(
+      proof
+        == PoKE2 {
+          z: DummyRSA::elem_of(1048576),
+          Q: DummyRSA::elem_of(130463359518971),
+          r: BigUint::from(7 as u8)
+        }
+    );
 
     // 2^35 = 34359738368
     let exp_2 = BigInt::from(35 as u8);
@@ -96,5 +95,47 @@ mod tests {
     assert!(verify_poke2::<DummyRSA>(&base, &result_2, &proof_2));
     // Cannot verify wrong base/exp/result triple with wrong pair.
     assert!(!verify_poke2::<DummyRSA>(&base, &result_2, &proof));
+    assert!(
+      proof_2
+        == PoKE2 {
+          z: DummyRSA::elem_of(34_359_738_368),
+          Q: DummyRSA::elem_of(909_043_872_400_063),
+          r: BigUint::from(9 as u8)
+        }
+    );
+  }
+
+  #[test]
+  fn test_poke2_negatives() {
+    let base = DummyRSA::elem_of(2);
+    let exp = BigInt::from((-5) as i8);
+    let result = DummyRSA::exp_signed(&base, &exp);
+    let proof = prove_poke2::<DummyRSA>(&base, &exp, &result);
+    assert!(verify_poke2::<DummyRSA>(&base, &result, &proof));
+    assert!(
+      proof
+        == PoKE2 {
+          z: DummyRSA::elem_of(1_135_351_933_874_355),
+          Q: DummyRSA::elem_of(586_139_831_188_592),
+          r: BigUint::from(8 as u8)
+        }
+    );
+  }
+
+  #[test]
+  fn test_hash_inputs() {
+    let base = DummyRSA::elem_of(2);
+    let exp = BigInt::from(20 as u8);
+    let result = DummyRSA::elem_of(1_048_576);
+    let z = DummyRSA::exp_signed(&DummyRSA::base_elem(), &exp);
+    let l = hash_prime(&base, &result, &z);
+    let alpha = hash_inputs(&base, &result, &z, &l);
+    assert!(
+      alpha
+        == BigUint::new(vec![
+          3652804667, 2122523887, 324677495, 3968534693, 1956023477, 4290210450, 3126358525,
+          845356874
+        ])
+    );
   }
 }
