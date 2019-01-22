@@ -33,6 +33,7 @@ struct RSA2048 {
 }
 
 impl PartialEq for RSA2048 {
+  // correct because this is a singleton
   fn eq(&self, _rhs: &Self) -> bool {
     true
   }
@@ -213,10 +214,8 @@ mod tests {
 
   #[test]
   fn test_inv() {
-    unimplemented!();
-    // let r = RSA2048::inv(&elem_of(2));
-    // assert!(r == elem_of(1_397_356_226_306_899));
-    // let r = RSA2048::inv(&elem_of(32_416_188_490));
-    // assert!(r == elem_of(173_039_603_491_119));
+    let x = elem_of(2u32);
+    let inv = RSA2048::inv(&x);
+    assert!(RSA2048::op(&x, &inv) == RSA2048::id());
   }
 }
