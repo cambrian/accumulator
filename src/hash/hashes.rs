@@ -57,9 +57,8 @@ mod tests {
     assert_ne!(sha256(data, Some(&[1])), sha256(data, Some(&[2])));
   }
 
-  fn test_h_prime() {
-    let data = b"test";
-  }
+  #[test]
+  fn test_h_prime() {}
 
   // WIP: benchmarking blake2, sha256, and eventually *_prime
   // #[bench]

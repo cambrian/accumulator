@@ -231,47 +231,6 @@ fn binary_rep(n: &BigInt) -> Vec<u8> {
 mod tests {
   use super::*;
 
-  fn isqrt(n: usize) -> usize {
-    // n == 0 && return n;
-    let mut s = (n as f64).sqrt() as usize;
-    s = (s + n / s) >> 1;
-    if s * s > n {
-      s - 1
-    } else {
-      s
-    }
-  }
-
-  fn perfect_sqrt(n: usize) -> isize {
-    match n & 0xf {
-      0 | 1 | 4 | 9 => {
-        let t = isqrt(n);
-        if t * t == n {
-          t as isize
-        } else {
-          -1
-        }
-      }
-      _ => -1,
-    }
-  }
-  #[test]
-  fn test_is_square() {
-    let mut squares = vec![];
-    for i in 0..200 {
-      if perfect_sqrt(i) >= 0 {
-        squares.push(true);
-      } else {
-        squares.push(false);
-      }
-    }
-    for i in 0..squares.len() {
-      println!("{}", i);
-      let val = bu!(i);
-      assert!(is_prob_square(&val) == squares[i]);
-    }
-  }
-
   #[test]
   fn test_miller_rabin() {
     assert!(passes_miller_rabin_base_2(&bu!(13u64)));
@@ -295,30 +254,6 @@ mod tests {
   fn test_binary_rep() {
     assert_eq!(binary_rep(&bi!(1)), [1]);
     assert_eq!(binary_rep(&bi!(44)), [1, 0, 1, 1, 0, 0]);
-  }
-
-  #[test]
-  fn test_lucas() {
-    // fair inputs are odd, nonsquare, and have no small prime factors
-    for &n in utils::SMALL_PRIMES.iter() {
-      match choose_d(&bi!(n), MAX_JACOBI_ITERS) {
-        Some(d) => assert!(passes_lucas(&bi!(n), &d)),
-        None => assert!(false),
-      }
-    }
-
-    for &n in utils::LARGE_PRIMES.iter() {
-      match choose_d(&bi!(n), MAX_JACOBI_ITERS) {
-        Some(d) => assert!(passes_lucas(&bi!(n), &d)),
-        None => assert!(false),
-      }
-    }
-    // for &p in utils::SMALL_PRIMES.iter() {
-    //   assert!(is_prob_prime(&bu!(p)));
-    // }
-    // for &p in utils::LARGE_PRIMES.iter() {
-    //   assert!(is_prob_prime(&bu!(p)));
-    // }
   }
 
   #[test]
