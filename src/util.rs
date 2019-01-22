@@ -1,21 +1,40 @@
 use super::group::{Group, InvertibleGroup};
 use num::{BigInt, BigUint, Unsigned};
-use num_bigint::Sign::Plus;
 use num_traits::identities::{One, Zero};
+use std::ops::Mul;
 
-pub trait Singleton: 'static {
-  // TODO: possible to make private??
+/// Trait definition to enable equality checks between group elements and other custom data
+/// structures by means of byte array comparison.
+pub trait ConvertBytes: Group {
+  fn to_le_bytes(x: &Self::Elem) -> Vec<u8>;
+  fn to_be_bytes(x: &Self::Elem) -> Vec<u8>;
+}
+
+/// TODO: Would be nice to provide eq to always return true, but this is not possible in Rust.
+pub trait Singleton: Eq + 'static {
+  // TODO: Possible to make private?
   fn get() -> &'static Self;
+}
+
+pub fn bi<T>(val: T) -> BigInt
+where
+  BigInt: From<T>,
+{
+  BigInt::from(val)
+}
+
+pub fn bu<U: Unsigned>(val: U) -> BigUint
+where
+  BigUint: From<U>,
+{
+  BigUint::from(val)
 }
 
 /// Returns `(a, b, GCD(x, y))` s.t. `ax + by = GCD(x, y)`.
 pub fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
-  let (mut s, mut old_s): (BigInt, BigInt) = (num::zero(), num::one());
-  let (mut t, mut old_t): (BigInt, BigInt) = (num::one(), num::zero());
-  let (mut r, mut old_r) = (
-    BigInt::from_biguint(Plus, y.clone()),
-    BigInt::from_biguint(Plus, x.clone()),
-  );
+  let (mut s, mut old_s) = (bi(0), bi(1));
+  let (mut t, mut old_t) = (bi(1), bi(0));
+  let (mut r, mut old_r) = (bi(y.clone()), bi(x.clone()));
 
   while !r.is_zero() {
     let quotient = &old_r / &r;
@@ -38,22 +57,14 @@ pub fn mod_euc_big<U: Unsigned + Clone>(x: &BigInt, m: &U) -> BigUint
 where
   BigInt: From<U>,
 {
-  let m_big = BigInt::from(m.clone());
+  let m_big = bi(m.clone());
   ((x % &m_big + &m_big) % &m_big)
     .to_biguint()
     .expect("positive BigInt expected")
 }
 
-/// Trait definition to enable equality checks between group elements and other custom
-/// data structures by means of byte array comparison.
-pub trait ConvertBytes: Group {
-  fn to_le_bytes(x: &Self::Elem) -> Vec<u8>;
-  fn to_be_bytes(x: &Self::Elem) -> Vec<u8>;
-}
-
-/// REVIEW: generalize
-pub fn product(elems: &[&BigUint]) -> BigUint {
-  elems.iter().fold(num::one(), |a, b| a * *b)
+pub fn product<T: Mul + One + Clone>(elems: &[&T]) -> T {
+  elems.iter().fold(num::one(), |a, &b| a * b.clone())
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
@@ -86,30 +97,30 @@ mod tests {
 
   #[test]
   fn test_bezout() {
-    let x = BigUint::from(7 as u16);
-    let y = BigUint::from(165 as u16);
+    let x = bu(7u16);
+    let y = bu(165u16);
     let (a, b, gcd) = bezout(&x, &y);
     assert!(gcd.is_one());
-    assert!(a == BigInt::from(-47 as i16));
-    assert!(b == BigInt::from(2 as i16));
+    assert!(a == bi(-47));
+    assert!(b == bi(2));
   }
 
   #[test]
   fn test_mod_euc_big() {
-    let r = mod_euc_big(&BigInt::from(-8), &(3 as u8));
+    let r = mod_euc_big(&bi(-8), &(3u8));
     assert!(r == BigUint::one());
   }
 
   #[test]
   fn test_product() {
     let elems = [
-      &BigUint::from(2u32),
-      &BigUint::from(3u32),
-      &BigUint::from(4u32),
-      &BigUint::from(5u32),
-      &BigUint::from(6u32),
-      &BigUint::from(7u32),
+      &bu(2u32),
+      &bu(3u32),
+      &bu(4u32),
+      &bu(5u32),
+      &bu(6u32),
+      &bu(7u32),
     ];
-    assert!(product(&elems) == BigUint::from(5040u32));
+    assert!(product(&elems) == bu(5040u32));
   }
 }

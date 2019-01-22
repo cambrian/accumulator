@@ -32,9 +32,18 @@ struct RSA2048 {
   m: Modulus<M>,
 }
 
+impl PartialEq for RSA2048 {
+  // correct because this is a singleton
+  fn eq(&self, _rhs: &Self) -> bool {
+    true
+  }
+}
+
+impl Eq for RSA2048 {}
+
 const ELEM_BYTES: usize = 256;
 
-/// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048
+/// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048.
 const RSA2048_MODULUS_DECIMAL: &str = "25195908475657893494027183240048398571429282126204\
                                        03202777713783604366202070759555626401852588078440\
                                        69182906412495150821892985591491761845028084891200\
@@ -63,8 +72,8 @@ lazy_static! {
 }
 
 /// We restrict our group to singly-montgomery-encoded values, to have proper closure.
-/// As a result, it's a pain to do some of the operations (see Group impl). We may want to
-/// make more substantial changes to our Ring fork to alleviate this.
+/// As a result, it's a pain to do some of the operations (see Group impl). We may want to make
+/// more substantial changes to our Ring fork to alleviate this.
 #[derive(PartialEq, Eq, Clone, Debug)]
 struct RSA2048Elem(RingElem<M, R>);
 
@@ -91,7 +100,7 @@ impl Singleton for RSA2048 {
   }
 }
 
-/// TODO: implement {x, -x} cosets
+/// TODO: Implement {x, -x} cosets.
 impl Group for RSA2048 {
   type Elem = RSA2048Elem;
 
@@ -108,7 +117,7 @@ impl Group for RSA2048 {
     RSA2048Elem(elem_mul(&a, b.clone(), &self.m))
   }
 
-  /// Constant-time exponentiation, via montgomery-multiplication
+  /// Constant-time exponentiation via montgomery-multiplication.
   fn exp_(&self, RSA2048Elem(a): &RSA2048Elem, n: &BigUint) -> RSA2048Elem {
     let exponent =
       PrivateExponent::from_be_bytes_padded(Input::from(n.to_bytes_be().as_slice()), &self.m)
@@ -155,13 +164,15 @@ fn encode(a: RingElem<M, Unencoded>) -> RSA2048Elem {
 
 #[cfg(test)]
 mod tests {
+  use super::super::super::util::bu;
+  use num_traits::Unsigned;
   use super::*;
 
-  fn elem_of<U>(n: U) -> RSA2048Elem
+  fn elem_of<U: Unsigned>(n: U) -> RSA2048Elem
   where
     BigUint: From<U>,
   {
-    elem_from_biguint(&BigUint::from(n))
+    elem_from_biguint(&bu(n))
   }
 
   #[test]
@@ -174,10 +185,10 @@ mod tests {
     let a = RSA2048::op(&elem_of(2u32), &elem_of(3u32));
     assert!(a == elem_of(6u32));
     let b = RSA2048::op(
-      &elem_of(RSA2048_MODULUS.clone() - BigUint::from(2u32)),
-      &elem_of(RSA2048_MODULUS.clone() - BigUint::from(3u32)),
+      &elem_of(RSA2048_MODULUS.clone() - bu(2u32)),
+      &elem_of(RSA2048_MODULUS.clone() - bu(3u32)),
     );
-    assert!(b == elem_of(BigUint::from(6u32)));
+    assert!(b == elem_of(bu(6u32)));
   }
 
   /// Tests that -x and x are treated as the same element.
@@ -191,9 +202,9 @@ mod tests {
 
   #[test]
   fn test_exp() {
-    let a = RSA2048::exp(&elem_of(2u32), &BigUint::from(3u32));
+    let a = RSA2048::exp(&elem_of(2u32), &bu(3u32));
     assert!(a == elem_of(8u32));
-    let b = RSA2048::exp(&elem_of(2u32), &BigUint::from(4096u32));
+    let b = RSA2048::exp(&elem_of(2u32), &bu(4096u32));
     assert!(b == elem_of(BigUint::from_str("217207389955395428589369158781869218697519159898401521658993038615824872408108784926597517\
         496727372037176277380476487000099770530440575029170919732871116716934260655466121508332329\
         543615367099810550371217642707848747209719337160655740326150736137284544974770721296865388\
@@ -205,10 +216,8 @@ mod tests {
 
   #[test]
   fn test_inv() {
-    unimplemented!();
-    // let r = RSA2048::inv(&elem_of(2));
-    // assert!(r == elem_of(1_397_356_226_306_899));
-    // let r = RSA2048::inv(&elem_of(32_416_188_490));
-    // assert!(r == elem_of(173_039_603_491_119));
+    let x = elem_of(2u32);
+    let inv = RSA2048::inv(&x);
+    assert!(RSA2048::op(&x, &inv) == RSA2048::id());
   }
 }

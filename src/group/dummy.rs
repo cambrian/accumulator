@@ -2,13 +2,13 @@
 //! Use this group for testing while we figure out ring integration.
 
 use super::super::util;
-use super::super::util::{ConvertBytes, Singleton};
+use super::super::util::{bi, bu, ConvertBytes, Singleton};
 use super::{Group, InvertibleGroup};
-use num::{BigInt, BigUint};
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::One;
 use std::u64;
 
+#[derive(PartialEq, Eq)]
 pub struct DummyRSA {
   modulus: u64,
 }
@@ -34,7 +34,7 @@ impl DummyRSA {
     let val = val_unbounded % Self::get().modulus;
     if val > DUMMY_RSA.modulus / 2 {
       DummyRSAElem {
-        val: util::mod_euc_big(&-BigInt::from(val), &Self::get().modulus)
+        val: util::mod_euc_big(&-bi(val), &Self::get().modulus)
           .to_u64()
           .expect("positive BigInt expected"),
       }
@@ -62,8 +62,8 @@ impl Group for DummyRSA {
 
 impl InvertibleGroup for DummyRSA {
   fn inv_(&self, x: &DummyRSAElem) -> DummyRSAElem {
-    let x_big = BigUint::from(x.val);
-    let mod_big = BigUint::from(self.modulus);
+    let x_big = bu(x.val);
+    let mod_big = bu(self.modulus);
     let (a, _, gcd) = util::bezout(&x_big, &mod_big);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
     DummyRSA::elem_of(
