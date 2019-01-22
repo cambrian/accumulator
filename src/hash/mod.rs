@@ -38,7 +38,7 @@ pub fn h_prime(h: &HashFn, data: &[u8]) -> BigUint {
     let hash_val = h(data, Some(&counter.to_bytes_be().1));
     let hash_val_signed = hash_val
       .to_bigint()
-      .expect("BigUint hash value could not be converted to BigInt");
+      .expect("BigUint hash value could not be converted to BigInt!");
     if primality::is_prob_prime(&hash_val_signed) {
       return hash_val_signed
         .to_biguint()
@@ -54,24 +54,24 @@ mod tests {
 
   #[test]
   fn test_blake2() {
-    let data = b"test";
+    let data = b"martian cyborg gerbil attack";
     assert_ne!(blake2(data, None), blake2(data, Some(&[1])));
   }
 
   #[test]
   fn test_sha256() {
-    let data = b"hello world";
+    let data = b"frick the world shyt aint real i bend tha spoon with my mind";
     assert_ne!(sha256(data, None), sha256(data, Some(&[1])));
     assert_ne!(sha256(data, Some(&[1])), sha256(data, Some(&[2])));
   }
 
   #[test]
-  fn test_h_prime() {}
-
-  // WIP: benchmarking blake2, sha256, and eventually *_prime
-  // #[bench]
-  // fn bench_blake2(b: &mut Bencher) {
-  //   let data = b"test";
-  //   b.iter(|| blake2(data, Some(&[])));
-  // }
+  fn test_h_prime() {
+    let b_1: &[u8] = b"boom i got ur boyfriend";
+    let b_2: &[u8] = b"boom i got ur boyfriene";
+    assert_ne!(b_1, b_2);
+    assert_ne!(h_prime(&blake2, b_1), h_prime(&blake2, b_2));
+    assert_ne!(h_prime(&sha256, b_1), h_prime(&sha256, b_2));
+    assert_ne!(h_prime(&blake2, b_1), h_prime(&sha256, b_1));
+  }
 }
