@@ -16,7 +16,7 @@ fn bench_poe() {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("test_poe", |b| b.iter(|| bench_poe()));
+  c.bench_function("poe", |b| b.iter(|| bench_poe()));
 }
 
 criterion_group!(benches, criterion_benchmark);

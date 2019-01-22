@@ -9,6 +9,6 @@ extern crate serde_derive;
 pub mod accumulator;
 /// Must be public to access from /benches to benchmark properly
 pub mod group;
-mod hash;
+pub mod hash;
 pub mod proof;
 mod util;
