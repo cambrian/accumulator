@@ -218,4 +218,31 @@ mod tests {
     let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(2746));
     delete::<DummyRSA>(&acc, &[(&big(67), &y_witness), (&big(89), &z_witness)]).unwrap();
   }
+
+  #[test]
+  fn test_prove_nonmembership() {
+    let acc = init_acc::<DummyRSA>();
+    let acc_set = [&big(41), &big(67), &big(89)];
+    let elems = [&big(5), &big(7), &big(11)];
+    let (d, v, gv_inverse, poke2_proof, poe_proof) =
+      prove_nonmembership::<DummyRSA>(&acc, &acc_set, &elems).expect("valid proof expected");
+    assert!(verify_nonmembership::<DummyRSA>(
+      &acc,
+      &elems,
+      &d,
+      &v,
+      &gv_inverse,
+      &poke2_proof,
+      &poe_proof
+    ));
+  }
+
+  #[should_panic(expected = "InputsNotCoPrime")]
+  #[test]
+  fn test_prove_nonmembership_failure() {
+    let acc = init_acc::<DummyRSA>();
+    let acc_set = [&big(41), &big(67), &big(89)];
+    let elems = [&big(41), &big(7), &big(11)];
+    prove_nonmembership::<DummyRSA>(&acc, &acc_set, &elems).unwrap();
+  }
 }

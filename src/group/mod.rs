@@ -1,8 +1,6 @@
 use num::integer::Integer;
-use num::BigInt;
-use num::BigUint;
-use num_traits::identities::One;
-use num_traits::identities::Zero;
+use num::{BigInt, BigUint};
+use num_traits::identities::{One, Zero};
 use serde::ser::Serialize;
 use std::marker::Sized;
 

@@ -1,10 +1,9 @@
-use super::super::group::Group;
-use super::super::group::InvertibleGroup;
+use super::super::group::{Group, InvertibleGroup};
 use super::super::hash::hashes;
 use super::super::util;
-use num::BigInt;
-use num::BigUint;
+use num::{BigInt, BigUint};
 use num_bigint::Sign::Plus;
+use num_integer::Integer;
 use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
@@ -30,7 +29,7 @@ pub fn prove_poke2<G: InvertibleGroup>(
   let z = G::exp_signed(&g, exp);
   let l = hash_prime(base, result, &z);
   let alpha = hash_inputs(base, result, &z, &l);
-  let q = exp / BigInt::from_biguint(Plus, l.clone());
+  let q = exp.div_floor(&BigInt::from_biguint(Plus, l.clone()));
   let r = util::mod_euc_big(exp, &l);
   PoKE2 {
     z,

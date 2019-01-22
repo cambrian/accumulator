@@ -20,6 +20,7 @@ byteorder = "1.2.7"
 lazy_static = "1.2.0"
 num = "0.2.0"
 num-bigint = "0.2"
+num-integer = "0.1"
 num-traits = "0.2"
 ring = { git = "https://github.com/1protocol/ring" }
 sha2 = "0.8.0"

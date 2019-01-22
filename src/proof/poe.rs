@@ -1,6 +1,7 @@
 use super::super::group::Group;
 // use super::super::hash::hashes;
 use num::BigUint;
+use num_integer::Integer;
 use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
@@ -11,7 +12,7 @@ pub struct PoE<T> {
 /// See page 16 of B&B.
 pub fn prove_poe<G: Group>(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G::Elem> {
   let l = hash_prime(exp, base, result);
-  let q = exp / l;
+  let q = exp.div_floor(&l);
   PoE {
     Q: G::exp(&base, &q),
   }
