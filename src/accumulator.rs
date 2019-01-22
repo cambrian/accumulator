@@ -1,6 +1,6 @@
 use super::group::{Group, InvertibleGroup};
 use super::proof::{poe::PoE, poke2::PoKE2};
-use super::util;
+use super::util{product, bezout, shamir_trick};
 use num;
 use num::BigUint;
 use num_traits::identities::{One, Zero};
@@ -18,7 +18,7 @@ pub fn setup<G: Group>() -> G::Elem {
 
 /// Adds `elems` to the accumulator `acc`.
 pub fn add<G: Group>(acc: G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
-  let x = util::product(elems);
+  let x = product(elems);
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::prove(&acc, &x, &new_acc);
   (new_acc, poe_proof)
@@ -48,7 +48,7 @@ pub fn delete<G: InvertibleGroup>(
       return Err(AccError::BadWitness);
     }
 
-    let acc_next_option = util::shamir_trick::<G>(&acc_next, witness, &elem_aggregate, elem);
+    let acc_next_option = shamir_trick::<G>(&acc_next, witness, &elem_aggregate, elem);
     match acc_next_option {
       Some(acc_next_value) => acc_next = acc_next_value,
       None => return Err(AccError::InputsNotCoPrime),
@@ -76,7 +76,7 @@ pub fn verify_membership<G: Group>(
   result: &G::Elem,
   proof: &PoE<G>,
 ) -> bool {
-  let exp = util::product(elems);
+  let exp = product(elems);
   PoE::verify(witness, &exp, result, proof)
 }
 
@@ -95,9 +95,9 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
   acc_set: &[&BigUint],
   elems: &[&BigUint],
 ) -> Result<NonMembershipProof<G>, AccError> {
-  let x = util::product(elems);
-  let s = util::product(acc_set);
-  let (a, b, gcd) = util::bezout(&x, &s);
+  let x = product(elems);
+  let s = product(acc_set);
+  let (a, b, gcd) = bezout(&x, &s);
 
   if !gcd.is_one() {
     return Err(AccError::InputsNotCoPrime);
@@ -131,7 +131,7 @@ pub fn verify_nonmembership<G: Group>(
     poe_proof,
   }: &NonMembershipProof<G>,
 ) -> bool {
-  let x = util::product(elems);
+  let x = product(elems);
   PoKE2::verify(acc, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
 }
 
@@ -154,7 +154,7 @@ mod tests {
     let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
     let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
     let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), z);
-    assert!(util::shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == Some(xyth_root));
+    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
 
   #[test]
@@ -162,7 +162,7 @@ mod tests {
     let (x, y, z) = (&big(7), &big(14), &big(19)); // Inputs not co-prime.
     let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
     let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
-    assert!(util::shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
+    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
   }
 
   #[test]
