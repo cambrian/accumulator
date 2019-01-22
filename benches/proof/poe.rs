@@ -5,7 +5,7 @@ extern crate criterion;
 use criterion::Criterion;
 use crypto::group::dummy::DummyRSA;
 use crypto::proof::poe::{prove_poe, verify_poe};
-use num::BigUint;
+use num::bigint::BigUint;
 
 fn bench_poe() {
   let base = DummyRSA::elem_of(2);
@@ -16,7 +16,7 @@ fn bench_poe() {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("test_poe", |b| b.iter(|| bench_poe()));
+  c.bench_function("poe", |b| b.iter(|| bench_poe()));
 }
 
 criterion_group!(benches, criterion_benchmark);
