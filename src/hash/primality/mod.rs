@@ -293,6 +293,7 @@ fn compute_u_and_v_k(
     k *= bi!(2);
     if bit == 1 {
       // compute (u, v)_{2k+1} from (u, v)_{2k}
+      // TODO: Why is mod_n necessary here?
       let pu_plus_v = p * u_k.clone() + v_k.clone();
       let du_plus_pv = mod_n(&(d * u_k.clone() + p * v_k.clone()));
       // if &pu_plus_v % 2 == bi!(0) {
