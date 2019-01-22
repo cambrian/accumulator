@@ -1,5 +1,4 @@
 use num::bigint::{BigInt, BigUint, Sign, ToBigInt, ToBigUint};
-use num_traits::cast::ToPrimitive;
 
 mod utils;
 
@@ -25,6 +24,12 @@ const MAX_JACOBI_ITERS: u64 = 500;
 // 2. Do Miller-Rabin base 2.
 // 3. Filter squares.
 // 4. Do Lucas.
+// Many BPSW implementations filter out square values of x after the base-2 Miller-Rabin test. We
+// do not do this for several reasons: (1) See comments above choose_d. (2) num::bigint does not
+// have a native sqrt function using e.g. Newton's method. (3) Since this implementation is geared
+// toward very large (256-bit and up) values of n, for which squares are far sparser than primes,
+// the expected marginal utility of catching squares before running out MAX_JACOBI_ITERS is
+// extremely low.
 #[allow(dead_code)]
 pub fn is_prob_prime(n: &BigUint) -> bool {
   // test small prime factors
@@ -36,16 +41,9 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
       return false;
     }
   }
-
-  // println!("no small prime factors...");
   if !passes_miller_rabin_base_2(n) {
     return false;
   }
-  // println!("passes Miller-Rabin base 2...");
-  // if is_prob_square(n) {
-  //   return false;
-  // }
-  // println!("probably not a square...");
   let n = &BigInt::from_biguint(Sign::Plus, n.clone());
   match choose_d(n, MAX_JACOBI_ITERS) {
     Some(d) => passes_lucas(n, &d),
@@ -79,87 +77,11 @@ fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   false
 }
 
-#[allow(dead_code)]
-fn is_prob_square(n: &BigUint) -> bool {
-  // Step 1
-  let zero = bu!(0);
-  let one = bu!(1);
-  if n & bu!(2) != zero || n & bu!(7) == bu!(5) || n & bu!(11) == bu!(8) {
-    return false;
-  }
-  // Maybe unneccessary
-  if *n == zero {
-    return true;
-  }
-
-  // println!("Step 2");
-
-  // Step 2
-  let copy = n.clone();
-  let copy = (copy.clone() & bu!(4_294_967_295)) + (copy >> 32);
-  let copy = (copy.clone() & bu!(65535)) + (copy >> 16);
-  let copy = (copy.clone() & bu!(255)) + ((copy.clone() >> 8) & bu!(255)) + (copy >> 16);
-  // println!("{}", n.to_u64().unwrap());
-  if utils::BAD_255[copy.to_u64().unwrap() as usize] {
-    return false;
-  }
-
-  // println!("Step 3");
-
-  let mut x = n.clone();
-  if x.clone() & bu!(4_294_967_295) == zero {
-    x >>= 32;
-  }
-  if x.clone() & bu!(65535) == zero {
-    x >>= 16;
-  }
-  if x.clone() & bu!(255) == zero {
-    x >>= 8;
-  }
-  if x.clone() & bu!(15) == zero {
-    x >>= 4;
-  }
-  if x.clone() & bu!(3) == zero {
-    x >>= 2;
-  }
-  if x.clone() & bu!(7) != one {
-    return false;
-  }
-
-  // println!("Step 4");
-
-  // let mut r: i64 = start[((n >> 3) & bu!(1023 as u64)).to_u64().unwrap() as usize];
-  // let mut t: BigInt;
-  // let mut z: BigInt;
-  // let zero_i = BigInt::from(0 as i8);
-  // while {
-  //   z = BigInt::from(x.clone()) - BigInt::from(r * r);
-  //   if z == zero_i {
-  //     return true;
-  //   }
-  //   t = z.clone() & -z.clone();
-  //   r += ((z & t.clone()) >> 1).to_i64().unwrap();
-  //   if r > (t.clone() >> 1).to_i64().unwrap() {
-  //     r = t.to_i64().unwrap() - r;
-  //   }
-  //   t <= BigInt::from(1 << 33)
-  // } {}
-  // println!("All else fails");
-
-  //0xC840C04048404040
-  // let inbase16 = &[12, 8, 4, 0, 12, 0, 4, 0, 4, 8, 4, 0, 4, 0, 4, 0];
-  // let good_mask = BigUint::from_radix_be(inbase16, 16).unwrap();
-  // if good_mask << n >= zero {
-  //   return false;
-  // }
-  true
-}
-
 // Finds and returns first D in [5, -7, 9, ..., 5 + 2*max_iter] for which Jacobi symbol (D/n) = -1,
 // or None if no such D exists. In the case that n is square, there is no such D even with max_iter
 // infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a low value
 // to max_iter to avoid wasting too much time. Note that the average number of iterations required
-// for nonsquare n is 1.8.
+// for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.
 fn choose_d(n: &BigInt, max_iter: u64) -> Option<BigInt> {
   let mut d = bi!(5);
 
@@ -428,12 +350,5 @@ mod tests {
         assert!(!is_prob_prime(&(bu!(p) * bu!(q))));
       }
     }
-  }
-
-  #[test]
-  fn jkdsaflkaflds() {
-    assert!(is_prob_prime(&bu!(48131)));
-    assert!(is_prob_prime(&bu!(106957)));
-    assert!(is_prob_prime(&bu!(107881)));
   }
 }
