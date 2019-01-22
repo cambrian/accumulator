@@ -1,5 +1,5 @@
 use super::group::{Group, InvertibleGroup};
-use super::proof::{poe::PoE, poke2, poke2::PoKE2};
+use super::proof::{poe::PoE, poke2::PoKE2};
 use super::util;
 use num;
 use num::BigUint;
@@ -84,7 +84,7 @@ pub struct NonMembershipProof<G: Group> {
   d: G::Elem,
   v: G::Elem,
   gv_inv: G::Elem,
-  poke2_proof: PoKE2<G::Elem>,
+  poke2_proof: PoKE2<G>,
   poe_proof: PoE<G>,
 }
 
@@ -108,7 +108,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
   let v = G::exp_signed(acc, &b);
   let gv_inv = G::op(&g, &G::inv(&v));
 
-  let poke2_proof = poke2::prove_poke2::<G>(acc, &b, &v);
+  let poke2_proof = PoKE2::prove(acc, &b, &v);
   let poe_proof = PoE::prove(&d, &x, &gv_inv);
   Ok(NonMembershipProof {
     d,
@@ -132,7 +132,7 @@ pub fn verify_nonmembership<G: Group>(
   }: &NonMembershipProof<G>,
 ) -> bool {
   let x = util::product(elems);
-  poke2::verify_poke2::<G>(acc, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
+  PoKE2::verify(acc, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
 }
 
 #[cfg(test)]

@@ -10,8 +10,8 @@ pub struct PoE<G: Group> {
   Q: G::Elem,
 }
 
-/// See page 16 of B&B.
 impl<G: Group> PoE<G> {
+  /// See page 16 of B&B.
   pub fn prove(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G> {
     let l = hash_prime(exp, base, result);
     let q = exp.div_floor(&l);
