@@ -27,20 +27,21 @@ const MAX_JACOBI_ITERS: u64 = 500;
 // 4. Do Lucas.
 #[allow(dead_code)]
 pub fn is_prob_prime(n: &BigUint) -> bool {
+  // test small prime factors
   for &p in utils::SMALL_PRIMES.iter() {
     if n == &bu!(p) {
       return true;
     }
+    if n % p == bu!(0) {
+      return false;
+    }
   }
 
-  if has_small_prime_factor(n) {
-    return false;
-  }
-  println!("no small prime factors...");
+  // println!("no small prime factors...");
   if !passes_miller_rabin_base_2(n) {
     return false;
   }
-  println!("passes Miller-Rabin base 2...");
+  // println!("passes Miller-Rabin base 2...");
   // if is_prob_square(n) {
   //   return false;
   // }
@@ -50,20 +51,6 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
     Some(d) => passes_lucas(n, &d),
     None => false,
   }
-}
-
-#[allow(dead_code)]
-fn has_small_prime_factor(n: &BigUint) -> bool {
-  for &divisor in utils::SMALL_PRIMES.iter() {
-    let divisor = &bu!(divisor);
-    if divisor == n {
-      break;
-    }
-    if n % divisor == bu!(0) {
-      return true;
-    }
-  }
-  false
 }
 
 #[allow(dead_code)]
@@ -92,6 +79,7 @@ fn passes_miller_rabin_base_2(n: &BigUint) -> bool {
   false
 }
 
+#[allow(dead_code)]
 fn is_prob_square(n: &BigUint) -> bool {
   // Step 1
   let zero = bu!(0);
@@ -237,7 +225,7 @@ fn passes_lucas(n: &BigInt, d: &BigInt) -> bool {
   let q = (bi!(1) - d) / bi!(4);
   let delta = n + &bi!(1);
 
-  println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
+  // println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
 
   let (u_delta, _v_delta) = compute_u_and_v_k(&delta, n, &bi!(1), &p, &p, &q, d);
   // u_delta % n != 0 proves n composite
@@ -289,37 +277,19 @@ fn compute_u_and_v_k(
     // compute (u, v)_{2k} from (u, v)_k
     u_k = mod_n(&(u_k.clone() * v_k.clone()));
     v_k = mod_n(&(v_k.modpow(&bi!(2), n) - bi!(2) * &q_k));
-    q_k = mod_n(&(&q_k * &q_k));
+    q_k = mod_n(&(q_k.clone() * q_k.clone()));
     k *= bi!(2);
     if bit == 1 {
       // compute (u, v)_{2k+1} from (u, v)_{2k}
       // TODO: Why is mod_n necessary here?
       let pu_plus_v = p * u_k.clone() + v_k.clone();
       let du_plus_pv = mod_n(&(d * u_k.clone() + p * v_k.clone()));
-      // if &pu_plus_v % 2 == bi!(0) {
-      //   if &du_plus_pv % 2 == bi!(0) {
-      //     u_k = half(&pu_plus_v);
-      //     v_k = half(&du_plus_pv);
-      //   } else {
-      //     u_k = half(&pu_plus_v);
-      //     v_k = half(&(du_plus_pv + n));
-      //   }
-      // } else if &du_plus_pv % 2 == bi!(0) {
-      //   u_k = half(&(pu_plus_v + n));
-      //   v_k = half(&du_plus_pv);
-      // } else {
-      //   u_k = half(&(pu_plus_v + n));
-      //   v_k = half(&(du_plus_pv + n));
-      // }
       k += bi!(1);
-      // u_k = (u_k % n + n) % n;
-      // v_k = (v_k % n + n) % n;
       u_k = half(&pu_plus_v);
       v_k = half(&du_plus_pv);
       q_k = mod_n(&(q_k.clone() * q.clone()));
-      assert!(u_k >= bi!(0) && v_k >= bi!(0));
     }
-    println!("(u, v)_{} = ({}, {})", k, u_k, v_k);
+    // println!("(u, v)_{} = ({}, {})", k, u_k, v_k);
   }
   (u_k, v_k)
 }
@@ -340,7 +310,7 @@ mod tests {
   use super::*;
 
   fn isqrt(n: usize) -> usize {
-    n == 0 && return n;
+    // n == 0 && return n;
     let mut s = (n as f64).sqrt() as usize;
     s = (s + n / s) >> 1;
     if s * s > n {
@@ -378,19 +348,6 @@ mod tests {
       let val = bu!(i);
       assert!(is_prob_square(&val) == squares[i]);
     }
-  }
-  #[test]
-  fn test_small_prime_factor() {
-    let n_prime = bu!(233u64);
-    let n_composite = bu!(50_621u64);
-    let n_composite_large = bu!(104_927u64);
-
-    assert!(n_composite == bu!(223u64) * bu!(227u64));
-    assert!(n_composite_large == bu!(317u64) * bu!(331u64));
-
-    assert!(!has_small_prime_factor(&n_prime));
-    assert!(has_small_prime_factor(&n_composite));
-    assert!(!has_small_prime_factor(&n_composite_large));
   }
 
   #[test]
@@ -444,32 +401,33 @@ mod tests {
 
   #[test]
   fn test_is_prob_prime() {
-    // assert!(is_prob_prime(&bu!(2)));
-    // assert!(is_prob_prime(&bu!(5)));
-    // assert!(is_prob_prime(&bu!(7)));
-    // assert!(is_prob_prime(&bu!(241)));
-    // assert!(is_prob_prime(&bu!(7919)));
-    // assert!(is_prob_prime(&bu!(48131)));
-    // assert!(is_prob_prime(&bu!(75913)));
-    // assert!(is_prob_prime(&bu!(76463)));
-    // assert!(is_prob_prime(&bu!(115_547)));
-    // for &p in utils::LARGE_PRIMES.iter() {
-    //   for &q in utils::LARGE_PRIMES.iter() {
-    //     assert!(!is_prob_prime(&(bu!(p) * bu!(q))));
-    //   }
-    // }
-    let mut tps = 0f64;
+    // sanity checks
+    assert!(is_prob_prime(&bu!(2)));
+    assert!(is_prob_prime(&bu!(5)));
+    assert!(is_prob_prime(&bu!(7)));
+    assert!(is_prob_prime(&bu!(241)));
+    assert!(is_prob_prime(&bu!(7919)));
+    assert!(is_prob_prime(&bu!(48131)));
+    assert!(is_prob_prime(&bu!(75913)));
+    assert!(is_prob_prime(&bu!(76463)));
+    assert!(is_prob_prime(&bu!(115_547)));
+
+    // medium primes
     for &p in utils::MED_PRIMES.iter() {
-      let d = choose_d(&bi!(p), 500);
-      if is_prob_prime(&bu!(p)) {
-        tps += 1f64;
-        // println!("{}: success", d.unwrap().to_str_radix(10));
-      } else {
-        println!("{}, {}", d.unwrap().to_str_radix(10), p);
+      assert!(is_prob_prime(&bu!(p)));
+    }
+
+    // large primes
+    for &p in utils::LARGE_PRIMES.iter() {
+      assert!(is_prob_prime(&bu!(p)));
+    }
+
+    // large, difficult-to-factor composites
+    for &p in utils::LARGE_PRIMES.iter() {
+      for &q in utils::LARGE_PRIMES.iter() {
+        assert!(!is_prob_prime(&(bu!(p) * bu!(q))));
       }
     }
-    println!("Small prime true positive rate: {}", tps / 456f64);
-    // tested on ~10k 32-bit composites with no failures
   }
 
   #[test]
