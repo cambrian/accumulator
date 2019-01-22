@@ -1,8 +1,8 @@
+use super::util::bi;
 use super::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
-use super::util::{bi};
 use serde::ser::Serialize;
 use std::marker::Sized;
 
@@ -24,29 +24,29 @@ pub trait Group: Singleton {
   /// But afaik bijective associated types are not supported by Rust.
   type Elem: Eq + Serialize + Clone + Sized;
 
-  fn id_(&self) -> Self::Elem;
+  fn id_(rep: &Self::Rep) -> Self::Elem;
 
   /// Returns an element with unknown order.
   /// REVIEW: Consider renaming Group such that it's clear that the group has elements of unknown
   /// order.
   /// REVIEW: Consider renaming to unknown_order_elem (maybe small_unknown_order_elem).
   /// E.g. 2, for RSA groups.
-  fn base_elem_(&self) -> Self::Elem;
+  fn base_elem_(rep: &Self::Rep) -> Self::Elem;
 
-  fn op_(&self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
+  fn op_(rep: &Self::Rep, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
 
   /// Default implementation of exponentiation via repeated squaring.
   /// Group implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
-  fn exp_(&self, a: &Self::Elem, n: &BigUint) -> Self::Elem {
+  fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &BigUint) -> Self::Elem {
     if *n == BigUint::zero() {
       Self::id()
     } else if *n == BigUint::one() {
       a.clone()
     } else if n.is_odd() {
-      Self::op(a, &Self::exp_(&self, &Self::op(a, a), &(n >> 1)))
+      Self::op(a, &Self::exp_(rep, &Self::op(a, a), &(n >> 1)))
     } else {
-      Self::exp_(&self, &Self::op(a, a), &(n >> 1))
+      Self::exp_(rep, &Self::op(a, a), &(n >> 1))
     }
   }
 
@@ -55,33 +55,33 @@ pub trait Group: Singleton {
   // -------------------
 
   fn id() -> Self::Elem {
-    Self::id_(Self::get())
+    Self::id_(Self::rep())
   }
 
   fn base_elem() -> Self::Elem {
-    Self::base_elem_(Self::get())
+    Self::base_elem_(Self::rep())
   }
 
   fn op(a: &Self::Elem, b: &Self::Elem) -> Self::Elem {
-    Self::op_(Self::get(), a, b)
+    Self::op_(Self::rep(), a, b)
   }
 
   fn exp(a: &Self::Elem, n: &BigUint) -> Self::Elem {
-    Self::exp_(Self::get(), a, n)
+    Self::exp_(Self::rep(), a, n)
   }
 }
 
 /// Trait for groups that support efficient inverse calculations.
 /// NOT used to mean a cyclic group (where every element has an inverse).
 pub trait InvertibleGroup: Group {
-  fn inv_(&self, a: &Self::Elem) -> Self::Elem;
+  fn inv_(rep: &Self::Rep, a: &Self::Elem) -> Self::Elem;
 
   // -------------------
   // END OF REQUIRED FNS
   // -------------------
 
   fn inv(a: &Self::Elem) -> Self::Elem {
-    Self::inv_(Self::get(), a)
+    Self::inv_(Self::rep(), a)
   }
 
   fn exp_signed(a: &Self::Elem, n: &BigInt) -> Self::Elem {
@@ -110,12 +110,8 @@ pub fn multi_exp<G: Group>(n: usize, alphas: &[G::Elem], x: &[BigInt]) -> G::Ele
   let x_l = &x[..n_half];
   let x_r = &x[n_half..];
   // G::op expects a BigUint.
-  let x_star_l = (x_l.iter().fold(bi(1), |a, b| a * b))
-    .to_biguint()
-    .unwrap();
-  let x_star_r = (x_r.iter().fold(bi(1), |a, b| a * b))
-    .to_biguint()
-    .unwrap();
+  let x_star_l = (x_l.iter().fold(bi(1), |a, b| a * b)).to_biguint().unwrap();
+  let x_star_r = (x_r.iter().fold(bi(1), |a, b| a * b)).to_biguint().unwrap();
   let l = multi_exp::<G>(n_half, alpha_l, x_l);
   let r = multi_exp::<G>(n - n_half, alpha_r, x_r);
   G::op(&G::exp(&l, &x_star_r), &G::exp(&r, &x_star_l))

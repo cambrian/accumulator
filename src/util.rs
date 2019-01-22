@@ -10,10 +10,11 @@ pub trait ConvertBytes: Group {
   fn to_be_bytes(x: &Self::Elem) -> Vec<u8>;
 }
 
-/// TODO: Would be nice to provide eq to always return true, but this is not possible in Rust.
-pub trait Singleton: Eq + 'static {
-  // TODO: Possible to make private?
-  fn get() -> &'static Self;
+/// We use this pattern to fake type-level programming. Rep stores info that we would like to
+/// "reflect" from the type-level at runtime.
+pub trait Singleton {
+  type Rep: 'static;
+  fn rep() -> &'static Self::Rep;
 }
 
 pub fn bi<T>(val: T) -> BigInt
