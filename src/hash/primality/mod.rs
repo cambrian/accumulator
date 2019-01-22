@@ -27,6 +27,12 @@ const MAX_JACOBI_ITERS: u64 = 500;
 // 4. Do Lucas.
 #[allow(dead_code)]
 pub fn is_prob_prime(n: &BigUint) -> bool {
+  for &p in utils::SMALL_PRIMES.iter() {
+    if n == &bu!(p) {
+      return true;
+    }
+  }
+
   if has_small_prime_factor(n) {
     return false;
   }
@@ -98,7 +104,7 @@ fn is_prob_square(n: &BigUint) -> bool {
     return true;
   }
 
-  println!("Step 2");
+  // println!("Step 2");
 
   // Step 2
   let copy = n.clone();
@@ -110,7 +116,7 @@ fn is_prob_square(n: &BigUint) -> bool {
     return false;
   }
 
-  println!("Step 3");
+  // println!("Step 3");
 
   let mut x = n.clone();
   if x.clone() & bu!(4_294_967_295) == zero {
@@ -132,7 +138,7 @@ fn is_prob_square(n: &BigUint) -> bool {
     return false;
   }
 
-  println!("Step 4");
+  // println!("Step 4");
 
   // let mut r: i64 = start[((n >> 3) & bu!(1023 as u64)).to_u64().unwrap() as usize];
   // let mut t: BigInt;
@@ -233,14 +239,19 @@ fn passes_lucas(n: &BigInt, d: &BigInt) -> bool {
 
   println!("Lucas test: (n, d, p, q) = ({}, {}, {}, {})", n, d, p, q);
 
-  let (u_delta, _v_delta) = compute_u_and_v_delta(&delta, n, &bi!(1), &p, &p, &q, d);
+  let (u_delta, _v_delta) = compute_u_and_v_k(&delta, n, &bi!(1), &p, &p, &q, d);
   // u_delta % n != 0 proves n composite
   u_delta == bi!(0)
   // EXTEND TO STRONG TEST
 }
 
-fn compute_u_and_v_delta(
-  delta: &BigInt,
+// Computes the Lucas sequences {u_i(p, q)} and {v_i(p, q)} up to a specified index k in log(k)
+// time by recursively calculating only the (2i)th and (2i+1)th elements in an order determined by
+// the binary expansion of k. In the Lucas probabilistic primality test we specify that d = p^2 - 4q
+// and are generally concerned with the case that k = delta = n+1.
+// Cf. https://en.wikipedia.org/wiki/Lucas_pseudoprime
+fn compute_u_and_v_k(
+  k: &BigInt,
   n: &BigInt,
   u_1: &BigInt,
   v_1: &BigInt,
@@ -248,52 +259,73 @@ fn compute_u_and_v_delta(
   q: &BigInt,
   d: &BigInt,
 ) -> (BigInt, BigInt) {
-  let mut k = bi!(1);
-  // assume delta is even
-  let delta_bits = binary_rep(delta);
+  let k_bits = binary_rep(k);
   let mut u_k = u_1.clone();
   let mut v_k = v_1.clone();
-  // Write binary expansion of delta_rem as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. x_1 is always
+
+  let mod_n = |x: &BigInt| {
+    if x < &bi!(0) {
+      n - (-x % n)
+    } else {
+      x % n
+    }
+  };
+
+  let half = |x: &BigInt| {
+    if x % 2 == bi!(1) {
+      mod_n(&((x + n) / 2))
+    } else {
+      mod_n(&(x / 2))
+    }
+  };
+
+  // Write binary expansion of k as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. x_1 is always
   // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
   // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
-  // we will have computed u_delta and v_delta in log(delta) time.
-  for &bit in delta_bits[1..].iter() {
-    u_k = (u_k.clone() * v_k.clone() % n + n) % n;
-    v_k = ((v_k.modpow(&bi!(2), n) - bi!(2) * q.modpow(&k, n)) % n + n) % n;
+  // we will have computed u_k and v_k, with k as given, in log(delta) time.
+  let mut k = bi!(1);
+  for &bit in k_bits[1..].iter() {
+    // compute (u, v)_{2k} from (u, v)_k
+    u_k = mod_n(&(u_k.clone() * v_k.clone()));
+    v_k = mod_n(&(v_k.modpow(&bi!(2), n) - bi!(2) * q.modpow(&k, n)));
     k *= bi!(2);
     if bit == 1 {
+      // compute (u, v)_{2k+1} from (u, v)_{2k}
       let pu_plus_v = p * u_k.clone() + v_k.clone();
       let du_plus_pv = d * u_k.clone() + p * v_k.clone();
-      if &pu_plus_v % 2 == bi!(0) {
-        if &du_plus_pv % 2 == bi!(0) {
-          u_k = pu_plus_v / 2;
-          v_k = du_plus_pv / 2;
-        } else {
-          u_k = pu_plus_v / 2;
-          v_k = (du_plus_pv + n) / 2;
-        }
-      } else if &du_plus_pv % 2 == bi!(0) {
-        u_k = (pu_plus_v + n) / 2;
-        v_k = du_plus_pv / 2;
-      } else {
-        u_k = (pu_plus_v + n) / 2;
-        v_k = (du_plus_pv + n) / 2;
-      }
+      // if &pu_plus_v % 2 == bi!(0) {
+      //   if &du_plus_pv % 2 == bi!(0) {
+      //     u_k = half(&pu_plus_v);
+      //     v_k = half(&du_plus_pv);
+      //   } else {
+      //     u_k = half(&pu_plus_v);
+      //     v_k = half(&(du_plus_pv + n));
+      //   }
+      // } else if &du_plus_pv % 2 == bi!(0) {
+      //   u_k = half(&(pu_plus_v + n));
+      //   v_k = half(&du_plus_pv);
+      // } else {
+      //   u_k = half(&(pu_plus_v + n));
+      //   v_k = half(&(du_plus_pv + n));
+      // }
       k += bi!(1);
-      u_k = (u_k % n + n) % n;
-      v_k = (v_k % n + n) % n;
+      // u_k = (u_k % n + n) % n;
+      // v_k = (v_k % n + n) % n;
+      u_k = half(&pu_plus_v);
+      v_k = half(&du_plus_pv);
+      assert!(u_k >= bi!(0) && v_k >= bi!(0));
     }
-    println!("(u_{}, v_{}) = ({}, {})", k, k, u_k, v_k);
+    println!("(u, v)_{} = ({}, {})", k, u_k, v_k);
   }
   (u_k, v_k)
 }
 
 fn binary_rep(n: &BigInt) -> Vec<u8> {
   let mut bits_rev = Vec::new();
-  let mut n_rem = n.clone();
-  while n_rem > bi!(0) {
-    bits_rev.push((n_rem.clone() % 2 == bi!(1)) as u8);
-    n_rem /= 2;
+  let mut n_mod_n = n.clone();
+  while n_mod_n > bi!(0) {
+    bits_rev.push((n_mod_n.clone() % 2 == bi!(1)) as u8);
+    n_mod_n /= 2;
   }
   bits_rev.reverse();
   bits_rev
@@ -385,10 +417,18 @@ mod tests {
   #[test]
   fn test_lucas() {
     // fair inputs are odd, nonsquare, and have no small prime factors
-    let n = bi!(7);
-    match choose_d(&n, MAX_JACOBI_ITERS) {
-      Some(d) => assert!(passes_lucas(&n, &d)),
-      None => assert!(false),
+    for &n in utils::SMALL_PRIMES.iter() {
+      match choose_d(&bi!(n), MAX_JACOBI_ITERS) {
+        Some(d) => assert!(passes_lucas(&bi!(n), &d)),
+        None => assert!(false),
+      }
+    }
+
+    for &n in utils::LARGE_PRIMES.iter() {
+      match choose_d(&bi!(n), MAX_JACOBI_ITERS) {
+        Some(d) => assert!(passes_lucas(&bi!(n), &d)),
+        None => assert!(false),
+      }
     }
     // for &p in utils::SMALL_PRIMES.iter() {
     //   assert!(is_prob_prime(&bu!(p)));
@@ -402,11 +442,26 @@ mod tests {
   fn test_is_prob_prime() {
     assert!(is_prob_prime(&bu!(2)));
     assert!(is_prob_prime(&bu!(5)));
-    for &p in utils::SMALL_PRIMES.iter() {
-      assert!(is_prob_prime(&bu!(p)));
-    }
+    assert!(is_prob_prime(&bu!(7)));
+    assert!(is_prob_prime(&bu!(241)));
+    //assert!(is_prob_prime(&bu!(7919)));
+    assert!(is_prob_prime(&bu!(48131)));
+    // assert!(is_prob_prime(&bu!(75913)));
+    // assert!(is_prob_prime(&bu!(76463)));
+    // assert!(is_prob_prime(&bu!(115_547)));
     // for &p in utils::LARGE_PRIMES.iter() {
-    //   assert!(is_prob_prime(&bu!(p)));
+    //   for &q in utils::LARGE_PRIMES.iter() {
+    //     assert!(!is_prob_prime(&(bu!(p) * bu!(q))));
+    //   }
     // }
+    // for &p in utils::LARGE_PRIMES.iter() {
+    //   println!("{}", is_prob_prime(&bu!(p)));
+    //   // assert!(is_prob_prime(&bu!(p)));
+    // }
+  }
+
+  #[test]
+  fn jkdsaflkaflds() {
+    assert!(is_prob_prime(&bu!(48131)));
   }
 }
