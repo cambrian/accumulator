@@ -32,6 +32,14 @@ struct RSA2048 {
   m: Modulus<M>,
 }
 
+impl PartialEq for RSA2048 {
+  fn eq(&self, _rhs: &Self) -> bool {
+    true
+  }
+}
+
+impl Eq for RSA2048 {}
+
 const ELEM_BYTES: usize = 256;
 
 /// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048

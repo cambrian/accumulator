@@ -9,6 +9,7 @@ use num_traits::cast::ToPrimitive;
 use num_traits::identities::One;
 use std::u64;
 
+#[derive(PartialEq, Eq)]
 pub struct DummyRSA {
   modulus: u64,
 }

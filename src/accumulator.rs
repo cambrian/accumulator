@@ -1,5 +1,5 @@
 use super::group::{Group, InvertibleGroup};
-use super::proof::{poe, poe::PoE, poke2, poke2::PoKE2};
+use super::proof::{poe::PoE, poke2, poke2::PoKE2};
 use super::util;
 use num;
 use num::BigUint;
@@ -20,7 +20,7 @@ pub fn setup<G: Group>() -> G::Elem {
 pub fn add<G: Group>(acc: G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
   let x = util::product(elems);
   let new_acc = G::exp(&acc, &x);
-  let poe_proof = poe::prove_poe::<G>(&acc, &x, &new_acc);
+  let poe_proof = PoE::prove(&acc, &x, &new_acc);
   (new_acc, poe_proof)
 }
 
@@ -32,7 +32,7 @@ pub fn delete<G: InvertibleGroup>(
   // REVIEW: It should be possible to restructure the loop in such a way that this check is
   // unnecessary
   if elem_witnesses.is_empty() {
-    let poe_proof = poe::prove_poe::<G>(&acc, &BigUint::zero(), &acc);
+    let poe_proof = PoE::prove(&acc, &BigUint::zero(), &acc);
     return Ok((acc.clone(), poe_proof));
   }
 
@@ -57,7 +57,7 @@ pub fn delete<G: InvertibleGroup>(
     elem_aggregate *= elem;
   }
 
-  let poe_proof = poe::prove_poe::<G>(&acc_next, &elem_aggregate, &acc);
+  let poe_proof = PoE::prove(&acc_next, &elem_aggregate, &acc);
   Ok((acc_next, poe_proof))
 }
 
@@ -77,7 +77,7 @@ pub fn verify_membership<G: Group>(
   proof: &PoE<G>,
 ) -> bool {
   let exp = util::product(elems);
-  poe::verify_poe::<G>(witness, &exp, result, proof)
+  PoE::verify(witness, &exp, result, proof)
 }
 
 pub struct NonMembershipProof<G: Group> {
@@ -109,7 +109,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
   let gv_inv = G::op(&g, &G::inv(&v));
 
   let poke2_proof = poke2::prove_poke2::<G>(acc, &b, &v);
-  let poe_proof = poe::prove_poe::<G>(&d, &x, &gv_inv);
+  let poe_proof = PoE::prove(&d, &x, &gv_inv);
   Ok(NonMembershipProof {
     d,
     v,
@@ -132,13 +132,12 @@ pub fn verify_nonmembership<G: Group>(
   }: &NonMembershipProof<G>,
 ) -> bool {
   let x = util::product(elems);
-  poke2::verify_poke2::<G>(acc, v, poke2_proof) && poe::verify_poe::<G>(d, &x, gv_inv, poe_proof)
+  poke2::verify_poke2::<G>(acc, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
 }
 
 #[cfg(test)]
 mod tests {
   use super::super::group::dummy::DummyRSA;
-  use super::super::proof::poe;
   use super::*;
 
   fn big(val: u64) -> BigUint {
@@ -173,7 +172,7 @@ mod tests {
     let (new_acc, poe) = add::<DummyRSA>(acc.clone(), &new_elems);
     let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(94_125_955));
     assert!(new_acc == expected_acc);
-    assert!(poe::verify_poe::<DummyRSA>(&acc, &big(385), &new_acc, &poe));
+    assert!(PoE::verify(&acc, &big(385), &new_acc, &poe));
   }
 
   #[test]
@@ -186,12 +185,7 @@ mod tests {
         .expect("valid delete expected");
     let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(41));
     assert!(new_acc == expected_acc);
-    assert!(poe::verify_poe::<DummyRSA>(
-      &new_acc,
-      &big(5963),
-      &acc,
-      &poe
-    ));
+    assert!(PoE::verify(&new_acc, &big(5963), &acc, &poe));
   }
 
   #[should_panic(expected = "BadWitness")]

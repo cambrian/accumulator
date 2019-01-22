@@ -5,39 +5,29 @@ use num_integer::Integer;
 use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
+#[derive(PartialEq, Eq)]
 pub struct PoE<G: Group> {
   Q: G::Elem,
 }
 
-impl<G: Group> PartialEq for PoE<G> {
-  fn eq(&self, rhs: &Self) -> bool {
-    self.Q == rhs.Q
-  }
-}
-
-impl<G: Group> Eq for PoE<G> {}
-
 /// See page 16 of B&B.
-pub fn prove_poe<G: Group>(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G> {
-  let l = hash_prime(exp, base, result);
-  let q = exp.div_floor(&l);
-  PoE {
-    Q: G::exp(&base, &q),
+impl<G: Group> PoE<G> {
+  pub fn prove(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G> {
+    let l = hash_prime(exp, base, result);
+    let q = exp.div_floor(&l);
+    PoE {
+      Q: G::exp(&base, &q),
+    }
   }
-}
 
-/// See page 16 of B&B.
-pub fn verify_poe<G: Group>(
-  base: &G::Elem,
-  exp: &BigUint,
-  result: &G::Elem,
-  proof: &PoE<G>,
-) -> bool {
-  let l = hash_prime(exp, base, result);
-  let r = exp % l.clone();
-  // w = Q^l * u^r
-  let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
-  w == *result
+  /// See page 16 of B&B.
+  pub fn verify(base: &G::Elem, exp: &BigUint, result: &G::Elem, proof: &PoE<G>) -> bool {
+    let l = hash_prime(exp, base, result);
+    let r = exp % l.clone();
+    // w = Q^l * u^r
+    let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
+    w == *result
+  }
 }
 
 fn hash_prime<G: Serialize>(_exp: &BigUint, _base: &G, _result: &G) -> BigUint {
@@ -60,8 +50,8 @@ mod tests {
     let base = DummyRSA::base_elem();
     let exp = BigUint::from(20 as u8);
     let result = DummyRSA::elem_of(1_048_576);
-    let proof = prove_poe::<DummyRSA>(&base, &exp, &result);
-    assert!(verify_poe::<DummyRSA>(&base, &exp, &result, &proof));
+    let proof = PoE::<DummyRSA>::prove(&base, &exp, &result);
+    assert!(PoE::verify(&base, &exp, &result, &proof));
     assert!(
       proof
         == PoE {
@@ -72,8 +62,8 @@ mod tests {
     // 2^35 = 34359738368
     let exp_2 = BigUint::from(35 as u8);
     let result_2 = DummyRSA::elem_of(34_359_738_368);
-    let proof_2 = prove_poe::<DummyRSA>(&base, &exp_2, &result_2);
-    assert!(verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof_2));
+    let proof_2 = PoE::<DummyRSA>::prove(&base, &exp_2, &result_2);
+    assert!(PoE::verify(&base, &exp_2, &result_2, &proof_2));
     assert!(
       proof_2
         == PoE {
@@ -81,6 +71,6 @@ mod tests {
         }
     );
     // Cannot verify wrong base/exp/result triple with wrong pair.
-    assert!(!verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof));
+    assert!(!PoE::verify(&base, &exp_2, &result_2, &proof));
   }
 }

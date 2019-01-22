@@ -3,7 +3,8 @@ use num::{BigInt, BigUint, Unsigned};
 use num_bigint::Sign::Plus;
 use num_traits::identities::{One, Zero};
 
-pub trait Singleton: 'static {
+/// TODO: would be nice to provide eq to always return true, but this is not possible in Rust
+pub trait Singleton: Eq + 'static {
   // TODO: possible to make private??
   fn get() -> &'static Self;
 }
