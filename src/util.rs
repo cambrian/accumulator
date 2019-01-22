@@ -10,8 +10,11 @@ pub trait ConvertBytes: Group {
   fn to_be_bytes(x: &Self::Elem) -> Vec<u8>;
 }
 
-/// We use this pattern to fake type-level programming. Rep stores info that we would like to
-/// "reflect" from the type-level at runtime.
+/// We use the singleton pattern to fake type-level programming.
+/// Self::Rep stores info that we would like to "reflect" from the type-level at runtime.
+/// We use a separate type Self::Rep from Self so that Self can be an uninhabitable type and exist
+/// purely at the type-level.
+/// TODO: can we enforce Self to be uninhabitable?
 pub trait Singleton {
   type Rep: 'static;
   fn rep() -> &'static Self::Rep;
