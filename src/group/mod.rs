@@ -2,6 +2,7 @@ use super::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
+use super::util::{bi};
 use serde::ser::Serialize;
 use std::marker::Sized;
 
@@ -108,11 +109,11 @@ pub fn multi_exp<G: Group>(n: usize, alphas: &[G::Elem], x: &[BigInt]) -> G::Ele
   let alpha_r = &alphas[n_half..];
   let x_l = &x[..n_half];
   let x_r = &x[n_half..];
-  // G::op expects a BigUint
-  let x_star_l = (x_l.iter().fold(BigInt::from(1 as u8), |a, b| a * b))
+  // G::op expects a BigUint.
+  let x_star_l = (x_l.iter().fold(bi(1), |a, b| a * b))
     .to_biguint()
     .unwrap();
-  let x_star_r = (x_r.iter().fold(BigInt::from(1 as u8), |a, b| a * b))
+  let x_star_r = (x_r.iter().fold(bi(1), |a, b| a * b))
     .to_biguint()
     .unwrap();
   let l = multi_exp::<G>(n_half, alpha_l, x_l);
@@ -127,11 +128,11 @@ mod tests {
 
   #[test]
   fn test_multi_exp() {
-    // TODO: Build more general testing framework
+    // TODO: Build more general testing framework.
     let alpha_1 = DummyRSA::elem_of(2);
     let alpha_2 = DummyRSA::elem_of(3);
-    let x_1 = BigInt::from(3 as u8);
-    let x_2 = BigInt::from(2 as u8);
+    let x_1 = bi(3);
+    let x_2 = bi(2);
     let res = multi_exp::<DummyRSA>(
       2,
       &[alpha_1.clone(), alpha_2.clone()],
@@ -139,7 +140,7 @@ mod tests {
     );
     assert!(res == DummyRSA::elem_of(108));
     let alpha_3 = DummyRSA::elem_of(5);
-    let x_3 = BigInt::from(1 as u8);
+    let x_3 = bi(1);
     let res_2 = multi_exp::<DummyRSA>(3, &[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
     assert!(res_2 == DummyRSA::elem_of(1_687_500));
   }

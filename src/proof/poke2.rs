@@ -1,8 +1,8 @@
 use super::super::group::{Group, InvertibleGroup};
 use super::super::hash::hashes;
 use super::super::util;
+use super::super::util::bi;
 use num::{BigInt, BigUint};
-use num_bigint::Sign::Plus;
 use num_integer::Integer;
 use serde::ser::Serialize;
 
@@ -21,7 +21,7 @@ impl<G: InvertibleGroup> PoKE2<G> {
     let z = G::exp_signed(&g, exp);
     let l = hash_prime(base, result, &z);
     let alpha = hash_inputs(base, result, &z, &l);
-    let q = exp.div_floor(&BigInt::from_biguint(Plus, l.clone()));
+    let q = exp.div_floor(&bi(l.clone()));
     let r = util::mod_euc_big(exp, &l);
     #[allow(non_snake_case)]
     let Q = G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q);
@@ -64,13 +64,14 @@ fn hash_inputs<G: Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint {
 #[cfg(test)]
 mod tests {
   use super::super::super::group::dummy::DummyRSA;
+  use super::super::super::util::bu;
   use super::*;
 
   #[test]
   fn test_poke2() {
     // 2^20 = 1048576
     let base = DummyRSA::base_elem();
-    let exp = BigInt::from(20 as u8);
+    let exp = bi(20);
     let result = DummyRSA::elem_of(1_048_576);
     let proof = PoKE2::<DummyRSA>::prove(&base, &exp, &result);
     assert!(PoKE2::verify(&base, &result, &proof));
@@ -80,12 +81,12 @@ mod tests {
         == PoKE2 {
           z: DummyRSA::elem_of(1_048_576),
           Q: DummyRSA::elem_of(1),
-          r: BigUint::from(20 as u8)
+          r: bu(20u8)
         }
     );
 
     // 2^35 = 34359738368
-    let exp_2 = BigInt::from(35 as u8);
+    let exp_2 = bi(35);
     let result_2 = DummyRSA::elem_of(34_359_738_368);
     let proof_2 = PoKE2::<DummyRSA>::prove(&base, &exp_2, &result_2);
     assert!(PoKE2::verify(&base, &result_2, &proof_2));
@@ -96,7 +97,7 @@ mod tests {
         == PoKE2 {
           z: DummyRSA::elem_of(34_359_738_368),
           Q: DummyRSA::elem_of(1),
-          r: BigUint::from(35 as u8)
+          r: bu(35u8)
         }
     );
   }
@@ -104,7 +105,7 @@ mod tests {
   #[test]
   fn test_poke2_negative() {
     let base = DummyRSA::elem_of(2);
-    let exp = BigInt::from((-5) as i8);
+    let exp = bi(-5);
     let result = DummyRSA::exp_signed(&base, &exp);
     let proof = PoKE2::<DummyRSA>::prove(&base, &exp, &result);
     assert!(PoKE2::verify(&base, &result, &proof));

@@ -1,6 +1,7 @@
 use super::primality::is_prob_prime;
 use blake2_rfc::blake2b::{blake2b, Blake2bResult};
-use num::bigint::{BigInt, BigUint, ToBigInt};
+use num::bigint::{BigUint};
+use super::super::util::{bi};
 use sha2::{Digest, Sha256};
 
 // 32 bytes = 256 bits.
@@ -30,18 +31,15 @@ pub fn sha256(data: &[u8], key: Option<&[u8]>) -> BigUint {
 
 type HashFn = Fn(&[u8], Option<&[u8]>) -> BigUint;
 
-#[allow(dead_code)]
 pub fn h_prime(h: &HashFn, data: &[u8]) -> BigUint {
-  let mut counter = BigInt::from(0u64);
+  let mut counter = bi(0);
   loop {
     let hash_val = h(data, Some(&counter.to_bytes_be().1));
-    let hash_val_signed = hash_val
-      .to_bigint()
-      .expect("BigUint hash value could not be converted to BigInt");
+    let hash_val_signed = bi(hash_val);
     if is_prob_prime(&hash_val_signed) {
       return hash_val_signed
         .to_biguint()
-        .expect("Output of h_prime must be nonnegative!");
+        .expect("positive BigInt expected");
     }
     counter += 1;
   }
@@ -65,11 +63,7 @@ mod tests {
   }
 
   #[test]
-  fn test_h_prime() {}
-
-  // WIP: benchmarking blake2, sha256, and eventually *_prime
-  // #[bench]
-  // fn bench_blake2(b: &mut Bencher) {
-  //   unimplemented!()
-  // }
+  fn test_h_prime() {
+    unimplemented!();
+  }
 }

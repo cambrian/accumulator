@@ -138,19 +138,16 @@ pub fn verify_nonmembership<G: Group>(
 #[cfg(test)]
 mod tests {
   use super::super::group::dummy::DummyRSA;
+  use super::super::util::bu;
   use super::*;
 
-  fn big(val: u64) -> BigUint {
-    BigUint::from(val)
-  }
-
   fn init_acc<G: Group>() -> G::Elem {
-    G::exp(&setup::<G>(), &(big(41) * &big(67) * &big(89)))
+    G::exp(&setup::<G>(), &(bu(41u8) * &bu(67u8) * &bu(89u8)))
   }
 
   #[test]
   fn test_shamir_trick() {
-    let (x, y, z) = (&big(13), &big(17), &big(19));
+    let (x, y, z) = (&bu(13u8), &bu(17u8), &bu(19u8));
     let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
     let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
     let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), z);
@@ -159,7 +156,7 @@ mod tests {
 
   #[test]
   fn test_shamir_trick_failure() {
-    let (x, y, z) = (&big(7), &big(14), &big(19)); // Inputs not co-prime.
+    let (x, y, z) = (&bu(7u8), &bu(14u8), &bu(19u8)); // Inputs not co-prime.
     let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
     let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
     assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
@@ -168,40 +165,40 @@ mod tests {
   #[test]
   fn test_add() {
     let acc = init_acc::<DummyRSA>();
-    let new_elems = [&big(5), &big(7), &big(11)];
+    let new_elems = [&bu(5u8), &bu(7u8), &bu(11u8)];
     let (new_acc, poe) = add::<DummyRSA>(acc.clone(), &new_elems);
-    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(94_125_955));
+    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &bu(94_125_955u32));
     assert!(new_acc == expected_acc);
-    assert!(PoE::verify(&acc, &big(385), &new_acc, &poe));
+    assert!(PoE::verify(&acc, &bu(385u16), &new_acc, &poe));
   }
 
   #[test]
   fn test_delete() {
     let acc = init_acc::<DummyRSA>();
-    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(3649));
-    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(2747));
+    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(3649u16));
+    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(2747u16));
     let (new_acc, poe) =
-      delete::<DummyRSA>(acc.clone(), &[&(big(67), y_witness), &(big(89), z_witness)])
+      delete::<DummyRSA>(acc.clone(), &[&(bu(67u8), y_witness), &(bu(89u8), z_witness)])
         .expect("valid delete expected");
-    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(41));
+    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &bu(41u8));
     assert!(new_acc == expected_acc);
-    assert!(PoE::verify(&new_acc, &big(5963), &acc, &poe));
+    assert!(PoE::verify(&new_acc, &bu(5963u16), &acc, &poe));
   }
 
   #[should_panic(expected = "BadWitness")]
   #[test]
   fn test_delete_bad_witness() {
     let acc = init_acc::<DummyRSA>();
-    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(3648));
-    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(2746));
-    delete::<DummyRSA>(acc, &[&(big(67), y_witness), &(big(89), z_witness)]).unwrap();
+    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(3648u16));
+    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(2746u16));
+    delete::<DummyRSA>(acc, &[&(bu(67u8), y_witness), &(bu(89u8), z_witness)]).unwrap();
   }
 
   #[test]
   fn test_prove_nonmembership() {
     let acc = init_acc::<DummyRSA>();
-    let acc_set = [&big(41), &big(67), &big(89)];
-    let elems = [&big(5), &big(7), &big(11)];
+    let acc_set = [&bu(41u8), &bu(67u8), &bu(89u8)];
+    let elems = [&bu(5u8), &bu(7u8), &bu(11u8)];
     let proof =
       prove_nonmembership::<DummyRSA>(&acc, &acc_set, &elems).expect("valid proof expected");
     assert!(verify_nonmembership::<DummyRSA>(&acc, &elems, &proof));
@@ -211,8 +208,8 @@ mod tests {
   #[test]
   fn test_prove_nonmembership_failure() {
     let acc = init_acc::<DummyRSA>();
-    let acc_set = [&big(41), &big(67), &big(89)];
-    let elems = [&big(41), &big(7), &big(11)];
+    let acc_set = [&bu(41u8), &bu(67u8), &bu(89u8)];
+    let elems = [&bu(41u8), &bu(7u8), &bu(11u8)];
     prove_nonmembership::<DummyRSA>(&acc, &acc_set, &elems).unwrap();
   }
 }

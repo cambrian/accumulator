@@ -40,15 +40,16 @@ fn hash_prime<G: Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
 #[cfg(test)]
 mod tests {
   use super::super::super::group::dummy::DummyRSA;
+  use super::super::super::util::bu;
   use super::*;
 
   // Current exponents are far smaller than generated primes, so all PoE proofs are producing
-  // Q = 1 proofs, which is pretty useless. This will be remedied when we implement RSA2048
+  // pretty useless Q = 1 proofs. This will be remedied when we implement RSA2048.
   #[test]
   fn test_poe() {
     // 2^20 = 1048576
     let base = DummyRSA::base_elem();
-    let exp = BigUint::from(20 as u8);
+    let exp = bu(20u8);
     let result = DummyRSA::elem_of(1_048_576);
     let proof = PoE::<DummyRSA>::prove(&base, &exp, &result);
     assert!(PoE::verify(&base, &exp, &result, &proof));
@@ -60,7 +61,7 @@ mod tests {
     );
 
     // 2^35 = 34359738368
-    let exp_2 = BigUint::from(35 as u8);
+    let exp_2 = bu(35u8);
     let result_2 = DummyRSA::elem_of(34_359_738_368);
     let proof_2 = PoE::<DummyRSA>::prove(&base, &exp_2, &result_2);
     assert!(PoE::verify(&base, &exp_2, &result_2, &proof_2));
