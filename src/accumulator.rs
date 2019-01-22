@@ -18,7 +18,7 @@ pub fn setup<G: Group>() -> G::Elem {
 
 /// Adds `elems` to the accumulator `acc`.
 pub fn add<G: Group>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G::Elem>) {
-  let x = product(elems);
+  let x = util::product(elems);
   let new_acc = G::exp(acc, &x);
   let poe_proof = poe::prove_poe::<G>(acc, &x, &new_acc);
   (new_acc, poe_proof)
@@ -46,7 +46,7 @@ pub fn delete<G: InvertibleGroup>(
       return Err(AccError::BadWitness);
     }
 
-    let acc_next_option = shamir_trick::<G>(&acc_next, witness, &elem_aggregate, elem);
+    let acc_next_option = util::shamir_trick::<G>(&acc_next, witness, &elem_aggregate, elem);
     match acc_next_option {
       Some(acc_next_value) => acc_next = acc_next_value,
       None => return Err(AccError::InputsNotCoPrime),
@@ -74,7 +74,7 @@ pub fn verify_membership<G: Group>(
   result: &G::Elem,
   proof: &PoE<G::Elem>,
 ) -> bool {
-  let exp = product(elems);
+  let exp = util::product(elems);
   poe::verify_poe::<G>(witness, &exp, result, proof)
 }
 
@@ -85,8 +85,8 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
   acc_set: &[&BigUint],
   elems: &[&BigUint],
 ) -> Result<(G::Elem, G::Elem, G::Elem, PoKE2<G::Elem>, PoE<G::Elem>), AccError> {
-  let x = product(elems);
-  let s = product(acc_set);
+  let x = util::product(elems);
+  let s = util::product(acc_set);
   let (a, b, gcd) = util::bezout(&x, &s);
 
   if !gcd.is_one() {
@@ -113,36 +113,9 @@ pub fn verify_nonmembership<G: Group>(
   poke2_proof: &PoKE2<G::Elem>,
   poe_proof: &PoE<G::Elem>,
 ) -> bool {
-  let x = product(elems);
+  let x = util::product(elems);
   poke2::verify_poke2::<G>(acc, v, poke2_proof)
     && poe::verify_poe::<G>(d, &x, gv_inverse, poe_proof)
-}
-
-fn product(elems: &[&BigUint]) -> BigUint {
-  elems.iter().fold(num::one(), |a, b| a * *b)
-}
-
-/// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
-fn shamir_trick<G: InvertibleGroup>(
-  xth_root: &G::Elem,
-  yth_root: &G::Elem,
-  x: &BigUint,
-  y: &BigUint,
-) -> Option<G::Elem> {
-  if G::exp(xth_root, x) != G::exp(yth_root, y) {
-    return None;
-  }
-
-  let (a, b, gcd) = util::bezout(x, y);
-
-  if !gcd.is_one() {
-    return None;
-  }
-
-  Some(G::op(
-    &G::exp_signed(xth_root, &b),
-    &G::exp_signed(yth_root, &a),
-  ))
 }
 
 #[cfg(test)]
@@ -156,30 +129,24 @@ mod tests {
   }
 
   fn init_acc<G: Group>() -> G::Elem {
-    G::exp(&setup::<G>(), &product(&[&big(41), &big(67), &big(89)]))
-  }
-
-  #[test]
-  fn test_product() {
-    let elems = [&big(2), &big(3), &big(4), &big(5), &big(6), &big(7)];
-    assert!(product(&elems) == big(5040));
+    G::exp(&setup::<G>(), &(big(41) * &big(67) * &big(89)))
   }
 
   #[test]
   fn test_shamir_trick() {
     let (x, y, z) = (&big(13), &big(17), &big(19));
-    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[y, z]));
-    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[x, z]));
+    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
+    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
     let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), z);
-    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == Some(xyth_root));
+    assert!(util::shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
 
   #[test]
   fn test_shamir_trick_failure() {
     let (x, y, z) = (&big(7), &big(14), &big(19)); // Inputs not co-prime.
-    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[y, z]));
-    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &product(&[x, z]));
-    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
+    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
+    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
+    assert!(util::shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
   }
 
   #[test]

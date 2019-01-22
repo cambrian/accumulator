@@ -1,7 +1,7 @@
-use super::group::Group;
+use super::group::{Group, InvertibleGroup};
 use num::{BigInt, BigUint, Unsigned};
 use num_bigint::Sign::Plus;
-use num_traits::identities::Zero;
+use num_traits::identities::{One, Zero};
 
 /// Returns `(a, b, GCD(x, y))` s.t. `ax + by = GCD(x, y)`.
 pub fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
@@ -46,6 +46,33 @@ pub trait ConvertBytes: Group {
   fn to_be_bytes(x: &Self::Elem) -> Vec<u8>;
 }
 
+pub fn product(elems: &[&BigUint]) -> BigUint {
+  elems.iter().fold(num::one(), |a, b| a * *b)
+}
+
+/// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
+pub fn shamir_trick<G: InvertibleGroup>(
+  xth_root: &G::Elem,
+  yth_root: &G::Elem,
+  x: &BigUint,
+  y: &BigUint,
+) -> Option<G::Elem> {
+  if G::exp(xth_root, x) != G::exp(yth_root, y) {
+    return None;
+  }
+
+  let (a, b, gcd) = bezout(x, y);
+
+  if !gcd.is_one() {
+    return None;
+  }
+
+  Some(G::op(
+    &G::exp_signed(xth_root, &b),
+    &G::exp_signed(yth_root, &a),
+  ))
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -65,5 +92,18 @@ mod tests {
   fn test_mod_euc_big() {
     let r = mod_euc_big(&BigInt::from(-8), &(3 as u8));
     assert!(r == BigUint::one());
+  }
+
+  #[test]
+  fn test_product() {
+    let elems = [
+      &BigUint::from(2u32),
+      &BigUint::from(3u32),
+      &BigUint::from(4u32),
+      &BigUint::from(5u32),
+      &BigUint::from(6u32),
+      &BigUint::from(7u32),
+    ];
+    assert!(product(&elems) == BigUint::from(5040u32));
   }
 }
