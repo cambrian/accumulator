@@ -1,5 +1,5 @@
 use super::super::group::{Group, InvertibleGroup};
-use super::super::hash::hashes;
+use super::super::hash;
 use super::super::util;
 use num::{BigInt, BigUint};
 use num_bigint::Sign::Plus;
@@ -54,7 +54,7 @@ fn hash_prime<G: Serialize>(_u: &G, _w: &G, _z: &G) -> BigUint {
   // let mut hash_string = serde_json::to_string(&u).unwrap();
   // hash_string.push_str(&serde_json::to_string(&w).unwrap());
   // hash_string.push_str(&serde_json::to_string(&z).unwrap());
-  // hashes::h_prime(&hashes::blake2, hash_string.as_bytes())
+  // hash::h_prime(&hash::blake2, hash_string.as_bytes())
 }
 
 fn hash_inputs<G: Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint {
@@ -62,7 +62,7 @@ fn hash_inputs<G: Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint {
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
   hash_string.push_str(&serde_json::to_string(&z).unwrap());
   hash_string.push_str(&l.to_str_radix(16));
-  hashes::blake2(hash_string.as_bytes(), None)
+  hash::blake2(hash_string.as_bytes(), None)
 }
 
 #[cfg(test)]
