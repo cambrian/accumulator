@@ -1,7 +1,7 @@
+use super::super::util::bi;
 use super::primality::is_prob_prime;
 use blake2_rfc::blake2b::{blake2b, Blake2bResult};
-use num::bigint::{BigUint};
-use super::super::util::{bi};
+use num::bigint::BigUint;
 use sha2::{Digest, Sha256};
 
 // 32 bytes = 256 bits.
