@@ -17,20 +17,22 @@ pub fn setup<G: Group>() -> G::Elem {
 }
 
 /// Adds `elems` to the accumulator `acc`.
-pub fn add<G: Group>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G::Elem>) {
+pub fn add<G: Group>(acc: G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G::Elem>) {
   let x = util::product(elems);
-  let new_acc = G::exp(acc, &x);
-  let poe_proof = poe::prove_poe::<G>(acc, &x, &new_acc);
+  let new_acc = G::exp(&acc, &x);
+  let poe_proof = poe::prove_poe::<G>(&acc, &x, &new_acc);
   (new_acc, poe_proof)
 }
 
 /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
 pub fn delete<G: InvertibleGroup>(
-  acc: &G::Elem,
-  elem_witnesses: &[(&BigUint, &G::Elem)],
+  acc: G::Elem,
+  elem_witnesses: &[&(BigUint, G::Elem)],
 ) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
+  // REVIEW: It should be possible to restructure the loop in such a way that this check is
+  // unnecessary
   if elem_witnesses.is_empty() {
-    let poe_proof = poe::prove_poe::<G>(acc, &BigUint::zero(), acc);
+    let poe_proof = poe::prove_poe::<G>(&acc, &BigUint::zero(), &acc);
     return Ok((acc.clone(), poe_proof));
   }
 
@@ -42,7 +44,7 @@ pub fn delete<G: InvertibleGroup>(
     .expect("unexpected witnesses")
     .1
   {
-    if &G::exp(witness, elem) != acc {
+    if G::exp(witness, elem) != acc {
       return Err(AccError::BadWitness);
     }
 
@@ -52,19 +54,19 @@ pub fn delete<G: InvertibleGroup>(
       None => return Err(AccError::InputsNotCoPrime),
     };
 
-    elem_aggregate *= *elem;
+    elem_aggregate *= elem;
   }
 
-  let poe_proof = poe::prove_poe::<G>(&acc_next, &elem_aggregate, acc);
+  let poe_proof = poe::prove_poe::<G>(&acc_next, &elem_aggregate, &acc);
   Ok((acc_next, poe_proof))
 }
 
 /// See `delete`.
 pub fn prove_membership<G: InvertibleGroup>(
   acc: &G::Elem,
-  elem_witnesses: &[(&BigUint, &G::Elem)],
+  elem_witnesses: &[&(BigUint, G::Elem)],
 ) -> Result<(G::Elem, PoE<G::Elem>), AccError> {
-  delete::<G>(acc, elem_witnesses)
+  delete::<G>(acc.clone(), elem_witnesses)
 }
 
 /// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
@@ -153,7 +155,7 @@ mod tests {
   fn test_add() {
     let acc = init_acc::<DummyRSA>();
     let new_elems = [&big(5), &big(7), &big(11)];
-    let (new_acc, poe) = add::<DummyRSA>(&acc, &new_elems);
+    let (new_acc, poe) = add::<DummyRSA>(acc.clone(), &new_elems);
     let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(94_125_955));
     assert!(new_acc == expected_acc);
     assert!(poe::verify_poe::<DummyRSA>(&acc, &big(385), &new_acc, &poe));
@@ -165,7 +167,7 @@ mod tests {
     let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(3649));
     let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(2747));
     let (new_acc, poe) =
-      delete::<DummyRSA>(&acc, &[(&big(67), &y_witness), (&big(89), &z_witness)])
+      delete::<DummyRSA>(acc.clone(), &[&(big(67), y_witness), &(big(89), z_witness)])
         .expect("valid delete expected");
     let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &big(41));
     assert!(new_acc == expected_acc);
@@ -183,7 +185,7 @@ mod tests {
     let acc = init_acc::<DummyRSA>();
     let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(3648));
     let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &big(2746));
-    delete::<DummyRSA>(&acc, &[(&big(67), &y_witness), (&big(89), &z_witness)]).unwrap();
+    delete::<DummyRSA>(acc, &[&(big(67), y_witness), &(big(89), z_witness)]).unwrap();
   }
 
   #[test]

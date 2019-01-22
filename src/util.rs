@@ -46,6 +46,7 @@ pub trait ConvertBytes: Group {
   fn to_be_bytes(x: &Self::Elem) -> Vec<u8>;
 }
 
+/// REVIEW: generalize
 pub fn product(elems: &[&BigUint]) -> BigUint {
   elems.iter().fold(num::one(), |a, b| a * *b)
 }
