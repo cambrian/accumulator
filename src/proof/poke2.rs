@@ -75,7 +75,7 @@ mod tests {
     let result = DummyRSA::elem_of(1_048_576);
     let proof = PoKE2::<DummyRSA>::prove(&base, &exp, &result);
     assert!(PoKE2::verify(&base, &result, &proof));
-    // Must compare entire structs since elements z, Q, and r are private
+    // Must compare entire structs since elements z, Q, and r are private.
     assert!(
       proof
         == PoKE2 {
