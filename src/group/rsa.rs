@@ -11,7 +11,7 @@
 //!    depends on accessing the element bytes, this should have a significant performance penalty.
 //!    We should profile before deciding how to improve this, but regardless of solution choice this
 //!    needs to be fixed before release.
-use super::super::util;
+use super::super::util::{bezout, mod_euc_big, Singleton};
 use super::{Group, InvertibleGroup};
 use core::clone::Clone;
 use core::str::FromStr;
@@ -85,12 +85,15 @@ impl Serialize for RSA2048Elem {
   }
 }
 
-/// TODO: implement {x, -x} cosets
-impl Group for RSA2048 {
-  type Elem = RSA2048Elem;
+impl Singleton for RSA2048 {
   fn get() -> &'static Self {
     &RSA2048_
   }
+}
+
+/// TODO: implement {x, -x} cosets
+impl Group for RSA2048 {
+  type Elem = RSA2048Elem;
 
   fn id_(&self) -> RSA2048Elem {
     RSA2048Elem(self.m.oneR_elem())
@@ -118,9 +121,9 @@ impl Group for RSA2048 {
 impl InvertibleGroup for RSA2048 {
   fn inv_(&self, x: &RSA2048Elem) -> RSA2048Elem {
     let x_big = biguint_from_elem(x);
-    let (a, _, gcd) = util::bezout(&x_big, &RSA2048_MODULUS);
+    let (a, _, gcd) = bezout(&x_big, &RSA2048_MODULUS);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
-    elem_from_biguint(&util::mod_euc_big::<BigUint>(&a, &RSA2048_MODULUS))
+    elem_from_biguint(&mod_euc_big::<BigUint>(&a, &RSA2048_MODULUS))
   }
 }
 

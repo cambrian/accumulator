@@ -2,7 +2,7 @@
 //! Use this group for testing while we figure out ring integration.
 
 use super::super::util;
-use super::super::util::ConvertBytes;
+use super::super::util::{ConvertBytes, Singleton};
 use super::{Group, InvertibleGroup};
 use num::{BigInt, BigUint};
 use num_traits::cast::ToPrimitive;
@@ -23,6 +23,12 @@ pub struct DummyRSAElem {
   val: u64,
 }
 
+impl Singleton for DummyRSA {
+  fn get() -> &'static Self {
+    &DUMMY_RSA
+  }
+}
+
 impl DummyRSA {
   pub fn elem_of(val_unbounded: u64) -> DummyRSAElem {
     let val = val_unbounded % Self::get().modulus;
@@ -40,9 +46,6 @@ impl DummyRSA {
 
 impl Group for DummyRSA {
   type Elem = DummyRSAElem;
-  fn get() -> &'static Self {
-    &DUMMY_RSA
-  }
   fn op_(&self, a_elem: &DummyRSAElem, b_elem: &DummyRSAElem) -> DummyRSAElem {
     // Note: This is a pretty naive implementation of op.
     let (a, b) = (a_elem.val, b_elem.val);

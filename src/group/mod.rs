@@ -1,3 +1,4 @@
+use super::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
@@ -15,31 +16,28 @@ pub mod rsa;
 /// should be a single, constant, static instance of the group representation accessible at all
 /// times. This way, we can "reflect" information about the group type by accessing the singleton.
 /// Refer to dummy.rs for an example.
-pub trait Group: Sized + 'static {
+pub trait Group: Singleton {
   /// In theory the association Group::Elem is bijective, such that it makes sense to write
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
   /// type and avoid using prefix notation for all of our group operations.
   /// But afaik bijective associated types are not supported by Rust.
   type Elem: Eq + Serialize + Clone + Sized;
 
-  // TODO: possible to make private??
-  fn get() -> &'static Self;
-
-  fn id_(&'static self) -> Self::Elem;
+  fn id_(&self) -> Self::Elem;
 
   /// Returns an element with unknown order.
   /// REVIEW: Consider renaming Group such that it's clear that the group has elements of unknown
   /// order.
   /// REVIEW: Consider renaming to unknown_order_elem (maybe small_unknown_order_elem).
   /// E.g. 2, for RSA groups.
-  fn base_elem_(&'static self) -> Self::Elem;
+  fn base_elem_(&self) -> Self::Elem;
 
-  fn op_(&'static self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
+  fn op_(&self, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
 
   /// Default implementation of exponentiation via repeated squaring.
   /// Group implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
-  fn exp_(&'static self, a: &Self::Elem, n: &BigUint) -> Self::Elem {
+  fn exp_(&self, a: &Self::Elem, n: &BigUint) -> Self::Elem {
     if *n == BigUint::zero() {
       Self::id()
     } else if *n == BigUint::one() {

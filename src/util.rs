@@ -3,6 +3,11 @@ use num::{BigInt, BigUint, Unsigned};
 use num_bigint::Sign::Plus;
 use num_traits::identities::{One, Zero};
 
+pub trait Singleton: 'static {
+  // TODO: possible to make private??
+  fn get() -> &'static Self;
+}
+
 /// Returns `(a, b, GCD(x, y))` s.t. `ax + by = GCD(x, y)`.
 pub fn bezout(x: &BigUint, y: &BigUint) -> (BigInt, BigInt, BigInt) {
   let (mut s, mut old_s): (BigInt, BigInt) = (num::zero(), num::one());
