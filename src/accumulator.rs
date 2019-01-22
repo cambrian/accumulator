@@ -1,9 +1,9 @@
 use super::group::{Group, InvertibleGroup};
 use super::proof::{poe::PoE, poke2::PoKE2};
-use super::util::{product, bezout, shamir_trick};
+use super::util::{bezout, bu, product, shamir_trick};
 use num;
 use num::BigUint;
-use num_traits::identities::{One, Zero};
+use num_traits::identities::One;
 
 #[derive(Debug)]
 pub enum AccError {
@@ -29,21 +29,10 @@ pub fn delete<G: InvertibleGroup>(
   acc: G::Elem,
   elem_witnesses: &[&(BigUint, G::Elem)],
 ) -> Result<(G::Elem, PoE<G>), AccError> {
-  // REVIEW: It should be possible to restructure the loop in such a way that this check is
-  // unnecessary
-  if elem_witnesses.is_empty() {
-    let poe_proof = PoE::prove(&acc, &BigUint::zero(), &acc);
-    return Ok((acc.clone(), poe_proof));
-  }
+  let mut elem_aggregate = bu(1u8);
+  let mut acc_next = acc.clone();
 
-  let mut elem_aggregate = elem_witnesses[0].0.clone();
-  let mut acc_next = elem_witnesses[0].1.clone();
-
-  for (elem, witness) in elem_witnesses
-    .split_first() // Chop off first entry.
-    .expect("unexpected witnesses")
-    .1
-  {
+  for (elem, witness) in elem_witnesses {
     if G::exp(witness, elem) != acc {
       return Err(AccError::BadWitness);
     }
@@ -89,7 +78,6 @@ pub struct NonMembershipProof<G: Group> {
 }
 
 /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
-#[allow(clippy::type_complexity)]
 pub fn prove_nonmembership<G: InvertibleGroup>(
   acc: &G::Elem,
   acc_set: &[&BigUint],
@@ -177,12 +165,22 @@ mod tests {
     let acc = init_acc::<DummyRSA>();
     let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(3649u16));
     let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(2747u16));
-    let (new_acc, poe) =
-      delete::<DummyRSA>(acc.clone(), &[&(bu(67u8), y_witness), &(bu(89u8), z_witness)])
-        .expect("valid delete expected");
+    let (new_acc, poe) = delete::<DummyRSA>(
+      acc.clone(),
+      &[&(bu(67u8), y_witness), &(bu(89u8), z_witness)],
+    )
+    .expect("valid delete expected");
     let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &bu(41u8));
     assert!(new_acc == expected_acc);
     assert!(PoE::verify(&new_acc, &bu(5963u16), &acc, &poe));
+  }
+
+  #[test]
+  fn test_delete_empty() {
+    let acc = init_acc::<DummyRSA>();
+    let (new_acc, poe) = delete::<DummyRSA>(acc.clone(), &[]).expect("valid delete expected");
+    assert!(new_acc == acc);
+    assert!(PoE::verify(&new_acc, &bu(1u8), &acc, &poe));
   }
 
   #[should_panic(expected = "BadWitness")]

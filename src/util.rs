@@ -16,11 +16,17 @@ pub trait Singleton: Eq + 'static {
   fn get() -> &'static Self;
 }
 
-pub fn bi<T>(val: T) -> BigInt where BigInt: From<T> {
+pub fn bi<T>(val: T) -> BigInt
+where
+  BigInt: From<T>,
+{
   BigInt::from(val)
 }
 
-pub fn bu<U: Unsigned>(val: U) -> BigUint where BigUint: From<U> {
+pub fn bu<U: Unsigned>(val: U) -> BigUint
+where
+  BigUint: From<U>,
+{
   BigUint::from(val)
 }
 
@@ -58,7 +64,7 @@ where
 }
 
 pub fn product<T: Mul + One + Clone>(elems: &[&T]) -> T {
-  elems.iter().fold(num::one(), |a, b| a * (*b).clone())
+  elems.iter().fold(num::one(), |a, &b| a * b.clone())
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.

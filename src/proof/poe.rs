@@ -1,5 +1,5 @@
 use super::super::group::Group;
-use super::super::hash::hashes;
+use super::super::hash;
 use num::BigUint;
 use num_integer::Integer;
 use serde::ser::Serialize;
@@ -34,7 +34,7 @@ fn hash_prime<G: Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
   let mut hash_string = exp.to_str_radix(16);
   hash_string.push_str(&serde_json::to_string(&base).unwrap());
   hash_string.push_str(&serde_json::to_string(&result).unwrap());
-  hashes::h_prime(&hashes::blake2, hash_string.as_bytes())
+  hash::h_prime(&hash::blake2, hash_string.as_bytes())
 }
 
 #[cfg(test)]
