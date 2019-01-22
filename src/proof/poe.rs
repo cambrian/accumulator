@@ -30,9 +30,6 @@ impl<G: Group> PoE<G> {
   }
 }
 
-<<<<<<< HEAD
-fn hash_prime<G: Serialize>(_exp: &BigUint, _base: &G, _result: &G) -> BigUint {
-=======
 /// See page 16 of B&B.
 pub fn verify_poe<G: Group>(
   base: &G::Elem,
@@ -48,8 +45,6 @@ pub fn verify_poe<G: Group>(
 }
 
 fn hash_prime<G: Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
->>>>>>> Using hash prime function
-  // TODO: Replace with commented out when hash_prime is implemented.
   let mut hash_string = exp.to_str_radix(16);
   hash_string.push_str(&serde_json::to_string(&base).unwrap());
   hash_string.push_str(&serde_json::to_string(&result).unwrap());
@@ -89,12 +84,7 @@ mod tests {
           Q: DummyRSA::elem_of(1)
         }
     );
-<<<<<<< HEAD
     // Cannot verify wrong base/exp/result triple with wrong pair.
-    assert!(!PoE::verify(&base, &exp_2, &result_2, &proof));
-=======
-    // // Cannot verify wrong base/exp/result triple with wrong pair.
     // assert!(!verify_poe::<DummyRSA>(&base, &exp_2, &result_2, &proof));
->>>>>>> Using hash prime function
   }
 }

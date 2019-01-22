@@ -49,7 +49,6 @@ impl<G: Group> PoKE2<G> {
 }
 
 fn hash_prime<G: Serialize>(u: &G, w: &G, z: &G) -> BigUint {
-  // TODO: Replace with commented out when hash_prime is implemented.
   let mut hash_string = serde_json::to_string(&u).unwrap();
   hash_string.push_str(&serde_json::to_string(&w).unwrap());
   hash_string.push_str(&serde_json::to_string(&z).unwrap());
