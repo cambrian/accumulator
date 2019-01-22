@@ -7,7 +7,8 @@ extern crate lazy_static;
 extern crate serde_derive;
 
 pub mod accumulator;
-mod group;
+/// Must be public to access from /benches to benchmark properly
+pub mod group;
 mod hash;
 pub mod proof;
 mod util;
