@@ -6,7 +6,7 @@ pub use blake2b::Blake2b;
 mod primality;
 
 /// Just like Hasher, but general over output type.
-pub trait GeneralHasher: Hasher + Default {
+pub trait GeneralHasher: Hasher {
   type Output;
   /// Similar to Hasher::finish, but consumes self.
   fn finalize(self) -> Self::Output;
