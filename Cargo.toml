@@ -15,19 +15,19 @@ readme = "README.md"
 repository = "https://github.com/1protocol/crypto"
 
 [dependencies]
+bitvec = "0.9.0"
 blake2-rfc = "0.2.18"
 byteorder = "1.2.7"
+criterion = "0.2.8"
+gnuplot = "0.0.26"
 lazy_static = "1.2.0"
 num = "0.2.0"
 num-bigint = "0.2"
 num-integer = "0.1"
 num-traits = "0.2"
+rand = "0.6.4"
 ring = { git = "https://github.com/1protocol/ring" }
 untrusted = "0.6.2"
-criterion = "0.2.8"
-bitvec = "0.9.0"
-gnuplot = "0.0.26"
-rand = "0.6.4"
 
 [[bench]]
 name = "poe"
