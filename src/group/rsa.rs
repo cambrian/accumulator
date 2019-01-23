@@ -11,8 +11,8 @@
 //!    depends on accessing the element bytes, this should have a significant performance penalty.
 //!    We should profile before deciding how to improve this, but regardless of solution choice this
 //!    needs to be fixed before release.
-use super::super::util::{bezout, mod_euc_big, Singleton};
 use super::{Group, InvertibleGroup};
+use crate::util::{bezout, mod_euc_big, Singleton};
 use core::clone::Clone;
 use core::str::FromStr;
 use num::BigUint;
@@ -155,8 +155,8 @@ fn encode(a: RingElem<M, Unencoded>) -> RSA2048Elem {
 
 #[cfg(test)]
 mod tests {
-  use super::super::super::util::bu;
   use super::*;
+  use crate::util::bu;
   use num_traits::Unsigned;
 
   fn elem_of<U: Unsigned>(n: U) -> RSA2048Elem

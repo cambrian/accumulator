@@ -1,9 +1,9 @@
 //! Dummy RSA group for 64-bit numbers.
 //! Use this group for testing while we figure out ring integration.
 
-use super::super::util;
-use super::super::util::{bi, bu, ConvertBytes, Singleton};
 use super::{Group, InvertibleGroup};
+use crate::util;
+use crate::util::{bi, bu, ConvertBytes, Singleton};
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::One;
 use std::u64;

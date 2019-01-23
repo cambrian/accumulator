@@ -1,5 +1,5 @@
-use super::super::group::{multi_exp, InvertibleGroup};
-use super::super::util::product;
+use crate::group::{multi_exp, InvertibleGroup};
+use crate::util::product;
 use num::BigInt;
 
 #[allow(non_snake_case)]
@@ -25,9 +25,9 @@ impl<G: InvertibleGroup> PoKCR<G> {
 
 #[cfg(test)]
 mod tests {
-  use super::super::super::group::dummy::DummyRSA;
-  use super::super::super::util::bi;
   use super::*;
+  use crate::group::dummy::DummyRSA;
+  use crate::util::bi;
 
   #[test]
   fn test_pokcr() {

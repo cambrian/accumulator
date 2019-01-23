@@ -1,6 +1,6 @@
 // TODO: Add reading links.
-use num::bigint::{BigInt};
-use super::super::util::bi;
+use crate::util::bi;
+use num::bigint::BigInt;
 mod constants;
 
 const MAX_JACOBI_ITERS: u64 = 500;

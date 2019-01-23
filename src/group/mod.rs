@@ -1,5 +1,5 @@
-use super::util::product;
-use super::util::Singleton;
+use crate::util::product;
+use crate::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
@@ -119,9 +119,9 @@ pub fn multi_exp<G: Group>(alphas: &[&G::Elem], x: &[&BigInt]) -> G::Elem {
 
 #[cfg(test)]
 mod tests {
-  use super::super::util::bi;
   use super::dummy::DummyRSA;
   use super::*;
+  use crate::util::bi;
 
   #[test]
   fn test_multi_exp() {

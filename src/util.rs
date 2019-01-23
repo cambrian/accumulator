@@ -1,4 +1,4 @@
-use super::group::{Group, InvertibleGroup};
+use crate::group::{Group, InvertibleGroup};
 use num::{BigInt, BigUint, Unsigned};
 use num_traits::identities::{One, Zero};
 use std::ops::Mul;

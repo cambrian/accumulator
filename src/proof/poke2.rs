@@ -1,7 +1,7 @@
-use super::super::group::{Group, InvertibleGroup};
-use super::super::hash;
-use super::super::util;
-use super::super::util::bi;
+use crate::group::{Group, InvertibleGroup};
+use crate::hash;
+use crate::util;
+use crate::util::bi;
 use num::{BigInt, BigUint};
 use num_integer::Integer;
 use serde::ser::Serialize;
@@ -63,9 +63,9 @@ fn hash_inputs<G: Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint {
 
 #[cfg(test)]
 mod tests {
-  use super::super::super::group::dummy::DummyRSA;
-  use super::super::super::util::bu;
   use super::*;
+  use crate::group::dummy::DummyRSA;
+  use crate::util::bu;
 
   #[test]
   fn test_poke2() {

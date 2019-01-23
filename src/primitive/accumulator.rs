@@ -1,6 +1,6 @@
-use super::group::{Group, InvertibleGroup};
-use super::proof::{poe::PoE, poke2::PoKE2};
-use super::util::{bezout, bu, product, shamir_trick};
+use crate::group::{Group, InvertibleGroup};
+use crate::proof::{poe::PoE, poke2::PoKE2};
+use crate::util::{bezout, bu, product, shamir_trick};
 use num;
 use num::BigUint;
 use num_traits::identities::One;
@@ -125,9 +125,9 @@ pub fn verify_nonmembership<G: Group>(
 
 #[cfg(test)]
 mod tests {
-  use super::super::group::dummy::DummyRSA;
-  use super::super::util::bu;
   use super::*;
+  use crate::group::dummy::DummyRSA;
+  use crate::util::bu;
 
   fn init_acc<G: Group>() -> G::Elem {
     G::exp(&setup::<G>(), &(bu(41u8) * &bu(67u8) * &bu(89u8)))

@@ -4,19 +4,19 @@ extern crate criterion;
 
 use criterion::Criterion;
 use crypto::group::dummy::DummyRSA;
-use crypto::proof::poe::{prove_poe, verify_poe};
-use super::util::bu;
+use crypto::proof::poe::PoE;
+use crypto::util::bu;
 
 fn bench_poe() {
   let base = DummyRSA::elem_of(2);
-  let exp = bu(20);
+  let exp = bu(20u8);
   let result = DummyRSA::elem_of(1_048_576);
-  let proof = prove_poe::<DummyRSA>(&base, &exp, &result);
-  verify_poe::<DummyRSA>(&base, &exp, &result, &proof);
+  let proof = PoE::<DummyRSA>::prove(&base, &exp, &result);
+  PoE::<DummyRSA>::verify(&base, &exp, &result, &proof);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("poe", |b| b.iter(|| bench_poe()));
+  c.bench_function("poe", |b| b.iter(bench_poe));
 }
 
 criterion_group!(benches, criterion_benchmark);

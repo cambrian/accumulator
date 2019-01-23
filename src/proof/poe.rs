@@ -1,5 +1,5 @@
-use super::super::group::Group;
-use super::super::hash;
+use crate::group::Group;
+use crate::hash;
 use num::BigUint;
 use num_integer::Integer;
 use serde::ser::Serialize;
@@ -39,9 +39,9 @@ fn hash_prime<G: Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
 
 #[cfg(test)]
 mod tests {
-  use super::super::super::group::dummy::DummyRSA;
-  use super::super::super::util::bu;
   use super::*;
+  use crate::group::dummy::DummyRSA;
+  use crate::util::bu;
 
   // Current exponents are far smaller than generated primes, so all PoE proofs are producing
   // pretty useless Q = 1 proofs. This will be remedied when we implement RSA2048.

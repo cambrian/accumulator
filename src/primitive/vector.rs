@@ -1,7 +1,7 @@
 // TODO (Also, how to aggregate?)
 use super::accumulator::AccError;
-use super::group::Group;
-use super::proof::{poe::PoE, poke2::PoKE2};
+use crate::group::Group;
+use crate::proof::{poe::PoE, poke2::PoKE2};
 use bitvec::BitVec;
 use num::BigUint;
 
