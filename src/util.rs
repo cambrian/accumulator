@@ -19,9 +19,9 @@ where
   BigInt::from(val)
 }
 
-pub fn bu<U>(val: U) -> BigUint
+pub fn bu<T>(val: T) -> BigUint
 where
-  BigUint: From<U>,
+  BigUint: From<T>,
 {
   BigUint::from(val)
 }
