@@ -1,6 +1,6 @@
 // TODO: Add reading links.
 use crate::util::bi;
-use num::bigint::BigInt;
+use num::bigint::{BigInt, BigUint, ToBigInt};
 mod constants;
 
 const MAX_JACOBI_ITERS: u64 = 500;
@@ -16,7 +16,8 @@ const MAX_JACOBI_ITERS: u64 = 500;
 // toward very large (256-bit and up) values of n, for which squares are far sparser than primes,
 // the expected marginal utility of catching squares before running out MAX_JACOBI_ITERS is
 // extremely low.
-pub fn is_prob_prime(n: &BigInt) -> bool {
+pub fn is_prob_prime(n: &BigUint) -> bool {
+  let n = &n.to_bigint().expect("Could not convert BigUint to BigInt!");
   for &p in constants::SMALL_PRIMES.iter() {
     if n == &bi(p) {
       return true;
@@ -28,7 +29,7 @@ pub fn is_prob_prime(n: &BigInt) -> bool {
   if !passes_miller_rabin_base_2(n) {
     return false;
   }
-  match choose_d(n, MAX_JACOBI_ITERS) {
+  match choose_d(&n, MAX_JACOBI_ITERS) {
     Some(d) => passes_lucas(n, &d),
     None => false,
   }
@@ -202,6 +203,7 @@ fn to_binary(n: &BigInt) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::util::bu;
 
   #[test]
   fn test_miller_rabin() {
@@ -231,30 +233,30 @@ mod tests {
   #[test]
   fn test_is_prob_prime() {
     // Sanity checks.
-    assert!(is_prob_prime(&bi(2)));
-    assert!(is_prob_prime(&bi(5)));
-    assert!(is_prob_prime(&bi(7)));
-    assert!(is_prob_prime(&bi(241)));
-    assert!(is_prob_prime(&bi(7919)));
-    assert!(is_prob_prime(&bi(48131)));
-    assert!(is_prob_prime(&bi(75913)));
-    assert!(is_prob_prime(&bi(76463)));
-    assert!(is_prob_prime(&bi(115_547)));
+    assert!(is_prob_prime(&bu(2u64)));
+    assert!(is_prob_prime(&bu(5u64)));
+    assert!(is_prob_prime(&bu(7u64)));
+    assert!(is_prob_prime(&bu(241u64)));
+    assert!(is_prob_prime(&bu(7919u64)));
+    assert!(is_prob_prime(&bu(48131u64)));
+    assert!(is_prob_prime(&bu(75913u64)));
+    assert!(is_prob_prime(&bu(76463u64)));
+    assert!(is_prob_prime(&bu(115_547u64)));
 
     // Medium primes.
     for &p in constants::MED_PRIMES.iter() {
-      assert!(is_prob_prime(&bi(p)));
+      assert!(is_prob_prime(&bu(p as u64)));
     }
 
     // Large primes.
     for &p in constants::LARGE_PRIMES.iter() {
-      assert!(is_prob_prime(&bi(p)));
+      assert!(is_prob_prime(&bu(p as u64)));
     }
 
     // Large, difficult-to-factor composites.
     for &p in constants::LARGE_PRIMES.iter() {
       for &q in constants::LARGE_PRIMES.iter() {
-        assert!(!is_prob_prime(&(bi(p) * bi(q))));
+        assert!(!is_prob_prime(&(bu(p as u64) * bu(q as u64))));
       }
     }
   }
