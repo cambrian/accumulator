@@ -1,7 +1,7 @@
 //! Dummy RSA group for 64-bit numbers.
 //! Use this group for testing while we figure out ring integration.
 
-use super::{Group, InvertibleGroup};
+use super::{Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{bi, bu, ConvertBytes, Singleton};
 use num_traits::cast::ToPrimitive;
@@ -63,12 +63,6 @@ impl Group for DummyRSA {
   fn id_(_: &DummyRSAModulus) -> DummyRSAElem {
     DummyRSA::elem_of(1)
   }
-  fn base_elem_(_: &DummyRSAModulus) -> DummyRSAElem {
-    DummyRSA::elem_of(2)
-  }
-}
-
-impl InvertibleGroup for DummyRSA {
   fn inv_(DummyRSAModulus { modulus }: &DummyRSAModulus, x: &DummyRSAElem) -> DummyRSAElem {
     let x_big = bu(x.val);
     let mod_big = bu(*modulus);
@@ -79,6 +73,12 @@ impl InvertibleGroup for DummyRSA {
         .to_u64()
         .expect("u64-sized BigInt expected"),
     )
+  }
+}
+
+impl UnknownOrderGroup for DummyRSA {
+  fn unknown_order_elem_(_: &DummyRSAModulus) -> DummyRSAElem {
+    DummyRSA::elem_of(2)
   }
 }
 

@@ -32,13 +32,13 @@ impl<G: Group> PoE<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::RSA2048;
+  use crate::group::{RSA2048, UnknownOrderGroup};
   use crate::util::bu;
 
   #[test]
   fn test_poe_small_exp() {
     // 2^20 = 1048576
-    let base = RSA2048::base_elem();
+    let base = RSA2048::unknown_order_elem();
     let exp = bu(20u8);
     let result = RSA2048::elem_of(1_048_576);
     let proof = PoE::<RSA2048>::prove(&base, &exp, &result);

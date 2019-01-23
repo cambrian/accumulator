@@ -2,13 +2,13 @@
 use super::super::hash::{hash_to_prime, Blake2b};
 use super::accumulator;
 use super::accumulator::AccError;
-use crate::group::{Group, InvertibleGroup};
+use crate::group::UnknownOrderGroup;
 use crate::proof::{PoE, PoKE2};
 use bitvec::BitVec;
 use num::BigUint;
 
 #[derive(Debug)]
-pub enum UpdateResult<G: Group> {
+pub enum UpdateResult<G: UnknownOrderGroup> {
   NoChange(G::Elem),
   Update((MembershipProof<G>, MembershipProof<G>)),
 }
@@ -25,13 +25,13 @@ pub enum Proof {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct MembershipProof<G: Group> {
+pub struct MembershipProof<G: UnknownOrderGroup> {
   acc: G::Elem,
   proof: PoE<G>,
 }
 
 #[allow(dead_code)]
-struct NonMembershipProof<G: Group> {
+struct NonMembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,
   gv_inverse: G::Elem,
@@ -39,14 +39,14 @@ struct NonMembershipProof<G: Group> {
   poe_proof: PoE<G>,
 }
 
-pub fn setup<G: Group>() -> G::Elem {
-  G::base_elem()
+pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
+  G::unknown_order_elem()
 }
 
 // TODO 1. Somehow check if element is already in accumulator
 // Find a better way to pass a reference to vector of references, or remove this in accumulator.rs
 // TODO Option type to allow for only deletion or only addition
-pub fn update<G: InvertibleGroup>(
+pub fn update<G: UnknownOrderGroup>(
   acc: &G::Elem,
   bits: &BitVec,
   indices: &[&BigUint],
@@ -87,15 +87,12 @@ pub fn update<G: InvertibleGroup>(
   }
 }
 
-pub fn open<G: Group>(
-  _acc: &G::Elem,
+pub fn open<G: UnknownOrderGroup>(
   _bits: &BitVec,
   _indices: &[BigUint],
-  _inclusion_witnesses: &[(&BigUint, &G::Elem)],
-  _acc_set: &[&BigUint],
 ) -> Result<Vec<Proof>, OpenError> {
-  // let mut one_commitment = bu(1u8);
-  // let mut zero_commitment = bu(1u8);
+  // let mut one_commitment = BigUint::One;
+  // let mut zero_commitment;
   // for i in 0..bits.len() {
   //   if bits[i] {
   //     one_commitment *= h_prime(&blake2, indices[i].to_str_radix(16).as_bytes());
@@ -113,7 +110,7 @@ pub fn open<G: Group>(
   unimplemented!();
 }
 
-pub fn verify<G: Group>(
+pub fn verify<G: UnknownOrderGroup>(
   _acc: &G::Elem,
   _bits: &[bool],
   _indices: &[BigUint],
@@ -133,9 +130,9 @@ mod tests {
     let vc = setup::<DummyRSA>();
     let mut bv: BitVec = BitVec::new();
     bv.push(true);
-    let proofs = update::<DummyRSA>(&vc, &bv, &[&bu(2u8)], &[&DummyRSA::base_elem()]);
+    let proofs = update::<DummyRSA>(&vc, &bv, &[&bu(2u8)], &[&DummyRSA::unknown_order_elem()]);
     println!("{:?}", proofs);
-    //    G: InvertibleGroup>(
+    //    G: UnknownOrderGroup>(
     //   acc: &G::Elem,
     //   bits: &BitVec,
     //   indices: &[&BigUint],

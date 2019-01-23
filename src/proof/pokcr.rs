@@ -1,14 +1,14 @@
-use crate::group::{multi_exp, InvertibleGroup};
+use crate::group::{multi_exp, Group};
 use crate::util::product;
 use num::BigInt;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq)]
-pub struct PoKCR<G: InvertibleGroup> {
+pub struct PoKCR<G: Group> {
   w: G::Elem,
 }
 
-impl<G: InvertibleGroup> PoKCR<G> {
+impl<G: Group> PoKCR<G> {
   pub fn prove(witnesses: &[&G::Elem]) -> PoKCR<G> {
     PoKCR {
       w: witnesses.iter().fold(G::id(), |a, b| G::op(&a, b)),
