@@ -35,6 +35,16 @@ path = "benches/proof/poe.rs"
 harness = false
 
 [[bench]]
+name = "poke"
+path = "benches/proof/poke2.rs"
+harness = false
+
+[[bench]]
+name = "pokcr"
+path = "benches/proof/pokcr.rs"
+harness = false
+
+[[bench]]
 name = "hashes"
 path = "benches/hash/hashes.rs"
 harness = false
