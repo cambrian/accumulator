@@ -3,13 +3,6 @@ use num::{BigInt, BigUint, Unsigned};
 use num_traits::identities::{One, Zero};
 use std::ops::Mul;
 
-/// Trait definition to enable equality checks between group elements and other custom data
-/// structures by means of byte array comparison.
-pub trait ConvertBytes: Group {
-  fn to_le_bytes(x: &Self::Elem) -> Vec<u8>;
-  fn to_be_bytes(x: &Self::Elem) -> Vec<u8>;
-}
-
 /// We use the singleton pattern to fake type-level programming.
 /// Self::Rep stores info that we would like to "reflect" from the type-level at runtime.
 /// We use a separate type Self::Rep from Self so that Self can be an uninhabitable type and exist
@@ -26,7 +19,7 @@ where
   BigInt::from(val)
 }
 
-pub fn bu<U: Unsigned>(val: U) -> BigUint
+pub fn bu<U>(val: U) -> BigUint
 where
   BigUint: From<U>,
 {

@@ -8,8 +8,8 @@
 //! constant factor. op is unaffected.
 use super::{Group, UnknownOrderGroup};
 use crate::util::{bezout, mod_euc_big, Singleton};
-use core::clone::Clone;
-use core::str::FromStr;
+use std::clone::Clone;
+use std::str::FromStr;
 use num::BigUint;
 use num_traits::identities::One;
 use ring::arithmetic::montgomery::{Unencoded, R};

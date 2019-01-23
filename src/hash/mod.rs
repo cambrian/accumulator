@@ -1,3 +1,4 @@
+use crate::util::bu;
 use num::bigint::BigUint;
 use std::hash::{Hash, Hasher};
 
@@ -21,13 +22,10 @@ pub trait GeneralHasher: Hasher {
 //
 // This lets us write:
 // hash(&Blake2b::default, &(base, exp, result))
-pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> BigUint
-where
-  BigUint: From<H::Output>,
-{
+pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> H::Output {
   let mut h = new_hasher();
   t.hash(&mut h);
-  BigUint::from(h.finalize())
+  h.finalize()
 }
 
 /// Hashes t with an incrementing counter until a prime is found.
@@ -38,7 +36,7 @@ where
   let mut counter = 0u64;
   loop {
     // REVIEW: Set final bit to 1 to speed this up ~2x
-    let candidate_prime = hash(new_hasher, &(t, counter));
+    let candidate_prime = bu(hash(new_hasher, &(t, counter)));
     if primality::is_prob_prime(&candidate_prime) {
       return candidate_prime;
     }
