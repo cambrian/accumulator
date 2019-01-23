@@ -1,4 +1,4 @@
-use super::util::bi;
+use super::util::product;
 use super::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
@@ -100,44 +100,41 @@ pub trait InvertibleGroup: Group {
 }
 
 /// Not tested thoroughly, auditing/review welcome.
-pub fn multi_exp<G: Group>(n: usize, alphas: &[G::Elem], x: &[BigInt]) -> G::Elem {
-  if n == 1 {
+pub fn multi_exp<G: Group>(alphas: &[&G::Elem], x: &[&BigInt]) -> G::Elem {
+  if alphas.len() == 1 {
     return alphas[0].clone();
   }
-  let n_half: usize = n / 2;
+
+  let n_half = alphas.len() / 2;
   let alpha_l = &alphas[..n_half];
   let alpha_r = &alphas[n_half..];
   let x_l = &x[..n_half];
   let x_r = &x[n_half..];
   // G::op expects a BigUint.
-  let x_star_l = (x_l.iter().fold(bi(1), |a, b| a * b)).to_biguint().unwrap();
-  let x_star_r = (x_r.iter().fold(bi(1), |a, b| a * b)).to_biguint().unwrap();
-  let l = multi_exp::<G>(n_half, alpha_l, x_l);
-  let r = multi_exp::<G>(n - n_half, alpha_r, x_r);
+  let x_star_l = product(x_l).to_biguint().expect("positive BigInt expected");
+  let x_star_r = product(x_r).to_biguint().expect("positive BigInt expected");
+  let l = multi_exp::<G>(alpha_l, x_l);
+  let r = multi_exp::<G>(alpha_r, x_r);
   G::op(&G::exp(&l, &x_star_r), &G::exp(&r, &x_star_l))
 }
 
 #[cfg(test)]
 mod tests {
+  use super::super::util::bi;
   use super::dummy::DummyRSA;
   use super::*;
 
   #[test]
   fn test_multi_exp() {
-    // TODO: Build more general testing framework.
     let alpha_1 = DummyRSA::elem_of(2);
     let alpha_2 = DummyRSA::elem_of(3);
     let x_1 = bi(3);
     let x_2 = bi(2);
-    let res = multi_exp::<DummyRSA>(
-      2,
-      &[alpha_1.clone(), alpha_2.clone()],
-      &[x_1.clone(), x_2.clone()],
-    );
+    let res = multi_exp::<DummyRSA>(&[&alpha_1, &alpha_2], &[&x_1, &x_2]);
     assert!(res == DummyRSA::elem_of(108));
     let alpha_3 = DummyRSA::elem_of(5);
     let x_3 = bi(1);
-    let res_2 = multi_exp::<DummyRSA>(3, &[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
+    let res_2 = multi_exp::<DummyRSA>(&[&alpha_1, &alpha_2, &alpha_3], &[&x_1, &x_2, &x_3]);
     assert!(res_2 == DummyRSA::elem_of(1_687_500));
   }
 }

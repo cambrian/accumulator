@@ -1,4 +1,4 @@
-// TODO
+// TODO (Also, how to aggregate?)
 use super::accumulator::AccError;
 use super::group::Group;
 use super::proof::{poe::PoE, poke2::PoKE2};
@@ -10,7 +10,7 @@ pub enum UpdateResult<G: Group> {
   Update(G::Elem, PoE<G>),
 }
 
-// TODO enumerate error types
+// TODO: Enumerate error types.
 pub enum OpenError {
   Error,
 }
@@ -20,11 +20,13 @@ pub enum Proof {
   NonMembershipProof,
 }
 
+#[allow(dead_code)]
 struct MembershipProof<G: Group> {
   acc: G::Elem,
   proof: PoE<G>,
 }
 
+#[allow(dead_code)]
 struct NonMembershipProof<G: Group> {
   d: G::Elem,
   v: G::Elem,
@@ -37,23 +39,23 @@ pub fn setup<G: Group>() -> G::Elem {
   G::base_elem()
 }
 
-pub fn commit<G: Group>(m: BitVec) -> G::Elem {
+pub fn commit<G: Group>(_m: BitVec) -> G::Elem {
   G::base_elem()
 }
 
-pub fn update<G: Group>(bits: &[bool], indices: &[BigUint]) -> Result<UpdateResult<G>, AccError> {
+pub fn update<G: Group>(_bits: &[bool], _indices: &[BigUint]) -> Result<UpdateResult<G>, AccError> {
   unimplemented!();
 }
 
-pub fn open<G: Group>(bits: &[bool], indices: &[BigUint]) -> Result<Vec<Proof>, OpenError> {
+pub fn open<G: Group>(_bits: &[bool], _indices: &[BigUint]) -> Result<Vec<Proof>, OpenError> {
   unimplemented!();
 }
 
 pub fn verify<G: Group>(
-  acc: &G::Elem,
-  bits: &[bool],
-  indices: &[BigUint],
-  proofs: Vec<Proof>,
+  _acc: &G::Elem,
+  _bits: &[bool],
+  _indices: &[BigUint],
+  _proofs: Vec<Proof>,
 ) -> bool {
   unimplemented!();
 }
