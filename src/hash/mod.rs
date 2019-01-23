@@ -20,7 +20,7 @@ pub trait GeneralHasher: Hasher + Default {
 // hash_to_prime::<Blake2b, (&G::Elem, &BigUint, &G::Elem)>(&(base, exp, result))
 //
 // This lets us write:
-// hash_to_prime(Blake2b::default, &(base, exp, result))
+// hash_to_prime(&Blake2b::default, &(base, exp, result))
 pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> BigUint
 where
   BigUint: From<H::Output>,
