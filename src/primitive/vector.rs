@@ -4,9 +4,9 @@ use super::accumulator;
 use super::accumulator::AccError;
 use crate::group::{Group, InvertibleGroup};
 use crate::proof::{poe::PoE, poke2::PoKE2};
+use crate::util::bu;
 use bitvec::BitVec;
 use num::BigUint;
-// use num_traits::identities::One;
 
 #[derive(Debug)]
 pub enum UpdateResult<G: Group> {
@@ -88,14 +88,28 @@ pub fn update<G: InvertibleGroup>(
   }
 }
 
-pub fn open<G: Group>(_bits: &BitVec, _indices: &[BigUint]) -> Result<Vec<Proof>, OpenError> {
-  // let mut one_commitment = BigUint::One;
-  // let mut zero_commitment;
+pub fn open<G: Group>(
+  acc: &G::Elem,
+  bits: &BitVec,
+  indices: &[BigUint],
+  inclusion_witnesses: &[(&BigUint, &G::Elem)],
+  acc_set: &[&BigUint],
+) -> Result<Vec<Proof>, OpenError> {
+  // let mut one_commitment = bu(1u8);
+  // let mut zero_commitment = bu(1u8);
   // for i in 0..bits.len() {
   //   if bits[i] {
   //     one_commitment *= h_prime(&blake2, indices[i].to_str_radix(16).as_bytes());
-  //     ones.add()
+  //   } else {
+  //     zero_commitment *= h_prime(&blake2, indices[i].to_str_radix(16).as_bytes());
   //   }
+  // }
+  // inclusion_witnesses.iter().map(|(index, witness)| { index = h_prime(&blake2, index.to_str_radix(16).as_bytes(); (index, witness) });
+  // match accumulator::prove_membership(acc, inclusion_witnesses) {
+  //   Ok(inclusion_proof) => {
+  //     match accumulator::prove_nonmembership(acc, acc_set, )
+  //   }
+  //   Err(n) => Err(n),
   // }
   unimplemented!();
 }
