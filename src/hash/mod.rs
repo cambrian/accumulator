@@ -28,10 +28,6 @@ pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -
   h.finalize()
 }
 
-fn set_1(a: BigUint) -> BigUint {
-  a | bu(1u8)
-}
-
 /// Hashes t with an incrementing counter until a prime is found.
 pub fn hash_to_prime<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> BigUint
 where
@@ -39,8 +35,10 @@ where
 {
   let mut counter = 0u64;
   loop {
-    // REVIEW: Set final bit to 1 to speed this up ~2x
-    let candidate_prime = set_1(bu(hash(new_hasher, &(t, counter))));
+    // If possible, set the last bit to 1 (thus making the candidate prime odd) without
+    // allocating a new biguint. The provided implementation of BitOr for BigUint allocates,
+    // so we get minimal performance gains from doing it the easy way.
+    let candidate_prime = bu(hash(new_hasher, &(t, counter)));
     if primality::is_prob_prime(&candidate_prime) {
       return candidate_prime;
     }
