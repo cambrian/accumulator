@@ -14,7 +14,6 @@ pub trait ConvertBytes: Group {
 /// Self::Rep stores info that we would like to "reflect" from the type-level at runtime.
 /// We use a separate type Self::Rep from Self so that Self can be an uninhabitable type and exist
 /// purely at the type-level.
-/// TODO: can we enforce Self to be uninhabitable?
 pub trait Singleton {
   type Rep: 'static;
   fn rep() -> &'static Self::Rep;
