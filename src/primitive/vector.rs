@@ -1,5 +1,5 @@
 // TODO (Also, how to aggregate?)
-use super::super::hash::{blake2, h_prime};
+use super::super::hash::{hash_to_prime, Blake2b};
 use super::accumulator;
 use super::accumulator::AccError;
 use crate::group::{Group, InvertibleGroup};
@@ -58,9 +58,9 @@ pub fn update<G: InvertibleGroup>(
   let mut del_commitments = vec![];
   for i in 0..bits.len() {
     if bits[i] {
-      add_commitments.push(h_prime(&blake2, indices[i].to_str_radix(16).as_bytes()));
+      add_commitments.push(hash_to_prime(&Blake2b::default, indices[i]));
     } else {
-      del_commitments.push(h_prime(&blake2, indices[i].to_str_radix(16).as_bytes()));
+      del_commitments.push(hash_to_prime(&Blake2b::default, indices[i]));
     }
   }
   let mut add_commitments_ref = vec![];

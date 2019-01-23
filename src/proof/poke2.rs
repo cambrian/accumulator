@@ -1,10 +1,9 @@
 use crate::group::{Group, InvertibleGroup};
-use crate::hash;
+use crate::hash::{hash, hash_to_prime, Blake2b};
 use crate::util;
 use crate::util::bi;
 use num::{BigInt, BigUint};
 use num_integer::Integer;
-use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq)]
@@ -19,8 +18,8 @@ impl<G: InvertibleGroup> PoKE2<G> {
   pub fn prove(base: &G::Elem, exp: &BigInt, result: &G::Elem) -> PoKE2<G> {
     let g = G::base_elem();
     let z = G::exp_signed(&g, exp);
-    let l = hash_prime(base, result, &z);
-    let alpha = hash_inputs(base, result, &z, &l);
+    let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
+    let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
     let q = exp.div_floor(&bi(l.clone()));
     let r = util::mod_euc_big(exp, &l);
     #[allow(non_snake_case)]
@@ -35,8 +34,8 @@ impl<G: Group> PoKE2<G> {
     #[allow(non_snake_case)]
     let PoKE2 { z, Q, r } = proof;
     let g = G::base_elem();
-    let l = hash_prime(base, result, &z);
-    let alpha = hash_inputs(base, result, &z, &l);
+    let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
+    let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
     let lhs = G::op(
       &G::exp(Q, &l),
       &G::exp(&G::op(&base, &G::exp(&g, &alpha)), &r),
@@ -44,21 +43,6 @@ impl<G: Group> PoKE2<G> {
     let rhs = G::op(result, &G::exp(&z, &alpha));
     lhs == rhs
   }
-}
-
-fn hash_prime<G: Serialize>(u: &G, w: &G, z: &G) -> BigUint {
-  let mut hash_string = serde_json::to_string(&u).unwrap();
-  hash_string.push_str(&serde_json::to_string(&w).unwrap());
-  hash_string.push_str(&serde_json::to_string(&z).unwrap());
-  hash::h_prime(&hash::blake2, hash_string.as_bytes())
-}
-
-fn hash_inputs<G: Serialize>(u: &G, w: &G, z: &G, l: &BigUint) -> BigUint {
-  let mut hash_string = serde_json::to_string(&u).unwrap();
-  hash_string.push_str(&serde_json::to_string(&w).unwrap());
-  hash_string.push_str(&serde_json::to_string(&z).unwrap());
-  hash_string.push_str(&l.to_str_radix(16));
-  hash::blake2(hash_string.as_bytes(), None)
 }
 
 #[cfg(test)]

@@ -1,8 +1,7 @@
 use crate::group::Group;
-use crate::hash;
+use crate::hash::{hash_to_prime, Blake2b};
 use num::BigUint;
 use num_integer::Integer;
-use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
 #[derive(Debug, PartialEq, Eq)]
@@ -13,7 +12,7 @@ pub struct PoE<G: Group> {
 impl<G: Group> PoE<G> {
   /// See page 16 of B&B.
   pub fn prove(base: &G::Elem, exp: &BigUint, result: &G::Elem) -> PoE<G> {
-    let l = hash_prime(exp, base, result);
+    let l = hash_to_prime(&Blake2b::default, &(base, exp, result));
     let q = exp.div_floor(&l);
     PoE {
       Q: G::exp(&base, &q),
@@ -22,19 +21,12 @@ impl<G: Group> PoE<G> {
 
   /// See page 16 of B&B.
   pub fn verify(base: &G::Elem, exp: &BigUint, result: &G::Elem, proof: &PoE<G>) -> bool {
-    let l = hash_prime(exp, base, result);
+    let l = hash_to_prime(&Blake2b::default, &(base, exp, result));
     let r = exp % l.clone();
     // w = Q^l * u^r
     let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
     w == *result
   }
-}
-
-fn hash_prime<G: Serialize>(exp: &BigUint, base: &G, result: &G) -> BigUint {
-  let mut hash_string = exp.to_str_radix(16);
-  hash_string.push_str(&serde_json::to_string(&base).unwrap());
-  hash_string.push_str(&serde_json::to_string(&result).unwrap());
-  hash::h_prime(&hash::blake2, hash_string.as_bytes())
 }
 
 #[cfg(test)]

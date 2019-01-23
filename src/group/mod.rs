@@ -3,7 +3,7 @@ use crate::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
-use serde::ser::Serialize;
+use std::hash::Hash;
 use std::marker::Sized;
 
 pub mod class;
@@ -22,7 +22,7 @@ pub trait Group: Singleton {
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
   /// type and avoid using prefix notation for all of our group operations.
   /// But afaik bijective associated types are not supported by Rust.
-  type Elem: Eq + Serialize + Clone + Sized;
+  type Elem: Eq + Clone + Sized + Hash;
 
   fn id_(rep: &Self::Rep) -> Self::Elem;
 

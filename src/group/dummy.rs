@@ -20,7 +20,7 @@ const Q: u64 = 12_364_769;
 
 const DUMMY_RSA_MODULUS: DummyRSAModulus = DummyRSAModulus { modulus: P * Q };
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct DummyRSAElem {
   val: u64,
 }
