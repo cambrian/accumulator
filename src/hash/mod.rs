@@ -35,7 +35,7 @@ where
 {
   let mut counter = 0u64;
   loop {
-    // If possible, set the last bit to 1 (thus making the candidate prime odd) without
+    // REVIEW: If possible, set the last bit to 1 (thus making the candidate prime odd) without
     // allocating a new biguint. The provided implementation of BitOr for BigUint allocates,
     // so we get minimal performance gains from doing it the easy way.
     let candidate_prime = bu(hash(new_hasher, &(t, counter)));
