@@ -26,7 +26,7 @@ where
   BigInt::from(val)
 }
 
-pub fn bu<U: Unsigned>(val: U) -> BigUint
+pub fn bu<U>(val: U) -> BigUint
 where
   BigUint: From<U>,
 {
