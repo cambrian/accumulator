@@ -1,3 +1,6 @@
-pub mod poe;
-pub mod pokcr;
-pub mod poke2;
+mod poe;
+pub use poe::PoE;
+mod pokcr;
+pub use pokcr::PoKCR;
+mod poke2;
+pub use poke2::PoKE2;

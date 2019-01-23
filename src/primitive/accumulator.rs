@@ -1,5 +1,5 @@
 use crate::group::{Group, InvertibleGroup};
-use crate::proof::{poe::PoE, poke2::PoKE2};
+use crate::proof::{PoE, PoKE2};
 use crate::util::{bezout, bu, product, shamir_trick};
 use num;
 use num::BigUint;

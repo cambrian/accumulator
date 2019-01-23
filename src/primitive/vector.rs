@@ -3,7 +3,7 @@ use super::super::hash::{hash_to_prime, Blake2b};
 use super::accumulator;
 use super::accumulator::AccError;
 use crate::group::{Group, InvertibleGroup};
-use crate::proof::{poe::PoE, poke2::PoKE2};
+use crate::proof::{PoE, PoKE2};
 use bitvec::BitVec;
 use num::BigUint;
 // use num_traits::identities::One;
