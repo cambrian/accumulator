@@ -3,7 +3,7 @@
 
 use super::{Group, UnknownOrderGroup};
 use crate::util;
-use crate::util::{bi, bu, ConvertBytes, Singleton};
+use crate::util::{bi, bu, Singleton};
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::One;
 use std::u64;
@@ -79,16 +79,6 @@ impl Group for DummyRSA {
 impl UnknownOrderGroup for DummyRSA {
   fn unknown_order_elem_(_: &DummyRSAModulus) -> DummyRSAElem {
     DummyRSA::elem_of(2)
-  }
-}
-
-impl ConvertBytes for DummyRSA {
-  fn to_le_bytes(x: &DummyRSAElem) -> Vec<u8> {
-    x.val.to_le_bytes().to_vec()
-  }
-
-  fn to_be_bytes(x: &DummyRSAElem) -> Vec<u8> {
-    x.val.to_be_bytes().to_vec()
   }
 }
 

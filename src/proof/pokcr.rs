@@ -26,16 +26,16 @@ impl<G: Group> PoKCR<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::DummyRSA;
+  use crate::group::RSA2048;
   use crate::util::bi;
 
   #[test]
   fn test_pokcr() {
-    let witnesses = [&DummyRSA::elem_of(2), &DummyRSA::elem_of(3)];
+    let witnesses = [&RSA2048::elem_of(2), &RSA2048::elem_of(3)];
     let x = [&bi(2), &bi(2)];
-    let alphas = [&DummyRSA::elem_of(4), &DummyRSA::elem_of(9)];
-    let proof = PoKCR::<DummyRSA>::prove(&witnesses);
-    assert!(proof.w == DummyRSA::elem_of(6));
+    let alphas = [&RSA2048::elem_of(4), &RSA2048::elem_of(9)];
+    let proof = PoKCR::<RSA2048>::prove(&witnesses);
+    assert!(proof.w == RSA2048::elem_of(6));
     assert!(PoKCR::verify(&alphas, &x, &proof));
   }
 }

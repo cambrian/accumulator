@@ -8,8 +8,8 @@
 //! constant factor. op is unaffected.
 use super::{Group, UnknownOrderGroup};
 use crate::util::{bezout, mod_euc_big, Singleton};
-use core::clone::Clone;
-use core::str::FromStr;
+use std::clone::Clone;
+use std::str::FromStr;
 use num::BigUint;
 use num_traits::identities::One;
 use ring::arithmetic::montgomery::{Unencoded, R};
@@ -116,6 +116,13 @@ fn elem_from_biguint(a: &BigUint) -> RSA2048Elem {
   let unencoded =
     Elem::from_be_bytes_padded(Input::from(a.to_bytes_be().as_slice()), &RSA2048::rep()).unwrap();
   encode(unencoded)
+}
+
+impl RSA2048 {
+  pub fn elem_of(val_unbounded: u64) -> RSA2048Elem {
+    let n = BigUint::from(val_unbounded);
+    elem_from_biguint(&n)
+  }
 }
 
 /// Performs Montgomery encoding via multiplication with a doubly-encoded 1. This is often necessary
