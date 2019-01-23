@@ -24,10 +24,10 @@ use untrusted::Input;
 /// Type parameter for ring's modulus. Kind of misleading since it doesn't encode any info itself,
 /// but we're forced into this style.
 #[derive(PartialEq, Eq, Debug, Hash)]
-enum M {}
+pub enum M {}
 
 #[derive(PartialEq, Eq)]
-enum RSA2048 {}
+pub enum RSA2048 {}
 
 const ELEM_BYTES: usize = 256;
 
@@ -61,7 +61,7 @@ lazy_static! {
 /// As a result, it's a pain to do some of the operations (see Group impl). We may want to make
 /// more substantial changes to our Ring fork to allgceviate this.
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-struct RSA2048Elem(Elem<M, R>);
+pub struct RSA2048Elem(Elem<M, R>);
 
 impl Singleton for RSA2048 {
   type Rep = Modulus<M>;

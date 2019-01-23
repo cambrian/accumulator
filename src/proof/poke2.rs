@@ -48,7 +48,7 @@ impl<G: Group> PoKE2<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::dummy::DummyRSA;
+  use crate::group::DummyRSA;
   use crate::util::bu;
 
   #[test]

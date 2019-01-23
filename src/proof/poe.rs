@@ -32,7 +32,7 @@ impl<G: Group> PoE<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::dummy::DummyRSA;
+  use crate::group::DummyRSA;
   use crate::util::bu;
 
   // Current exponents are far smaller than generated primes, so all PoE proofs are producing

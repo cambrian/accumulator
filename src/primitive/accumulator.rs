@@ -127,7 +127,7 @@ pub fn verify_nonmembership<G: Group>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::dummy::DummyRSA;
+  use crate::group::DummyRSA;
   use crate::util::bu;
 
   fn init_acc<G: Group>() -> G::Elem {

@@ -6,9 +6,11 @@ use num_traits::identities::{One, Zero};
 use std::hash::Hash;
 use std::marker::Sized;
 
-pub mod class;
-pub mod dummy;
-pub mod rsa;
+mod class;
+mod dummy;
+pub use dummy::{DummyRSA, DummyRSAElem};
+mod rsa;
+pub use rsa::{RSA2048Elem, RSA2048};
 
 /// We need a runtime representation for the group itself because reading in group parameters
 /// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
@@ -119,7 +121,6 @@ pub fn multi_exp<G: Group>(alphas: &[&G::Elem], x: &[&BigInt]) -> G::Elem {
 
 #[cfg(test)]
 mod tests {
-  use super::dummy::DummyRSA;
   use super::*;
   use crate::util::bi;
 
