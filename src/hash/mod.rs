@@ -1,6 +1,6 @@
+use crate::util::bu;
 use num::bigint::BigUint;
 use std::hash::{Hash, Hasher};
-use crate::util::bu;
 
 mod blake2b;
 pub use blake2b::Blake2b;
@@ -22,10 +22,7 @@ pub trait GeneralHasher: Hasher {
 //
 // This lets us write:
 // hash(&Blake2b::default, &(base, exp, result))
-pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> H::Output
-where
-  BigUint: From<H::Output>,
-{
+pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> H::Output {
   let mut h = new_hasher();
   t.hash(&mut h);
   h.finalize()
