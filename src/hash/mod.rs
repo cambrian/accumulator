@@ -1,5 +1,6 @@
+use crate::util::bi;
 use blake2_rfc::blake2b::{blake2b, Blake2bResult};
-use num::bigint::{BigInt, BigUint, ToBigInt};
+use num::bigint::BigUint;
 use sha2::{Digest, Sha256};
 
 mod primality;
@@ -32,16 +33,11 @@ pub fn sha256(data: &[u8], key: Option<&[u8]>) -> BigUint {
 type HashFn = Fn(&[u8], Option<&[u8]>) -> BigUint;
 
 pub fn h_prime(h: &HashFn, data: &[u8]) -> BigUint {
-  let mut counter = BigInt::from(0u64);
+  let mut counter = bi(0);
   loop {
     let hash_val = h(data, Some(&counter.to_bytes_be().1));
-    let hash_val_signed = hash_val
-      .to_bigint()
-      .expect("BigUint hash value could not be converted to BigInt!");
-    if primality::is_prob_prime(&hash_val_signed) {
-      return hash_val_signed
-        .to_biguint()
-        .expect("Output of h_prime must be nonnegative!");
+    if primality::is_prob_prime(&hash_val) {
+      return hash_val;
     }
     counter += 1;
   }
