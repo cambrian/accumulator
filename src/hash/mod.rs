@@ -36,10 +36,7 @@ where
 {
   let mut counter = 0u64;
   loop {
-    let mut h = new_hasher();
-    counter.hash(&mut h);
-    t.hash(&mut h);
-    let candidate_prime = BigUint::from(h.finalize());
+    let candidate_prime = hash(new_hasher, &(t, counter));
     if primality::is_prob_prime(&candidate_prime) {
       return candidate_prime;
     }
