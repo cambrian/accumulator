@@ -1,5 +1,6 @@
+use crate::util::bi;
 use blake2_rfc::blake2b::{blake2b, Blake2bResult};
-use num::bigint::{BigInt, BigUint};
+use num::bigint::BigUint;
 use sha2::{Digest, Sha256};
 
 mod primality;
@@ -33,7 +34,7 @@ type HashFn = Fn(&[u8], Option<&[u8]>) -> BigUint;
 
 #[allow(dead_code)]
 pub fn h_prime(h: &HashFn, data: &[u8]) -> BigUint {
-  let mut counter = BigInt::from(0u64);
+  let mut counter = bi(0);
   loop {
     let hash_val = h(data, Some(&counter.to_bytes_be().1));
     if primality::is_prob_prime(&hash_val) {
