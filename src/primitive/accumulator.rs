@@ -17,6 +17,7 @@ pub fn setup<G: Group>() -> G::Elem {
 }
 
 /// Adds `elems` to the accumulator `acc`.
+/// REVIEW: Change to Result and fail if elems are not co-prime with acc.
 pub fn add<G: Group>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
   let x = product(elems);
   let new_acc = G::exp(&acc, &x);
