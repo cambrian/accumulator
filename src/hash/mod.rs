@@ -36,6 +36,7 @@ where
 {
   let mut counter = 0u64;
   loop {
+    // REVIEW: Set final bit to 1 to speed this up ~2x
     let candidate_prime = hash(new_hasher, &(t, counter));
     if primality::is_prob_prime(&candidate_prime) {
       return candidate_prime;
