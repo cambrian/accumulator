@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::hash::{Blake2b, hash, hash_to_prime};
+use crypto::hash::{hash, hash_to_prime, Blake2b};
 use rand::Rng;
 
 fn bench_blake2() {
@@ -16,8 +16,8 @@ fn bench_h_prime() {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("blake2", |b| b.iter(|| bench_blake2()));
-  c.bench_function("h_prime", |b| b.iter(|| bench_h_prime()));
+  c.bench_function("blake2", |b| b.iter(bench_blake2));
+  c.bench_function("h_prime", |b| b.iter(bench_h_prime));
 }
 
 criterion_group!(benches, criterion_benchmark);
