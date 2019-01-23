@@ -83,6 +83,8 @@ pub trait Group: Singleton {
   }
 }
 
+/// We use this to mean a group containing elements of unknown order, not necessarily that the group
+/// itself has unknown order. E.g. RSA groups.
 pub trait UnknownOrderGroup: Group {
   /// E.g. 2, for RSA groups.
   fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;
