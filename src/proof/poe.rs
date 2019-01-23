@@ -5,7 +5,7 @@ use num_integer::Integer;
 use serde::ser::Serialize;
 
 #[allow(non_snake_case)]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PoE<G: Group> {
   Q: G::Elem,
 }

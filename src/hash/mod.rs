@@ -31,7 +31,6 @@ pub fn sha256(data: &[u8], key: Option<&[u8]>) -> BigUint {
 
 type HashFn = Fn(&[u8], Option<&[u8]>) -> BigUint;
 
-#[allow(dead_code)]
 pub fn h_prime(h: &HashFn, data: &[u8]) -> BigUint {
   let mut counter = BigInt::from(0u64);
   loop {

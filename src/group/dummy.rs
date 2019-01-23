@@ -8,7 +8,7 @@ use num_traits::cast::ToPrimitive;
 use num_traits::identities::One;
 use std::u64;
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DummyRSA {}
 
 pub struct DummyRSAModulus {
@@ -20,7 +20,7 @@ const Q: u64 = 12_364_769;
 
 const DUMMY_RSA_MODULUS: DummyRSAModulus = DummyRSAModulus { modulus: P * Q };
 
-#[derive(Clone, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct DummyRSAElem {
   val: u64,
 }
