@@ -5,7 +5,7 @@ mod blake2b;
 pub use blake2b::Blake2b;
 mod primality;
 
-/// Just like Hasher, but general over output type.
+/// Like std::hash::Hasher, but general over output type.
 pub trait GeneralHasher: Hasher {
   type Output;
   /// Similar to Hasher::finish, but consumes self.
@@ -17,10 +17,10 @@ pub trait GeneralHasher: Hasher {
 // type-level, we'd need to fully specify T as well, which is a pain in the ass.
 //
 // Instead of writing:
-// hash_to_prime::<Blake2b, (&G::Elem, &BigUint, &G::Elem)>(&(base, exp, result))
+// hash::<Blake2b, (&G::Elem, &BigUint, &G::Elem)>(&(base, exp, result))
 //
 // This lets us write:
-// hash_to_prime(&Blake2b::default, &(base, exp, result))
+// hash(&Blake2b::default, &(base, exp, result))
 pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> BigUint
 where
   BigUint: From<H::Output>,
@@ -30,6 +30,7 @@ where
   BigUint::from(h.finalize())
 }
 
+/// Hashes t with an incrementing counter until a prime is found.
 pub fn hash_to_prime<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> BigUint
 where
   BigUint: From<H::Output>,

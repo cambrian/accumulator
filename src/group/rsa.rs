@@ -1,16 +1,11 @@
 //! Integration of Brian Smith's ring library into our group interface.
-//! There are a lot of rough edges to the interface boundary. Two things to note in particular:
+//! There are a lot of rough edges to the interface boundary. One thing to note in particular:
 //!
-//! 1. We restrict our group to singly-encoded values (via Montgomery encoding), whereas ring
-//!    will use unencoded, inverse, or doubly-encoded values where they are more convenient. As a
-//!    result, we perform extra encodings/decodings that ring doesn't. The performance impact of
-//!    this should be minor, as it makes only the functions exp, id, and base_elem slower by a
-//!    constant factor. op is unaffected.
-//!
-//! 2. When extracting ring elements to bytes or big[u]ints, we always perform a copy. Since hashing
-//!    depends on accessing the element bytes, this should have a significant performance penalty.
-//!    We should profile before deciding how to improve this, but regardless of solution choice this
-//!    needs to be fixed before release.
+//! We restrict our group to singly-encoded values (via Montgomery encoding), whereas ring
+//! will use unencoded, inverse, or doubly-encoded values where they are more convenient. As a
+//! result, we perform extra encodings/decodings that ring doesn't. The performance impact of
+//! this should be minor, as it makes only the functions exp, id, and base_elem slower by a
+//! constant factor. op is unaffected.
 use super::{Group, InvertibleGroup};
 use crate::util::{bezout, mod_euc_big, Singleton};
 use core::clone::Clone;
