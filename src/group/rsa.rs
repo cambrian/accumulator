@@ -118,6 +118,13 @@ fn elem_from_biguint(a: &BigUint) -> RSA2048Elem {
   encode(unencoded)
 }
 
+impl RSA2048 {
+  pub fn elem_of(val_unbounded: u64) -> RSA2048Elem {
+    let n = BigUint::from(val_unbounded);
+    elem_from_biguint(&n)
+  }
+}
+
 /// Performs Montgomery encoding via multiplication with a doubly-encoded 1. This is often necessary
 /// because ring will give results in whatever encoding type is most convenient. For unencoded
 /// values we have to encode the result explicitly.

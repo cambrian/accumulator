@@ -6,7 +6,6 @@ use crate::group::UnknownOrderGroup;
 use crate::proof::{PoE, PoKE2};
 use bitvec::BitVec;
 use num::BigUint;
-// use num_traits::identities::One;
 
 #[derive(Debug)]
 pub enum UpdateResult<G: UnknownOrderGroup> {
@@ -97,8 +96,16 @@ pub fn open<G: UnknownOrderGroup>(
   // for i in 0..bits.len() {
   //   if bits[i] {
   //     one_commitment *= h_prime(&blake2, indices[i].to_str_radix(16).as_bytes());
-  //     ones.add()
+  //   } else {
+  //     zero_commitment *= h_prime(&blake2, indices[i].to_str_radix(16).as_bytes());
   //   }
+  // }
+  // inclusion_witnesses.iter().map(|(index, witness)| { index = h_prime(&blake2, index.to_str_radix(16).as_bytes(); (index, witness) });
+  // match accumulator::prove_membership(acc, inclusion_witnesses) {
+  //   Ok(inclusion_proof) => {
+  //     match accumulator::prove_nonmembership(acc, acc_set, )
+  //   }
+  //   Err(n) => Err(n),
   // }
   unimplemented!();
 }
