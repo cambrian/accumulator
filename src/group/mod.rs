@@ -3,12 +3,14 @@ use crate::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
-use serde::ser::Serialize;
+use std::hash::Hash;
 use std::marker::Sized;
 
-pub mod class;
-pub mod dummy;
-pub mod rsa;
+mod class;
+mod dummy;
+pub use dummy::{DummyRSA, DummyRSAElem};
+mod rsa;
+pub use rsa::{RSA2048Elem, RSA2048};
 
 /// We need a runtime representation for the group itself because reading in group parameters
 /// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
@@ -22,7 +24,7 @@ pub trait Group: Singleton {
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
   /// type and avoid using prefix notation for all of our group operations.
   /// But afaik bijective associated types are not supported by Rust.
-  type Elem: Eq + Serialize + Clone + Sized;
+  type Elem: Eq + Clone + Sized + Hash;
 
   fn id_(rep: &Self::Rep) -> Self::Elem;
 
@@ -119,7 +121,6 @@ pub fn multi_exp<G: Group>(alphas: &[&G::Elem], x: &[&BigInt]) -> G::Elem {
 
 #[cfg(test)]
 mod tests {
-  use super::dummy::DummyRSA;
   use super::*;
   use crate::util::bi;
 

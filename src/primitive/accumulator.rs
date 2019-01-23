@@ -1,5 +1,5 @@
 use crate::group::{Group, InvertibleGroup};
-use crate::proof::{poe::PoE, poke2::PoKE2};
+use crate::proof::{PoE, PoKE2};
 use crate::util::{bezout, bu, product, shamir_trick};
 use num;
 use num::BigUint;
@@ -16,8 +16,8 @@ pub fn setup<G: Group>() -> G::Elem {
   G::base_elem()
 }
 
-/// Adds `elems` to the accumulator `acc`.
-/// REVIEW: Change to Result and fail if elems are not co-prime with acc.
+/// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are co-prime with the
+/// accumulator, but it is up to clients to either ensure uniqueness or treat this as multi-set.
 pub fn add<G: Group>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
   let x = product(elems);
   let new_acc = G::exp(&acc, &x);
@@ -127,7 +127,7 @@ pub fn verify_nonmembership<G: Group>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::dummy::DummyRSA;
+  use crate::group::DummyRSA;
   use crate::util::bu;
 
   fn init_acc<G: Group>() -> G::Elem {

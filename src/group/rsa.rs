@@ -18,18 +18,16 @@ use core::str::FromStr;
 use num::BigUint;
 use num_traits::identities::One;
 use ring::arithmetic::montgomery::{Unencoded, R};
-use ring::rsa::bigint::{elem_exp_consttime, elem_mul, Elem as RingElem, Modulus, PrivateExponent};
-use serde::ser::{Serialize, Serializer};
-use std::result::Result;
+use ring::rsa::bigint::{elem_exp_consttime, elem_mul, Elem, Modulus, PrivateExponent};
 use untrusted::Input;
 
 /// Type parameter for ring's modulus. Kind of misleading since it doesn't encode any info itself,
 /// but we're forced into this style.
-#[derive(PartialEq, Eq, Debug)]
-enum M {}
+#[derive(PartialEq, Eq, Debug, Hash)]
+pub enum M {}
 
 #[derive(PartialEq, Eq)]
-enum RSA2048 {}
+pub enum RSA2048 {}
 
 const ELEM_BYTES: usize = 256;
 
@@ -61,25 +59,9 @@ lazy_static! {
 
 /// We restrict our group to singly-montgomery-encoded values, to have proper closure.
 /// As a result, it's a pain to do some of the operations (see Group impl). We may want to make
-/// more substantial changes to our Ring fork to alleviate this.
-#[derive(PartialEq, Eq, Clone, Debug)]
-struct RSA2048Elem(RingElem<M, R>);
-
-impl Serialize for RSA2048Elem {
-  /// TODO: If we can read the limbs from the ring Elem directly, we should be able to avoid both
-  /// the clone and the allocation of a byte buffer. Since this fn is used in hashing it may be
-  /// worth the performance gains. Alternatively we can implement hashing without the indirection
-  /// of serialization. We should profile before making this decision.
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: Serializer,
-  {
-    let RSA2048Elem(e) = self.clone();
-    let mut bytes = [0; ELEM_BYTES];
-    e.into_unencoded(&RSA2048::rep()).fill_be_bytes(&mut bytes);
-    serializer.serialize_bytes(&bytes)
-  }
-}
+/// more substantial changes to our Ring fork to allgceviate this.
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+pub struct RSA2048Elem(Elem<M, R>);
 
 impl Singleton for RSA2048 {
   type Rep = Modulus<M>;
@@ -97,7 +79,7 @@ impl Group for RSA2048 {
   }
 
   fn base_elem_(m: &Modulus<M>) -> RSA2048Elem {
-    let unencoded_2 = RingElem::from_be_bytes_padded(Input::from(&[2 as u8]), m).unwrap();
+    let unencoded_2 = Elem::from_be_bytes_padded(Input::from(&[2 as u8]), m).unwrap();
     encode(unencoded_2)
   }
 
@@ -137,15 +119,21 @@ fn biguint_from_elem(RSA2048Elem(a): &RSA2048Elem) -> BigUint {
 
 fn elem_from_biguint(a: &BigUint) -> RSA2048Elem {
   let unencoded =
-    RingElem::from_be_bytes_padded(Input::from(a.to_bytes_be().as_slice()), &RSA2048::rep())
-      .unwrap();
+    Elem::from_be_bytes_padded(Input::from(a.to_bytes_be().as_slice()), &RSA2048::rep()).unwrap();
   encode(unencoded)
+}
+
+impl RSA2048 {
+  pub fn elem_of(val_unbounded: u64) -> RSA2048Elem {
+    let n = BigUint::from(val_unbounded);
+    elem_from_biguint(&n)
+  }
 }
 
 /// Performs Montgomery encoding via multiplication with a doubly-encoded 1. This is often necessary
 /// because ring will give results in whatever encoding type is most convenient. For unencoded
 /// values we have to encode the result explicitly.
-fn encode(a: RingElem<M, Unencoded>) -> RSA2048Elem {
+fn encode(a: Elem<M, Unencoded>) -> RSA2048Elem {
   RSA2048Elem(elem_mul(
     RSA2048::rep().oneRR().as_ref(),
     a,

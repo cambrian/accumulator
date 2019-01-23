@@ -1,10 +1,9 @@
 // TODO (Also, how to aggregate?)
-use super::super::hash::{blake2, h_prime};
+use super::super::hash::{hash_to_prime, Blake2b};
 use super::accumulator;
 use super::accumulator::AccError;
 use crate::group::{Group, InvertibleGroup};
-use crate::proof::{poe::PoE, poke2::PoKE2};
-use crate::util::bu;
+use crate::proof::{PoE, PoKE2};
 use bitvec::BitVec;
 use num::BigUint;
 
@@ -58,9 +57,9 @@ pub fn update<G: InvertibleGroup>(
   let mut del_commitments = vec![];
   for i in 0..bits.len() {
     if bits[i] {
-      add_commitments.push(h_prime(&blake2, indices[i].to_str_radix(16).as_bytes()));
+      add_commitments.push(hash_to_prime(&Blake2b::default, indices[i]));
     } else {
-      del_commitments.push(h_prime(&blake2, indices[i].to_str_radix(16).as_bytes()));
+      del_commitments.push(hash_to_prime(&Blake2b::default, indices[i]));
     }
   }
   let mut add_commitments_ref = vec![];
@@ -89,11 +88,11 @@ pub fn update<G: InvertibleGroup>(
 }
 
 pub fn open<G: Group>(
-  acc: &G::Elem,
-  bits: &BitVec,
-  indices: &[BigUint],
-  inclusion_witnesses: &[(&BigUint, &G::Elem)],
-  acc_set: &[&BigUint],
+  _acc: &G::Elem,
+  _bits: &BitVec,
+  _indices: &[BigUint],
+  _inclusion_witnesses: &[(&BigUint, &G::Elem)],
+  _acc_set: &[&BigUint],
 ) -> Result<Vec<Proof>, OpenError> {
   // let mut one_commitment = bu(1u8);
   // let mut zero_commitment = bu(1u8);
@@ -126,7 +125,7 @@ pub fn verify<G: Group>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::dummy::DummyRSA;
+  use crate::group::DummyRSA;
   use crate::util::bu;
 
   #[test]
