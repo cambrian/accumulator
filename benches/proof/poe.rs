@@ -3,8 +3,8 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::dummy::DummyRSA;
-use crypto::proof::poe::PoE;
+use crypto::group::DummyRSA;
+use crypto::proof::PoE;
 use crypto::util::bu;
 
 fn bench_poe() {

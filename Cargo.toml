@@ -38,3 +38,6 @@ harness = false
 name = "hashes"
 path = "benches/hash/hashes.rs"
 harness = false
+
+[profile.dev]
+opt-level = 3
