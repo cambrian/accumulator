@@ -17,20 +17,17 @@ const MAX_JACOBI_ITERS: u64 = 500;
 // the expected marginal utility of catching squares before running out MAX_JACOBI_ITERS is
 // extremely low.
 pub fn is_prob_prime(n: &BigUint) -> bool {
-  let n = &n.to_bigint().expect("Could not convert BigUint to BigInt!");
+  let n = n.to_bigint().expect("Could not convert BigUint to BigInt!");
   for &p in constants::SMALL_PRIMES.iter() {
-    if n == &bi(p) {
-      return true;
-    }
-    if n % p == bi(0) {
-      return false;
+    if &n % p == bi(0) {
+      return n == bi(p);
     }
   }
-  if !passes_miller_rabin_base_2(n) {
+  if !passes_miller_rabin_base_2(&n) {
     return false;
   }
   match choose_d(&n, MAX_JACOBI_ITERS) {
-    Some(d) => passes_lucas(n, &d),
+    Some(d) => passes_lucas(&n, &d),
     None => false,
   }
 }
