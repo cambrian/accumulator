@@ -127,7 +127,7 @@ pub fn verify_nonmembership<G: UnknownOrderGroup>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{DummyRSA, Group};
+  use crate::group::{Group, RSA2048};
   use crate::util::bu;
 
   fn init_acc<G: UnknownOrderGroup>() -> G::Elem {
@@ -137,47 +137,47 @@ mod tests {
   #[test]
   fn test_shamir_trick() {
     let (x, y, z) = (&bu(13u8), &bu(17u8), &bu(19u8));
-    let xth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(y * z));
-    let yth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(x * z));
-    let xyth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), z);
-    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == Some(xyth_root));
+    let xth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(y * z));
+    let yth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(x * z));
+    let xyth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), z);
+    assert!(shamir_trick::<RSA2048>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
 
   #[test]
   fn test_shamir_trick_failure() {
     let (x, y, z) = (&bu(7u8), &bu(14u8), &bu(19u8)); // Inputs not co-prime.
-    let xth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(y * z));
-    let yth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(x * z));
-    assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
+    let xth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(y * z));
+    let yth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(x * z));
+    assert!(shamir_trick::<RSA2048>(&xth_root, &yth_root, x, y) == None);
   }
 
   #[test]
   fn test_add() {
-    let acc = init_acc::<DummyRSA>();
+    let acc = init_acc::<RSA2048>();
     let new_elems = [&bu(5u8), &bu(7u8), &bu(11u8)];
-    let (new_acc, poe) = add::<DummyRSA>(&acc, &new_elems);
-    let expected_acc = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(94_125_955u32));
+    let (new_acc, poe) = add::<RSA2048>(&acc, &new_elems);
+    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &bu(94_125_955u32));
     assert!(new_acc == expected_acc);
     assert!(PoE::verify(&acc, &bu(385u16), &new_acc, &poe));
   }
 
   #[test]
   fn test_delete() {
-    let acc = init_acc::<DummyRSA>();
-    let y_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(3649u16));
-    let z_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(2747u16));
+    let acc = init_acc::<RSA2048>();
+    let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &bu(3649u16));
+    let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &bu(2747u16));
     let (new_acc, poe) =
-      delete::<DummyRSA>(&acc, &[(&bu(67u8), &y_witness), (&bu(89u8), &z_witness)])
+      delete::<RSA2048>(&acc, &[(&bu(67u8), &y_witness), (&bu(89u8), &z_witness)])
         .expect("valid delete expected");
-    let expected_acc = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(41u8));
+    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &bu(41u8));
     assert!(new_acc == expected_acc);
     assert!(PoE::verify(&new_acc, &bu(5963u16), &acc, &poe));
   }
 
   #[test]
   fn test_delete_empty() {
-    let acc = init_acc::<DummyRSA>();
-    let (new_acc, poe) = delete::<DummyRSA>(&acc, &[]).expect("valid delete expected");
+    let acc = init_acc::<RSA2048>();
+    let (new_acc, poe) = delete::<RSA2048>(&acc, &[]).expect("valid delete expected");
     assert!(new_acc == acc);
     assert!(PoE::verify(&new_acc, &bu(1u8), &acc, &poe));
   }
@@ -185,28 +185,28 @@ mod tests {
   #[should_panic(expected = "BadWitness")]
   #[test]
   fn test_delete_bad_witness() {
-    let acc = init_acc::<DummyRSA>();
-    let y_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(3648u16));
-    let z_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(2746u16));
-    delete::<DummyRSA>(&acc, &[(&bu(67u8), &y_witness), (&bu(89u8), &z_witness)]).unwrap();
+    let acc = init_acc::<RSA2048>();
+    let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &bu(3648u16));
+    let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &bu(2746u16));
+    delete::<RSA2048>(&acc, &[(&bu(67u8), &y_witness), (&bu(89u8), &z_witness)]).unwrap();
   }
 
   #[test]
   fn test_prove_nonmembership() {
-    let acc = init_acc::<DummyRSA>();
+    let acc = init_acc::<RSA2048>();
     let acc_set = [&bu(41u8), &bu(67u8), &bu(89u8)];
     let elems = [&bu(5u8), &bu(7u8), &bu(11u8)];
     let proof =
-      prove_nonmembership::<DummyRSA>(&acc, &acc_set, &elems).expect("valid proof expected");
-    assert!(verify_nonmembership::<DummyRSA>(&acc, &elems, &proof));
+      prove_nonmembership::<RSA2048>(&acc, &acc_set, &elems).expect("valid proof expected");
+    assert!(verify_nonmembership::<RSA2048>(&acc, &elems, &proof));
   }
 
   #[should_panic(expected = "InputsNotCoPrime")]
   #[test]
   fn test_prove_nonmembership_failure() {
-    let acc = init_acc::<DummyRSA>();
+    let acc = init_acc::<RSA2048>();
     let acc_set = [&bu(41u8), &bu(67u8), &bu(89u8)];
     let elems = [&bu(41u8), &bu(7u8), &bu(11u8)];
-    prove_nonmembership::<DummyRSA>(&acc, &acc_set, &elems).unwrap();
+    prove_nonmembership::<RSA2048>(&acc, &acc_set, &elems).unwrap();
   }
 }
