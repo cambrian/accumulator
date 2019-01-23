@@ -1,4 +1,4 @@
-use crate::group::{Group, InvertibleGroup};
+use crate::group::UnknownOrderGroup;
 use crate::hash::{hash, hash_to_prime, Blake2b};
 use crate::util;
 use crate::util::bi;
@@ -7,16 +7,16 @@ use num_integer::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq)]
-pub struct PoKE2<G: Group> {
+pub struct PoKE2<G: UnknownOrderGroup> {
   z: G::Elem,
   Q: G::Elem,
   r: BigUint,
 }
 
-impl<G: InvertibleGroup> PoKE2<G> {
+impl<G: UnknownOrderGroup> PoKE2<G> {
   /// See page 16 of B&B.
   pub fn prove(base: &G::Elem, exp: &BigInt, result: &G::Elem) -> PoKE2<G> {
-    let g = G::base_elem();
+    let g = G::unknown_order_elem();
     let z = G::exp_signed(&g, exp);
     let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
     let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
@@ -26,14 +26,12 @@ impl<G: InvertibleGroup> PoKE2<G> {
     let Q = G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q);
     PoKE2 { z, Q, r }
   }
-}
 
-impl<G: Group> PoKE2<G> {
   /// See page 16 of B&B.
   pub fn verify(base: &G::Elem, result: &G::Elem, proof: &PoKE2<G>) -> bool {
     #[allow(non_snake_case)]
     let PoKE2 { z, Q, r } = proof;
-    let g = G::base_elem();
+    let g = G::unknown_order_elem();
     let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
     let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
     let lhs = G::op(
@@ -48,13 +46,13 @@ impl<G: Group> PoKE2<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::DummyRSA;
+  use crate::group::{DummyRSA, Group};
   use crate::util::bu;
 
   #[test]
   fn test_poke2() {
     // 2^20 = 1048576
-    let base = DummyRSA::base_elem();
+    let base = DummyRSA::unknown_order_elem();
     let exp = bi(20);
     let result = DummyRSA::elem_of(1_048_576);
     let proof = PoKE2::<DummyRSA>::prove(&base, &exp, &result);

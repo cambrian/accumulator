@@ -1,4 +1,4 @@
-use crate::group::{Group, InvertibleGroup};
+use crate::group::Group;
 use num::{BigInt, BigUint, Unsigned};
 use num_traits::identities::{One, Zero};
 use std::ops::Mul;
@@ -71,7 +71,7 @@ pub fn product<T: Mul + One + Clone>(elems: &[&T]) -> T {
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
-pub fn shamir_trick<G: InvertibleGroup>(
+pub fn shamir_trick<G: Group>(
   xth_root: &G::Elem,
   yth_root: &G::Elem,
   x: &BigUint,

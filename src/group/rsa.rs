@@ -6,7 +6,7 @@
 //! result, we perform extra encodings/decodings that ring doesn't. The performance impact of
 //! this should be minor, as it makes only the functions exp, id, and base_elem slower by a
 //! constant factor. op is unaffected.
-use super::{Group, InvertibleGroup};
+use super::{Group, UnknownOrderGroup};
 use crate::util::{bezout, mod_euc_big, Singleton};
 use core::clone::Clone;
 use core::str::FromStr;
@@ -73,11 +73,6 @@ impl Group for RSA2048 {
     RSA2048Elem(m.oneR_elem())
   }
 
-  fn base_elem_(m: &Modulus<M>) -> RSA2048Elem {
-    let unencoded_2 = Elem::from_be_bytes_padded(Input::from(&[2 as u8]), m).unwrap();
-    encode(unencoded_2)
-  }
-
   fn op_(
     m: &Modulus<M>,
     RSA2048Elem(a): &RSA2048Elem,
@@ -93,14 +88,19 @@ impl Group for RSA2048 {
     let unencoded = elem_exp_consttime(a.clone(), &exponent, m).unwrap();
     encode(unencoded)
   }
-}
 
-impl InvertibleGroup for RSA2048 {
   fn inv_(_m: &Modulus<M>, x: &RSA2048Elem) -> RSA2048Elem {
     let x_big = biguint_from_elem(x);
     let (a, _, gcd) = bezout(&x_big, &RSA2048_MODULUS);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
     elem_from_biguint(&mod_euc_big::<BigUint>(&a, &RSA2048_MODULUS))
+  }
+}
+
+impl UnknownOrderGroup for RSA2048 {
+  fn unknown_order_elem_(m: &Modulus<M>) -> RSA2048Elem {
+    let unencoded_2 = Elem::from_be_bytes_padded(Input::from(&[2 as u8]), m).unwrap();
+    encode(unencoded_2)
   }
 }
 

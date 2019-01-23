@@ -1,4 +1,4 @@
-use crate::group::{Group, InvertibleGroup};
+use crate::group::UnknownOrderGroup;
 use crate::proof::{PoE, PoKE2};
 use crate::util::{bezout, bu, product, shamir_trick};
 use num;
@@ -12,13 +12,13 @@ pub enum AccError {
 }
 
 /// Initializes the accumulator to a group element.
-pub fn setup<G: Group>() -> G::Elem {
-  G::base_elem()
+pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
+  G::unknown_order_elem()
 }
 
 /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are co-prime with the
 /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multi-set.
-pub fn add<G: Group>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
+pub fn add<G: UnknownOrderGroup>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
   let x = product(elems);
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::<G>::prove(&acc, &x, &new_acc);
@@ -26,7 +26,7 @@ pub fn add<G: Group>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
 }
 
 /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
-pub fn delete<G: InvertibleGroup>(
+pub fn delete<G: UnknownOrderGroup>(
   acc: &G::Elem,
   elem_witnesses: &[(&BigUint, &G::Elem)],
 ) -> Result<(G::Elem, PoE<G>), AccError> {
@@ -52,7 +52,7 @@ pub fn delete<G: InvertibleGroup>(
 }
 
 /// See `delete`.
-pub fn prove_membership<G: InvertibleGroup>(
+pub fn prove_membership<G: UnknownOrderGroup>(
   acc: &G::Elem,
   elem_witnesses: &[(&BigUint, &G::Elem)],
 ) -> Result<(G::Elem, PoE<G>), AccError> {
@@ -60,7 +60,7 @@ pub fn prove_membership<G: InvertibleGroup>(
 }
 
 /// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
-pub fn verify_membership<G: Group>(
+pub fn verify_membership<G: UnknownOrderGroup>(
   witness: &G::Elem,
   elems: &[&BigUint],
   result: &G::Elem,
@@ -70,7 +70,7 @@ pub fn verify_membership<G: Group>(
   PoE::verify(witness, &exp, result, proof)
 }
 
-pub struct NonMembershipProof<G: Group> {
+pub struct NonMembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,
   gv_inv: G::Elem,
@@ -79,7 +79,7 @@ pub struct NonMembershipProof<G: Group> {
 }
 
 /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
-pub fn prove_nonmembership<G: InvertibleGroup>(
+pub fn prove_nonmembership<G: UnknownOrderGroup>(
   acc: &G::Elem,
   acc_set: &[&BigUint],
   elems: &[&BigUint],
@@ -92,7 +92,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
     return Err(AccError::InputsNotCoPrime);
   }
 
-  let g = G::base_elem();
+  let g = G::unknown_order_elem();
   let d = G::exp_signed(&g, &a);
   let v = G::exp_signed(acc, &b);
   let gv_inv = G::op(&g, &G::inv(&v));
@@ -109,7 +109,7 @@ pub fn prove_nonmembership<G: InvertibleGroup>(
 }
 
 /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
-pub fn verify_nonmembership<G: Group>(
+pub fn verify_nonmembership<G: UnknownOrderGroup>(
   acc: &G::Elem,
   elems: &[&BigUint],
   NonMembershipProof {
@@ -127,27 +127,27 @@ pub fn verify_nonmembership<G: Group>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::DummyRSA;
+  use crate::group::{DummyRSA, Group};
   use crate::util::bu;
 
-  fn init_acc<G: Group>() -> G::Elem {
+  fn init_acc<G: UnknownOrderGroup>() -> G::Elem {
     G::exp(&setup::<G>(), &(bu(41u8) * &bu(67u8) * &bu(89u8)))
   }
 
   #[test]
   fn test_shamir_trick() {
     let (x, y, z) = (&bu(13u8), &bu(17u8), &bu(19u8));
-    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
-    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
-    let xyth_root = DummyRSA::exp(&DummyRSA::base_elem(), z);
+    let xth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(y * z));
+    let yth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(x * z));
+    let xyth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), z);
     assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
 
   #[test]
   fn test_shamir_trick_failure() {
     let (x, y, z) = (&bu(7u8), &bu(14u8), &bu(19u8)); // Inputs not co-prime.
-    let xth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(y * z));
-    let yth_root = DummyRSA::exp(&DummyRSA::base_elem(), &(x * z));
+    let xth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(y * z));
+    let yth_root = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &(x * z));
     assert!(shamir_trick::<DummyRSA>(&xth_root, &yth_root, x, y) == None);
   }
 
@@ -156,7 +156,7 @@ mod tests {
     let acc = init_acc::<DummyRSA>();
     let new_elems = [&bu(5u8), &bu(7u8), &bu(11u8)];
     let (new_acc, poe) = add::<DummyRSA>(&acc, &new_elems);
-    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &bu(94_125_955u32));
+    let expected_acc = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(94_125_955u32));
     assert!(new_acc == expected_acc);
     assert!(PoE::verify(&acc, &bu(385u16), &new_acc, &poe));
   }
@@ -164,12 +164,12 @@ mod tests {
   #[test]
   fn test_delete() {
     let acc = init_acc::<DummyRSA>();
-    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(3649u16));
-    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(2747u16));
+    let y_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(3649u16));
+    let z_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(2747u16));
     let (new_acc, poe) =
       delete::<DummyRSA>(&acc, &[(&bu(67u8), &y_witness), (&bu(89u8), &z_witness)])
         .expect("valid delete expected");
-    let expected_acc = DummyRSA::exp(&DummyRSA::base_elem(), &bu(41u8));
+    let expected_acc = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(41u8));
     assert!(new_acc == expected_acc);
     assert!(PoE::verify(&new_acc, &bu(5963u16), &acc, &poe));
   }
@@ -186,8 +186,8 @@ mod tests {
   #[test]
   fn test_delete_bad_witness() {
     let acc = init_acc::<DummyRSA>();
-    let y_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(3648u16));
-    let z_witness = DummyRSA::exp(&DummyRSA::base_elem(), &bu(2746u16));
+    let y_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(3648u16));
+    let z_witness = DummyRSA::exp(&DummyRSA::unknown_order_elem(), &bu(2746u16));
     delete::<DummyRSA>(&acc, &[(&bu(67u8), &y_witness), (&bu(89u8), &z_witness)]).unwrap();
   }
 

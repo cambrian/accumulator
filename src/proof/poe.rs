@@ -32,7 +32,7 @@ impl<G: Group> PoE<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::DummyRSA;
+  use crate::group::{DummyRSA, UnknownOrderGroup};
   use crate::util::bu;
 
   // Current exponents are far smaller than generated primes, so all PoE proofs are producing
@@ -40,7 +40,7 @@ mod tests {
   #[test]
   fn test_poe() {
     // 2^20 = 1048576
-    let base = DummyRSA::base_elem();
+    let base = DummyRSA::unknown_order_elem();
     let exp = bu(20u8);
     let result = DummyRSA::elem_of(1_048_576);
     let proof = PoE::<DummyRSA>::prove(&base, &exp, &result);

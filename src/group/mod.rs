@@ -28,13 +28,6 @@ pub trait Group: Singleton {
 
   fn id_(rep: &Self::Rep) -> Self::Elem;
 
-  /// Returns an element with unknown order.
-  /// REVIEW: Consider renaming Group such that it's clear that the group has elements of unknown
-  /// order.
-  /// REVIEW: Consider renaming to unknown_order_elem (maybe small_unknown_order_elem).
-  /// E.g. 2, for RSA groups.
-  fn base_elem_(rep: &Self::Rep) -> Self::Elem;
-
   fn op_(rep: &Self::Rep, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
 
   /// Default implementation of exponentiation via repeated squaring.
@@ -52,16 +45,14 @@ pub trait Group: Singleton {
     }
   }
 
+  fn inv_(rep: &Self::Rep, a: &Self::Elem) -> Self::Elem;
+
   // -------------------
   // END OF REQUIRED FNS
   // -------------------
 
   fn id() -> Self::Elem {
     Self::id_(Self::rep())
-  }
-
-  fn base_elem() -> Self::Elem {
-    Self::base_elem_(Self::rep())
   }
 
   fn op(a: &Self::Elem, b: &Self::Elem) -> Self::Elem {
@@ -71,21 +62,12 @@ pub trait Group: Singleton {
   fn exp(a: &Self::Elem, n: &BigUint) -> Self::Elem {
     Self::exp_(Self::rep(), a, n)
   }
-}
-
-/// Trait for groups that support efficient inverse calculations.
-/// NOT used to mean a cyclic group (where every element has an inverse).
-pub trait InvertibleGroup: Group {
-  fn inv_(rep: &Self::Rep, a: &Self::Elem) -> Self::Elem;
-
-  // -------------------
-  // END OF REQUIRED FNS
-  // -------------------
 
   fn inv(a: &Self::Elem) -> Self::Elem {
     Self::inv_(Self::rep(), a)
   }
 
+  /// REVIEW: now that we've merged InvertibleGroup, should this be rolled in with exp?
   fn exp_signed(a: &Self::Elem, n: &BigInt) -> Self::Elem {
     // After further discussion: Writing a specialized inv() that takes an exponent is only a
     // marginal speedup over inv() then exp() in the negative exponent case. (That is, the
@@ -98,6 +80,15 @@ pub trait InvertibleGroup: Group {
         &(-n).to_biguint().expect("negative BigInt expected"),
       )
     }
+  }
+}
+
+pub trait UnknownOrderGroup: Group {
+  /// E.g. 2, for RSA groups.
+  fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;
+
+  fn unknown_order_elem() -> Self::Elem {
+    Self::unknown_order_elem_(Self::rep())
   }
 }
 
