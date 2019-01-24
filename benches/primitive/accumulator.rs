@@ -10,18 +10,14 @@ use num::bigint::BigUint;
 use rand::Rng;
 
 fn bench_add(elems: &[BigUint]) {
-  let mut borrowed_elems = Vec::new();
-  let acc = &setup::<DummyRSA>();
-  for elem in elems {
-    borrowed_elems.push(elem)
-  }
-  add::<DummyRSA>(&acc, &borrowed_elems);
+  let acc = setup::<DummyRSA>();
+  add::<DummyRSA>(acc, elems);
 }
 
 fn bench_iterative_add(elems: &[BigUint]) {
   let mut acc = setup::<DummyRSA>();
-  for elem in elems {
-    acc = add::<DummyRSA>(&acc, &[elem]).0;
+  for elem in elems.chunks(1) {
+    acc = add::<DummyRSA>(acc, elem).0;
   }
 }
 
