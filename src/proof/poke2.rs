@@ -1,27 +1,23 @@
 use crate::group::UnknownOrderGroup;
 use crate::hash::{hash, hash_to_prime, Blake2b};
-use crate::util;
-use crate::util::bi;
-use num::{BigInt, BigUint};
-use num_integer::Integer;
+use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq)]
 pub struct PoKE2<G: UnknownOrderGroup> {
   z: G::Elem,
   Q: G::Elem,
-  r: BigUint,
+  r: Integer,
 }
 
 impl<G: UnknownOrderGroup> PoKE2<G> {
   /// See page 16 of B&B.
-  pub fn prove(base: &G::Elem, exp: &BigInt, result: &G::Elem) -> PoKE2<G> {
+  pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> PoKE2<G> {
     let g = G::unknown_order_elem();
     let z = G::exp_signed(&g, exp);
     let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
     let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
-    let q = exp.div_floor(&bi(l.clone()));
-    let r = util::mod_euc_big(exp, &l);
+    let (q, r) = exp.clone().div_rem_euc(l);
     #[allow(non_snake_case)]
     let Q = G::exp_signed(&G::op(&base, &G::exp(&g, &alpha)), &q);
     PoKE2 { z, Q, r }

@@ -1,6 +1,5 @@
 use crate::group::{multi_exp, Group};
-use crate::util::product;
-use num::BigInt;
+use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq)]
@@ -15,8 +14,8 @@ impl<G: Group> PoKCR<G> {
     }
   }
 
-  pub fn verify(alphas: &[G::Elem], x: &[BigInt], proof: &PoKCR<G>) -> bool {
-    let x_star = product(x);
+  pub fn verify(alphas: &[G::Elem], x: &[Integer], proof: &PoKCR<G>) -> bool {
+    let x_star = x.iter().product();
     let y = multi_exp::<G>(alphas, x);
     let lhs = G::exp_signed(&proof.w, &x_star);
     lhs == y
