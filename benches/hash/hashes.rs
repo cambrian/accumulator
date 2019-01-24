@@ -10,14 +10,14 @@ fn bench_blake2() {
   hash(&Blake2b::default, b"werg");
 }
 
-fn bench_h_prime() {
+fn bench_hash_to_prime() {
   let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
   hash_to_prime(&Blake2b::default, &random_bytes);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function("blake2", |b| b.iter(bench_blake2));
-  c.bench_function("h_prime", |b| b.iter(bench_h_prime));
+  c.bench_function("hash_to_prime", |b| b.iter(bench_hash_to_prime));
 }
 
 criterion_group!(benches, criterion_benchmark);

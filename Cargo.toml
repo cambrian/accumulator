@@ -30,13 +30,18 @@ ring = { git = "https://github.com/1protocol/ring" }
 untrusted = "0.6.2"
 
 [[bench]]
-name = "poe"
-path = "benches/proof/poe.rs"
+name = "accumulator"
+path = "benches/primitive/accumulator.rs"
 harness = false
 
 [[bench]]
-name = "poke"
-path = "benches/proof/poke2.rs"
+name = "hashes"
+path = "benches/hash/hashes.rs"
+harness = false
+
+[[bench]]
+name = "poe"
+path = "benches/proof/poe.rs"
 harness = false
 
 [[bench]]
@@ -45,7 +50,9 @@ path = "benches/proof/pokcr.rs"
 harness = false
 
 [[bench]]
-name = "hashes"
-path = "benches/hash/hashes.rs"
+name = "poke2"
+path = "benches/proof/poke2.rs"
 harness = false
 
+[profile.dev]
+opt-level = 3
