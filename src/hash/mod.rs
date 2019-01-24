@@ -1,3 +1,5 @@
+#![allow(clippy::many_single_char_names)]
+
 use crate::util::bu;
 use num::bigint::BigUint;
 use std::hash::{Hash, Hasher};
@@ -36,8 +38,8 @@ where
   let mut counter = 0u64;
   loop {
     // REVIEW: If possible, set the last bit to 1 (thus making the candidate prime odd) without
-    // allocating a new biguint. The provided implementation of BitOr for BigUint allocates,
-    // so we get minimal performance gains from doing it the easy way.
+    // allocating a new biguint. The provided implementation of BitOr for BigUint allocates, so we
+    // get minimal performance gains from doing it the easy way.
     let candidate_prime = bu(hash(new_hasher, &(t, counter)));
     if primality::is_prob_prime(&candidate_prime) {
       return candidate_prime;

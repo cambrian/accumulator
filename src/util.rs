@@ -1,3 +1,5 @@
+#![allow(clippy::many_single_char_names)]
+
 use crate::group::Group;
 use num::{BigInt, BigUint, Unsigned};
 use num_traits::identities::{One, Zero};

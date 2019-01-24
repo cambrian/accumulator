@@ -31,11 +31,11 @@ mod tests {
 
   #[test]
   fn test_pokcr() {
-    let witnesses = [RSA2048::elem_of(2), RSA2048::elem_of(3)];
+    let witnesses = [RSA2048::elem_of(2u8), RSA2048::elem_of(3u8)];
     let x = [bi(2), bi(2)];
-    let alphas = [RSA2048::elem_of(4), RSA2048::elem_of(9)];
+    let alphas = [RSA2048::elem_of(4u8), RSA2048::elem_of(9u8)];
     let proof = PoKCR::<RSA2048>::prove(&witnesses);
-    assert!(proof.w == RSA2048::elem_of(6));
+    assert!(proof.w == RSA2048::elem_of(6u8));
     assert!(PoKCR::verify(&alphas, &x, &proof));
   }
 }

@@ -9,6 +9,8 @@ use std::marker::Sized;
 mod class;
 mod dummy;
 pub use dummy::{DummyRSA, DummyRSAElem};
+mod dummy2048;
+pub use dummy2048::{DummyRSA2048, DummyRSA2048Elem};
 mod rsa;
 pub use rsa::{RSA2048Elem, RSA2048};
 
