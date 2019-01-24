@@ -59,8 +59,8 @@ where
     .expect("positive BigInt expected")
 }
 
-pub fn product<T: Mul + One + Clone>(elems: &[&T]) -> T {
-  elems.iter().fold(num::one(), |a, &b| a * b.clone())
+pub fn product<T: Mul + One + Clone>(elems: &[T]) -> T {
+  elems.iter().fold(num::one(), |a, b| a * b.clone())
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
@@ -109,14 +109,7 @@ mod tests {
 
   #[test]
   fn test_product() {
-    let elems = [
-      &bu(2u32),
-      &bu(3u32),
-      &bu(4u32),
-      &bu(5u32),
-      &bu(6u32),
-      &bu(7u32),
-    ];
+    let elems = [bu(2u32), bu(3u32), bu(4u32), bu(5u32), bu(6u32), bu(7u32)];
     assert!(product(&elems) == bu(5040u32));
   }
 }

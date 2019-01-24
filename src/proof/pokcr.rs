@@ -9,13 +9,13 @@ pub struct PoKCR<G: Group> {
 }
 
 impl<G: Group> PoKCR<G> {
-  pub fn prove(witnesses: &[&G::Elem]) -> PoKCR<G> {
+  pub fn prove(witnesses: &[G::Elem]) -> PoKCR<G> {
     PoKCR {
       w: witnesses.iter().fold(G::id(), |a, b| G::op(&a, b)),
     }
   }
 
-  pub fn verify(alphas: &[&G::Elem], x: &[&BigInt], proof: &PoKCR<G>) -> bool {
+  pub fn verify(alphas: &[G::Elem], x: &[BigInt], proof: &PoKCR<G>) -> bool {
     let x_star = product(x);
     let y = multi_exp::<G>(alphas, x);
     let lhs = G::exp_signed(&proof.w, &x_star);
@@ -31,9 +31,9 @@ mod tests {
 
   #[test]
   fn test_pokcr() {
-    let witnesses = [&RSA2048::elem_of(2), &RSA2048::elem_of(3)];
-    let x = [&bi(2), &bi(2)];
-    let alphas = [&RSA2048::elem_of(4), &RSA2048::elem_of(9)];
+    let witnesses = [RSA2048::elem_of(2), RSA2048::elem_of(3)];
+    let x = [bi(2), bi(2)];
+    let alphas = [RSA2048::elem_of(4), RSA2048::elem_of(9)];
     let proof = PoKCR::<RSA2048>::prove(&witnesses);
     assert!(proof.w == RSA2048::elem_of(6));
     assert!(PoKCR::verify(&alphas, &x, &proof));

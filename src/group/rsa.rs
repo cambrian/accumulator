@@ -208,11 +208,7 @@ mod tests {
       let prime = hash_to_prime(&Blake2b::default, &random_bytes);
       elems.push(prime);
     }
-    let mut borrowed_elems = Vec::new();
-    let acc = &setup::<RSA2048>();
-    for elem in &elems {
-      borrowed_elems.push(elem)
-    }
-    add::<RSA2048>(&acc, &borrowed_elems[..]);
+    let acc = setup::<RSA2048>();
+    add::<RSA2048>(acc, &elems[..]);
   }
 }
