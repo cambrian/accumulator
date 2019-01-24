@@ -4,12 +4,24 @@ extern crate criterion;
 
 use criterion::Criterion;
 use crypto::group::{DummyRSA2048, ElemFromUnsigned, RSA2048};
-use crypto::util::bu;
 use num::BigUint;
 use std::str::FromStr;
 
 fn bench_op_simple<G: ElemFromUnsigned>() {
-  G::op(&G::elem_of(3u8), &G::elem_of(4u8));
+  G::op(
+    &G::elem_of(
+      BigUint::from_str(
+        "111066521363124532171649626395987136074128970245601106158251038731392583290069",
+      )
+      .unwrap(),
+    ),
+    &G::elem_of(
+      BigUint::from_str(
+        "106610920435831899020588753249099054915951032185883121197718271189872278955399",
+      )
+      .unwrap(),
+    ),
+  );
 }
 
 #[allow(dead_code)]
@@ -33,7 +45,13 @@ fn bench_op<G: ElemFromUnsigned>() {
 }
 
 fn bench_exp<G: ElemFromUnsigned>() {
-  G::exp(&G::elem_of(2u8), &bu(4097u32));
+  G::exp(
+    &G::elem_of(2u8),
+    &BigUint::from_str(
+      "77025435109995326125138168145937423130057967713026685378136292821520474962011",
+    )
+    .unwrap(),
+  );
 }
 
 fn bench_inv<G: ElemFromUnsigned>() {

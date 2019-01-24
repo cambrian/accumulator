@@ -74,6 +74,9 @@ impl Group for DummyRSA2048 {
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
     DummyRSA2048::elem_of(util::mod_euc_big(&a, modulus))
   }
+  fn exp_(modulus: &BigUint, x: &DummyRSA2048Elem, n: &BigUint) -> DummyRSA2048Elem {
+    DummyRSA2048::elem_of(x.val.modpow(n, modulus))
+  }
 }
 
 impl ElemFromUnsigned for DummyRSA2048 {
