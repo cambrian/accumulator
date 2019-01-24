@@ -141,6 +141,11 @@ mod tests {
 }
 
 /// REVIEW: Unsigned trait is unnecessary; BigUint: From<U> is sufficient
+/// REVIEW: ^ ignore the above. Actually, it would be better to express this trait as
+/// pub trait GroupElemOf<T>: Group
+/// such that implementations may define something like
+/// impl GroupElemOf<T> for Dummy where BigUint: From<T> {...}
+/// I'm sure i didn't get the syntax exactly right but you get the idea.
 pub trait ElemFromUnsigned: Group {
   fn elem_of<U: Unsigned>(n: U) -> Self::Elem
   where
