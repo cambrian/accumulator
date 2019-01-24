@@ -66,13 +66,16 @@ impl Group for DummyRSA2048 {
     DummyRSA2048::elem_of(op_result)
   }
   fn id_(_: &BigUint) -> DummyRSA2048Elem {
-    DummyRSA2048::elem_of(bu(1u8))
+    DummyRSA2048::elem_of(1u8)
   }
   fn inv_(modulus: &BigUint, x: &DummyRSA2048Elem) -> DummyRSA2048Elem {
     let x_big = bu(x.val.clone());
     let (a, _, gcd) = util::bezout(&x_big, modulus);
     assert!(gcd.is_one()); // TODO: Handle this impossibly rare failure?
     DummyRSA2048::elem_of(util::mod_euc_big(&a, modulus))
+  }
+  fn exp_(modulus: &BigUint, x: &DummyRSA2048Elem, n: &BigUint) -> DummyRSA2048Elem {
+    DummyRSA2048::elem_of(x.val.modpow(n, modulus))
   }
 }
 
@@ -87,7 +90,7 @@ impl ElemFromUnsigned for DummyRSA2048 {
 
 impl UnknownOrderGroup for DummyRSA2048 {
   fn unknown_order_elem_(_: &BigUint) -> DummyRSA2048Elem {
-    DummyRSA2048::elem_of(bu(2u8))
+    DummyRSA2048::elem_of(2u8)
   }
 }
 
@@ -102,13 +105,13 @@ mod tests {
 
   #[test]
   fn test_op() {
-    let a = DummyRSA2048::op(&DummyRSA2048::elem_of(2u32), &DummyRSA2048::elem_of(3u32));
-    assert!(a == DummyRSA2048::elem_of(6u32));
+    let a = DummyRSA2048::op(&DummyRSA2048::elem_of(2u8), &DummyRSA2048::elem_of(3u8));
+    assert!(a == DummyRSA2048::elem_of(6u8));
     let b = DummyRSA2048::op(
-      &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(2u32)),
-      &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(3u32)),
+      &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(2u8)),
+      &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(3u8)),
     );
-    assert!(b == DummyRSA2048::elem_of(bu(6u32)));
+    assert!(b == DummyRSA2048::elem_of(6u8));
   }
 
   /// Tests that -x and x are treated as the same element.
@@ -122,9 +125,9 @@ mod tests {
 
   #[test]
   fn test_exp() {
-    let a = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u32), &bu(3u32));
-    assert!(a == DummyRSA2048::elem_of(8u32));
-    let b = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u32), &bu(4096u32));
+    let a = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u8), &bu(3u8));
+    assert!(a == DummyRSA2048::elem_of(8u8));
+    let b = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u8), &bu(4096u16));
     assert!(b == DummyRSA2048::elem_of(BigUint::from_str("217207389955395428589369158781869218697519159898401521658993038615824872408108784926597517\
         496727372037176277380476487000099770530440575029170919732871116716934260655466121508332329\
         543615367099810550371217642707848747209719337160655740326150736137284544974770721296865388\
@@ -132,18 +135,18 @@ mod tests {
         194163842041340565518401459166858709515078878951293564147044227487142171138804897039341476\
         125519380825017530552968018297030172607314398711102156189885095451290884843968486448057303\
         47466581515692959313583208325725034506693916571047785061884094866050395109710").unwrap()));
-    let c = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u32), &RSA2048_MODULUS);
+    let c = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u8), &RSA2048_MODULUS);
     dbg!(c);
     let d = DummyRSA2048::exp(
-      &DummyRSA2048::elem_of(2u32),
-      &(RSA2048_MODULUS.clone() * bu(2u32)),
+      &DummyRSA2048::elem_of(2u8),
+      &(RSA2048_MODULUS.clone() * bu(2u8)),
     );
     dbg!(d);
   }
 
   #[test]
   fn test_inv() {
-    let x = DummyRSA2048::elem_of(2u32);
+    let x = DummyRSA2048::elem_of(2u8);
     let inv = DummyRSA2048::inv(&x);
     assert!(DummyRSA2048::op(&x, &inv) == DummyRSA2048::id());
   }
