@@ -140,6 +140,7 @@ mod tests {
   }
 }
 
+/// REVIEW: Unsigned trait is unnecessary; BigUint: From<U> is sufficient
 pub trait ElemFromUnsigned: Group {
   fn elem_of<U: Unsigned>(n: U) -> Self::Elem
   where
