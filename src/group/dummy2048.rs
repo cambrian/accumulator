@@ -1,11 +1,12 @@
 //! Dummy RSA group for 64-bit numbers.
 //! Use this group for testing while we figure out ring integration.
 
-use super::{Group, UnknownOrderGroup};
+use super::{ElemFromUnsigned, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{bi, bu, Singleton};
 use num::BigUint;
 use num_traits::identities::One;
+use num_traits::Unsigned;
 use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -42,17 +43,15 @@ impl Singleton for DummyRSA2048 {
   }
 }
 
-impl DummyRSA2048 {
-  pub fn elem_of(val_unbounded: BigUint) -> DummyRSA2048Elem {
-    let n = Self::rep();
-    let val = val_unbounded % n;
-    if val > n / bu(2u8) {
-      DummyRSA2048Elem {
-        val: util::mod_euc_big(&-bi(val), n),
-      }
-    } else {
-      DummyRSA2048Elem { val }
+pub fn elem_from_biguint(a: &BigUint) -> DummyRSA2048Elem {
+  let n = DummyRSA2048::rep();
+  let val = a % n;
+  if val > n / bu(2u8) {
+    DummyRSA2048Elem {
+      val: util::mod_euc_big(&-bi(val), n),
     }
+  } else {
+    DummyRSA2048Elem { val }
   }
 }
 
@@ -79,6 +78,15 @@ impl Group for DummyRSA2048 {
   }
 }
 
+impl ElemFromUnsigned for DummyRSA2048 {
+  fn elem_of<U: Unsigned>(n: U) -> DummyRSA2048Elem
+  where
+    BigUint: From<U>,
+  {
+    elem_from_biguint(&bu(n))
+  }
+}
+
 impl UnknownOrderGroup for DummyRSA2048 {
   fn unknown_order_elem_(_: &BigUint) -> DummyRSA2048Elem {
     DummyRSA2048::elem_of(bu(2u8))
@@ -88,27 +96,40 @@ impl UnknownOrderGroup for DummyRSA2048 {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::accumulator;
+  use crate::hash::{hash_to_prime, Blake2b};
+  use rand::Rng;
+
+  #[test]
+  fn test_init() {
+    let _x = &DummyRSA2048::rep();
+  }
 
   #[test]
   fn test_op() {
-    let a = DummyRSA2048::op(
-      &DummyRSA2048::elem_of(bu(2u8)),
-      &DummyRSA2048::elem_of(bu(3u8)),
+    let a = DummyRSA2048::op(&DummyRSA2048::elem_of(2u32), &DummyRSA2048::elem_of(3u32));
+    assert!(a == DummyRSA2048::elem_of(6u32));
+    let b = DummyRSA2048::op(
+      &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(2u32)),
+      &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(3u32)),
     );
-    assert!(a == DummyRSA2048::elem_of(bu(6u8)));
+    assert!(b == DummyRSA2048::elem_of(bu(6u32)));
   }
 
   /// Tests that -x and x are treated as the same element.
   #[test]
   fn test_cosets() {
-    unimplemented!()
+    unimplemented!();
+    // assert!(elem_of(2) == elem_of(2_794_712_452_613_795));
+    // let r = RSA2048::op(&elem_of(931_570_817_537_932), &elem_of(2));
+    // assert!(r == elem_of(931_570_817_537_933));
   }
 
   #[test]
   fn test_exp() {
-    let a = DummyRSA2048::exp(&DummyRSA2048::elem_of(bu(2u8)), &bu(3u32));
-    assert!(a == DummyRSA2048::elem_of(bu(8u8)));
-    let b = DummyRSA2048::exp(&DummyRSA2048::elem_of(bu(2u8)), &bu(4096u32));
+    let a = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u32), &bu(3u32));
+    assert!(a == DummyRSA2048::elem_of(8u32));
+    let b = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u32), &bu(4096u32));
     assert!(b == DummyRSA2048::elem_of(BigUint::from_str("217207389955395428589369158781869218697519159898401521658993038615824872408108784926597517\
         496727372037176277380476487000099770530440575029170919732871116716934260655466121508332329\
         543615367099810550371217642707848747209719337160655740326150736137284544974770721296865388\
@@ -116,12 +137,33 @@ mod tests {
         194163842041340565518401459166858709515078878951293564147044227487142171138804897039341476\
         125519380825017530552968018297030172607314398711102156189885095451290884843968486448057303\
         47466581515692959313583208325725034506693916571047785061884094866050395109710").unwrap()));
+    let c = DummyRSA2048::exp(&DummyRSA2048::elem_of(2u32), &RSA2048_MODULUS);
+    dbg!(c);
+    let d = DummyRSA2048::exp(
+      &DummyRSA2048::elem_of(2u32),
+      &(RSA2048_MODULUS.clone() * bu(2u32)),
+    );
+    dbg!(d);
   }
 
   #[test]
   fn test_inv() {
-    let x = DummyRSA2048::elem_of(bu(2u8));
+    let x = DummyRSA2048::elem_of(2u32);
     let inv = DummyRSA2048::inv(&x);
     assert!(DummyRSA2048::op(&x, &inv) == DummyRSA2048::id());
+  }
+
+  #[test]
+  fn test_add_failure() {
+    let mut elems = Vec::new();
+    // Works fine for 8 elements, 9 elements causes a panic on .unwrap, indicating ring is likely
+    // unable to process this exponent (product of 9 elements).
+    for _ in 0..9 {
+      let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
+      let prime = hash_to_prime(&Blake2b::default, &random_bytes);
+      elems.push(prime);
+    }
+    let acc = accumulator::setup::<DummyRSA2048>();
+    accumulator::add::<DummyRSA2048>(acc, &elems[..]);
   }
 }

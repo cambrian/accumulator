@@ -1,5 +1,3 @@
-#![allow(clippy::many_single_char_names)]
-
 use crate::util::bu;
 use num::bigint::BigUint;
 use std::hash::{Hash, Hasher};

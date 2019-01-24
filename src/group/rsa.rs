@@ -6,7 +6,7 @@
 //! perform extra encodings/decodings that ring doesn't. The performance impact of this should be
 //! minor, as it makes only the functions exp, id, and base_elem slower by a constant factor. op is
 //! unaffected.
-use super::{Group, UnknownOrderGroup};
+use super::{ElemFromUnsigned, Group, UnknownOrderGroup};
 use crate::util::bu;
 use crate::util::{bezout, mod_euc_big, Singleton};
 use num::BigUint;
@@ -120,8 +120,8 @@ fn elem_from_biguint(a: &BigUint) -> RSA2048Elem {
   encode(unencoded)
 }
 
-impl RSA2048 {
-  pub fn elem_of<U: Unsigned>(n: U) -> RSA2048Elem
+impl ElemFromUnsigned for RSA2048 {
+  fn elem_of<U: Unsigned>(n: U) -> RSA2048Elem
   where
     BigUint: From<U>,
   {

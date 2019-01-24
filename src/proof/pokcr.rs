@@ -26,7 +26,7 @@ impl<G: Group> PoKCR<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::RSA2048;
+  use crate::group::{ElemFromUnsigned, RSA2048};
   use crate::util::bi;
 
   #[test]

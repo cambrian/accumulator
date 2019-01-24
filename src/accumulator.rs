@@ -2,8 +2,6 @@
 //!
 //! Operations that "mutate" the accumulator (add, delete) use moves instead of references so that
 //! you don't accidentally use the old accumulator state.
-#![allow(clippy::many_single_char_names)]
-
 use crate::group::UnknownOrderGroup;
 use crate::proof::{PoE, PoKE2};
 use crate::util::{bezout, bu, product, shamir_trick};

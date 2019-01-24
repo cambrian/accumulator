@@ -3,6 +3,7 @@ use crate::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
+use num_traits::Unsigned;
 use std::hash::Hash;
 use std::marker::Sized;
 
@@ -137,4 +138,10 @@ mod tests {
     let res_2 = multi_exp::<DummyRSA>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
     assert!(res_2 == DummyRSA::elem_of(1_687_500));
   }
+}
+
+pub trait ElemFromUnsigned: Group {
+  fn elem_of<U: Unsigned>(n: U) -> Self::Elem
+  where
+    BigUint: From<U>;
 }

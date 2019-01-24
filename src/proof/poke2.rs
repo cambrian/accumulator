@@ -1,5 +1,3 @@
-#![allow(clippy::many_single_char_names)]
-
 use crate::group::UnknownOrderGroup;
 use crate::hash::{hash, hash_to_prime, Blake2b};
 use crate::util;
@@ -48,7 +46,7 @@ impl<G: UnknownOrderGroup> PoKE2<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{Group, RSA2048};
+  use crate::group::{ElemFromUnsigned, Group, RSA2048};
   use crate::util::bu;
 
   #[test]
