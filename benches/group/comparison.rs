@@ -36,7 +36,7 @@ fn bench_op_dummy() {
 }
 
 fn bench_exp_dummy() {
-  DummyRSA2048::exp(&DummyRSA2048::elem_of(bu(2u8)), &bu(4096u32));
+  DummyRSA2048::exp(&DummyRSA2048::elem_of(bu(2u8)), &bu(4097u32));
 }
 
 fn bench_inv_dummy() {
