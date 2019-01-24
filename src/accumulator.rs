@@ -28,9 +28,6 @@ where
   G::Elem: Debug,
 {
   let x = product(elems);
-  // TODO: Remove this.
-  println!("x: {:?}", x);
-  println!("acc {:?}", acc);
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::<G>::prove(&acc, &x, &new_acc);
   (new_acc, poe_proof)

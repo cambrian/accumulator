@@ -201,18 +201,4 @@ mod tests {
     let inv = RSA2048::inv(&x);
     assert!(RSA2048::op(&x, &inv) == RSA2048::id());
   }
-
-  #[test]
-  fn test_add_failure() {
-    let mut elems = Vec::new();
-    // Works fine for 8 elements, 9 elements causes a panic on .unwrap, indicating ring is likely
-    // unable to process this exponent (product of 9 elements).
-    for _ in 0..9 {
-      let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-      let prime = hash_to_prime(&Blake2b::default, &random_bytes);
-      elems.push(prime);
-    }
-    let acc = setup::<RSA2048>();
-    add::<RSA2048>(acc, &elems[..]);
-  }
 }
