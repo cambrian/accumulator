@@ -1,5 +1,5 @@
 // TODO (Also, how to aggregate?)
-use super::super::hash::{hash_to_prime, Blake2b};
+use crate::hash::{hash_to_prime, Blake2b};
 // use super::accumulator;
 use super::accumulator::AccError;
 use crate::group::UnknownOrderGroup;
