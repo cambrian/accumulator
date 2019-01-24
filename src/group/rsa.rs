@@ -140,7 +140,7 @@ fn encode(a: Elem<M, Unencoded>) -> RSA2048Elem {
 mod tests {
   use super::*;
   use crate::hash::{hash_to_prime, Blake2b};
-  use crate::primitive::accumulator::{add, setup};
+  use crate::accumulator::{add, setup};
   use crate::util::bu;
   use num_traits::Unsigned;
   use rand::Rng;
