@@ -46,7 +46,7 @@ impl<G: UnknownOrderGroup> PoKE2<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{RSA2048, Group};
+  use crate::group::{ElemFromUnsigned, Group, RSA2048};
   use crate::util::bu;
 
   #[test]
@@ -54,22 +54,22 @@ mod tests {
     // 2^20 = 1048576
     let base = RSA2048::unknown_order_elem();
     let exp = bi(20);
-    let result = RSA2048::elem_of(1_048_576);
+    let result = RSA2048::elem_of(1_048_576u32);
     let proof = PoKE2::<RSA2048>::prove(&base, &exp, &result);
     assert!(PoKE2::verify(&base, &result, &proof));
     // Must compare entire structs since elements z, Q, and r are private.
     assert!(
       proof
         == PoKE2 {
-          z: RSA2048::elem_of(1_048_576),
-          Q: RSA2048::elem_of(1),
+          z: RSA2048::elem_of(1_048_576u32),
+          Q: RSA2048::elem_of(1u8),
           r: bu(20u8)
         }
     );
 
     // 2^35 = 34359738368
     let exp_2 = bi(35);
-    let result_2 = RSA2048::elem_of(34_359_738_368);
+    let result_2 = RSA2048::elem_of(34_359_738_368u64);
     let proof_2 = PoKE2::<RSA2048>::prove(&base, &exp_2, &result_2);
     assert!(PoKE2::verify(&base, &result_2, &proof_2));
     // Cannot verify wrong base/exp/result triple with wrong pair.
@@ -77,8 +77,8 @@ mod tests {
     assert!(
       proof_2
         == PoKE2 {
-          z: RSA2048::elem_of(34_359_738_368),
-          Q: RSA2048::elem_of(1),
+          z: RSA2048::elem_of(34_359_738_368u64),
+          Q: RSA2048::elem_of(1u8),
           r: bu(35u8)
         }
     );
@@ -86,7 +86,7 @@ mod tests {
 
   #[test]
   fn test_poke2_negative() {
-    let base = RSA2048::elem_of(2);
+    let base = RSA2048::elem_of(2u8);
     let exp = bi(-5);
     let result = RSA2048::exp_signed(&base, &exp);
     let proof = PoKE2::<RSA2048>::prove(&base, &exp, &result);

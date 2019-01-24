@@ -32,7 +32,7 @@ impl<G: Group> PoE<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{RSA2048, UnknownOrderGroup};
+  use crate::group::{ElemFromUnsigned, UnknownOrderGroup, RSA2048};
   use crate::util::bu;
 
   #[test]
@@ -40,25 +40,25 @@ mod tests {
     // 2^20 = 1048576
     let base = RSA2048::unknown_order_elem();
     let exp = bu(20u8);
-    let result = RSA2048::elem_of(1_048_576);
+    let result = RSA2048::elem_of(1_048_576u32);
     let proof = PoE::<RSA2048>::prove(&base, &exp, &result);
     assert!(PoE::verify(&base, &exp, &result, &proof));
     assert!(
       proof
         == PoE {
-          Q: RSA2048::elem_of(1)
+          Q: RSA2048::elem_of(1u8)
         }
     );
 
     // 2^35 = 34359738368
     let exp_2 = bu(35u8);
-    let result_2 = RSA2048::elem_of(34_359_738_368);
+    let result_2 = RSA2048::elem_of(34_359_738_368u64);
     let proof_2 = PoE::<RSA2048>::prove(&base, &exp_2, &result_2);
     assert!(PoE::verify(&base, &exp_2, &result_2, &proof_2));
     assert!(
       proof_2
         == PoE {
-          Q: RSA2048::elem_of(1)
+          Q: RSA2048::elem_of(1u8)
         }
     );
   }
