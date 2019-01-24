@@ -1,15 +1,17 @@
 //! Integration of Brian Smith's ring library into our group interface.
 //! There are a lot of rough edges to the interface boundary. One thing to note in particular:
 //!
-//! We restrict our group to singly-encoded values (via Montgomery encoding), whereas ring
-//! will use unencoded, inverse, or doubly-encoded values where they are more convenient. As a
-//! result, we perform extra encodings/decodings that ring doesn't. The performance impact of
-//! this should be minor, as it makes only the functions exp, id, and base_elem slower by a
-//! constant factor. op is unaffected.
-use super::{Group, UnknownOrderGroup};
+//! We restrict our group to singly-encoded values (via Montgomery encoding), whereas ring will use
+//! unencoded, inverse, or doubly-encoded values where they are more convenient. As a result, we
+//! perform extra encodings/decodings that ring doesn't. The performance impact of this should be
+//! minor, as it makes only the functions exp, id, and base_elem slower by a constant factor. op is
+//! unaffected.
+use super::{ElemFromUnsigned, Group, UnknownOrderGroup};
+use crate::util::bu;
 use crate::util::{bezout, mod_euc_big, Singleton};
 use num::BigUint;
 use num_traits::identities::One;
+use num_traits::Unsigned;
 use ring::arithmetic::montgomery::{Unencoded, R};
 use ring::rsa::bigint::{elem_exp_consttime, elem_mul, Elem, Modulus, PrivateExponent};
 use std::clone::Clone;
@@ -118,10 +120,12 @@ fn elem_from_biguint(a: &BigUint) -> RSA2048Elem {
   encode(unencoded)
 }
 
-impl RSA2048 {
-  pub fn elem_of(val_unbounded: u64) -> RSA2048Elem {
-    let n = BigUint::from(val_unbounded);
-    elem_from_biguint(&n)
+impl ElemFromUnsigned for RSA2048 {
+  fn elem_of<U: Unsigned>(n: U) -> RSA2048Elem
+  where
+    BigUint: From<U>,
+  {
+    elem_from_biguint(&bu(n))
   }
 }
 
@@ -139,18 +143,7 @@ fn encode(a: Elem<M, Unencoded>) -> RSA2048Elem {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::accumulator::{add, setup};
-  use crate::hash::{hash_to_prime, Blake2b};
   use crate::util::bu;
-  use num_traits::Unsigned;
-  use rand::Rng;
-
-  fn elem_of<U: Unsigned>(n: U) -> RSA2048Elem
-  where
-    BigUint: From<U>,
-  {
-    elem_from_biguint(&bu(n))
-  }
 
   #[test]
   fn test_init() {
@@ -159,13 +152,13 @@ mod tests {
 
   #[test]
   fn test_op() {
-    let a = RSA2048::op(&elem_of(2u32), &elem_of(3u32));
-    assert!(a == elem_of(6u32));
+    let a = RSA2048::op(&RSA2048::elem_of(2u32), &RSA2048::elem_of(3u32));
+    assert!(a == RSA2048::elem_of(6u32));
     let b = RSA2048::op(
-      &elem_of(RSA2048_MODULUS.clone() - bu(2u32)),
-      &elem_of(RSA2048_MODULUS.clone() - bu(3u32)),
+      &RSA2048::elem_of(RSA2048_MODULUS.clone() - bu(2u32)),
+      &RSA2048::elem_of(RSA2048_MODULUS.clone() - bu(3u32)),
     );
-    assert!(b == elem_of(bu(6u32)));
+    assert!(b == RSA2048::elem_of(bu(6u32)));
   }
 
   /// Tests that -x and x are treated as the same element.
@@ -179,25 +172,28 @@ mod tests {
 
   #[test]
   fn test_exp() {
-    let a = RSA2048::exp(&elem_of(2u32), &bu(3u32));
-    assert!(a == elem_of(8u32));
-    let b = RSA2048::exp(&elem_of(2u32), &bu(4096u32));
-    assert!(b == elem_of(BigUint::from_str("217207389955395428589369158781869218697519159898401521658993038615824872408108784926597517\
+    let a = RSA2048::exp(&RSA2048::elem_of(2u32), &bu(3u32));
+    assert!(a == RSA2048::elem_of(8u32));
+    let b = RSA2048::exp(&RSA2048::elem_of(2u32), &bu(4096u32));
+    assert!(b == RSA2048::elem_of(BigUint::from_str("217207389955395428589369158781869218697519159898401521658993038615824872408108784926597517\
         496727372037176277380476487000099770530440575029170919732871116716934260655466121508332329\
         543615367099810550371217642707848747209719337160655740326150736137284544974770721296865388\
         733305727739636960186370782308858960903126545368015203728531224712542949463283059298449823\
         194163842041340565518401459166858709515078878951293564147044227487142171138804897039341476\
         125519380825017530552968018297030172607314398711102156189885095451290884843968486448057303\
         47466581515692959313583208325725034506693916571047785061884094866050395109710").unwrap()));
-    let c = RSA2048::exp(&elem_of(2u32), &RSA2048_MODULUS);
+    let c = RSA2048::exp(&RSA2048::elem_of(2u32), &RSA2048_MODULUS);
     dbg!(c);
-    let d = RSA2048::exp(&elem_of(2u32), &(RSA2048_MODULUS.clone() * bu(2u32)));
+    let d = RSA2048::exp(
+      &RSA2048::elem_of(2u32),
+      &(RSA2048_MODULUS.clone() * bu(2u32)),
+    );
     dbg!(d);
   }
 
   #[test]
   fn test_inv() {
-    let x = elem_of(2u32);
+    let x = RSA2048::elem_of(2u32);
     let inv = RSA2048::inv(&x);
     assert!(RSA2048::op(&x, &inv) == RSA2048::id());
   }

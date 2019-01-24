@@ -3,12 +3,15 @@ use crate::util::Singleton;
 use num::integer::Integer;
 use num::{BigInt, BigUint};
 use num_traits::identities::{One, Zero};
+use num_traits::Unsigned;
 use std::hash::Hash;
 use std::marker::Sized;
 
 mod class;
 mod dummy;
 pub use dummy::{DummyRSA, DummyRSAElem};
+mod dummy2048;
+pub use dummy2048::{DummyRSA2048, DummyRSA2048Elem};
 mod rsa;
 pub use rsa::{RSA2048Elem, RSA2048};
 
@@ -33,6 +36,8 @@ pub trait Group: Singleton {
   /// Default implementation of exponentiation via repeated squaring.
   /// Group implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
+  /// REVIEW: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
+  /// calls don't appear to be implemented in rust)
   fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &BigUint) -> Self::Elem {
     if *n == BigUint::zero() {
       Self::id()
@@ -133,4 +138,10 @@ mod tests {
     let res_2 = multi_exp::<DummyRSA>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
     assert!(res_2 == DummyRSA::elem_of(1_687_500));
   }
+}
+
+pub trait ElemFromUnsigned: Group {
+  fn elem_of<U: Unsigned>(n: U) -> Self::Elem
+  where
+    BigUint: From<U>;
 }
