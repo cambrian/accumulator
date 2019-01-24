@@ -33,6 +33,8 @@ pub trait Group: Singleton {
   /// Default implementation of exponentiation via repeated squaring.
   /// Group implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
+  /// REVIEW: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
+  /// calls don't appear to be implemented in rust)
   fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &BigUint) -> Self::Elem {
     if *n == BigUint::zero() {
       Self::id()

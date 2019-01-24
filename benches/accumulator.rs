@@ -23,7 +23,6 @@ fn bench_iterative_add(elems: &[BigUint]) {
 
 fn criterion_benchmark(c: &mut Criterion) {
   let mut elems = Vec::new();
-  // DEBUG: Unwrap in exp_ panics sometimes??
   for _ in 0..10 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
     let prime = hash_to_prime(&Blake2b::default, &random_bytes);
