@@ -31,7 +31,7 @@ untrusted = "0.6.2"
 
 [[bench]]
 name = "accumulator"
-path = "benches/primitive/accumulator.rs"
+path = "benches/accumulator.rs"
 harness = false
 
 [[bench]]
@@ -53,3 +53,6 @@ harness = false
 name = "poke2"
 path = "benches/proof/poke2.rs"
 harness = false
+
+[profile.bench]
+opt-level = 3
