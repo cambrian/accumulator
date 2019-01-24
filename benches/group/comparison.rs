@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::{DummyRSA2048, ElemFromUnsigned, Group, RSA2048};
+use crypto::group::{DummyRSA2048, ElemFromUnsigned, RSA2048};
 use crypto::util::bu;
 use num::BigUint;
 use std::str::FromStr;
