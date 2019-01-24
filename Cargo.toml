@@ -46,6 +46,11 @@ path = "benches/hash/hashes.rs"
 harness = false
 
 [[bench]]
+name = "primality"
+path = "benches/hash/primality.rs"
+harness = false
+
+[[bench]]
 name = "poe"
 path = "benches/proof/poe.rs"
 harness = false
