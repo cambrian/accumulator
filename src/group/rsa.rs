@@ -158,7 +158,7 @@ mod tests {
       &RSA2048::elem_of(RSA2048_MODULUS.clone() - bu(2u32)),
       &RSA2048::elem_of(RSA2048_MODULUS.clone() - bu(3u32)),
     );
-    assert!(b == RSA2048::elem_of(bu(6u32)));
+    assert!(b == RSA2048::elem_of(6u8));
   }
 
   /// Tests that -x and x are treated as the same element.

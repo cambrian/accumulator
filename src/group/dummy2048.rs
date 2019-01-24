@@ -66,7 +66,7 @@ impl Group for DummyRSA2048 {
     DummyRSA2048::elem_of(op_result)
   }
   fn id_(_: &BigUint) -> DummyRSA2048Elem {
-    DummyRSA2048::elem_of(bu(1u8))
+    DummyRSA2048::elem_of(1u8)
   }
   fn inv_(modulus: &BigUint, x: &DummyRSA2048Elem) -> DummyRSA2048Elem {
     let x_big = bu(x.val.clone());
@@ -87,7 +87,7 @@ impl ElemFromUnsigned for DummyRSA2048 {
 
 impl UnknownOrderGroup for DummyRSA2048 {
   fn unknown_order_elem_(_: &BigUint) -> DummyRSA2048Elem {
-    DummyRSA2048::elem_of(bu(2u8))
+    DummyRSA2048::elem_of(2u8)
   }
 }
 
@@ -108,7 +108,7 @@ mod tests {
       &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(2u32)),
       &DummyRSA2048::elem_of(RSA2048_MODULUS.clone() - bu(3u32)),
     );
-    assert!(b == DummyRSA2048::elem_of(bu(6u32)));
+    assert!(b == DummyRSA2048::elem_of(6u32));
   }
 
   /// Tests that -x and x are treated as the same element.
