@@ -96,9 +96,6 @@ impl UnknownOrderGroup for DummyRSA2048 {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::accumulator;
-  use crate::hash::{hash_to_prime, Blake2b};
-  use rand::Rng;
 
   #[test]
   fn test_init() {
@@ -151,19 +148,5 @@ mod tests {
     let x = DummyRSA2048::elem_of(2u32);
     let inv = DummyRSA2048::inv(&x);
     assert!(DummyRSA2048::op(&x, &inv) == DummyRSA2048::id());
-  }
-
-  #[test]
-  fn test_add_failure() {
-    let mut elems = Vec::new();
-    // Works fine for 8 elements, 9 elements causes a panic on .unwrap, indicating ring is likely
-    // unable to process this exponent (product of 9 elements).
-    for _ in 0..9 {
-      let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-      let prime = hash_to_prime(&Blake2b::default, &random_bytes);
-      elems.push(prime);
-    }
-    let acc = accumulator::setup::<DummyRSA2048>();
-    accumulator::add::<DummyRSA2048>(acc, &elems[..]);
   }
 }
