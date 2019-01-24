@@ -69,7 +69,7 @@ fn bench_op_real() {
 }
 
 fn bench_exp_real() {
-  RSA2048::exp(&RSA2048::elem_of(bu(2u8)), &bu(4096u32));
+  RSA2048::exp(&RSA2048::elem_of(bu(2u8)), &bu(4097u32));
 }
 
 fn bench_inv_real() {
