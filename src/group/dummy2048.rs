@@ -4,7 +4,8 @@ use crate::util;
 use crate::util::{bi, bu, Singleton};
 use num::BigUint;
 use num_traits::identities::One;
-use num_traits::Unsigned;
+use num_traits::{Num, Unsigned};
+use rug::Integer;
 use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -75,7 +76,20 @@ impl Group for DummyRSA2048 {
     DummyRSA2048::elem_of(util::mod_euc_big(&a, modulus))
   }
   fn exp_(modulus: &BigUint, x: &DummyRSA2048Elem, n: &BigUint) -> DummyRSA2048Elem {
-    DummyRSA2048::elem_of(x.val.modpow(n, modulus))
+    // TODO: Is there a better conversion method than this??
+    let rug_base = Integer::from_str_radix(&x.val.to_str_radix(2), 2).unwrap();
+    let rug_exp = Integer::from_str_radix(&n.to_str_radix(2), 2).unwrap();
+    let rug_mod = Integer::from_str_radix(&modulus.to_str_radix(2), 2).unwrap();
+    DummyRSA2048::elem_of(
+      BigUint::from_str_radix(
+        &rug_base
+          .pow_mod(&rug_exp, &rug_mod)
+          .unwrap()
+          .to_string_radix(2),
+        2,
+      )
+      .unwrap(),
+    )
   }
 }
 
