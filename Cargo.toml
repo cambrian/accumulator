@@ -27,6 +27,7 @@ num-integer = "0.1"
 num-traits = "0.2"
 rand = "0.6.4"
 ring = { git = "https://github.com/1protocol/ring" }
+rug = "1.2.3"
 untrusted = "0.6.2"
 
 [[bench]]
