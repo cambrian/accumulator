@@ -70,21 +70,22 @@ pub fn update<G: UnknownOrderGroup>(
   for i in 0..del_commitments.len() {
     del_commitments_ref.push((&del_commitments[i], del_witnesses[i]));
   }
-  let (added_acc, add_poe) = accumulator::add::<G>(acc, &add_commitments_ref);
-  let add_proof = MembershipProof {
-    acc: added_acc,
-    proof: add_poe,
-  };
-  match accumulator::delete::<G>(acc, &del_commitments_ref) {
-    Ok((del_acc, del_poe)) => {
-      let del_proof = MembershipProof {
-        acc: del_acc,
-        proof: del_poe,
-      };
-      Ok(UpdateResult::Update((add_proof, del_proof)))
-    }
-    Err(n) => Err(n),
-  }
+  unimplemented!();
+  // // let (added_acc, add_poe) = accumulator::add::<G>(acc, &add_commitments_ref);
+  // // let add_proof = MembershipProof {
+  // //   acc: added_acc,
+  // //   proof: add_poe,
+  // // };
+  // // match accumulator::delete::<G>(acc, &del_commitments_ref) {
+  // //   Ok((del_acc, del_poe)) => {
+  // //     let del_proof = MembershipProof {
+  // //       acc: del_acc,
+  // //       proof: del_poe,
+  // //     };
+  // //     Ok(UpdateResult::Update((add_proof, del_proof)))
+  // //   }
+  // //   Err(n) => Err(n),
+  // }
 }
 
 pub fn open<G: UnknownOrderGroup>(

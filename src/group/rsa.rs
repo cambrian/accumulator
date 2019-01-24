@@ -8,12 +8,12 @@
 //! constant factor. op is unaffected.
 use super::{Group, UnknownOrderGroup};
 use crate::util::{bezout, mod_euc_big, Singleton};
-use std::clone::Clone;
-use std::str::FromStr;
 use num::BigUint;
 use num_traits::identities::One;
 use ring::arithmetic::montgomery::{Unencoded, R};
 use ring::rsa::bigint::{elem_exp_consttime, elem_mul, Elem, Modulus, PrivateExponent};
+use std::clone::Clone;
+use std::str::FromStr;
 use untrusted::Input;
 
 /// Type parameter for ring's modulus. Kind of misleading since it doesn't encode any info itself,
@@ -21,7 +21,7 @@ use untrusted::Input;
 #[derive(PartialEq, Eq, Debug, Hash)]
 pub enum M {}
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RSA2048 {}
 
 const ELEM_BYTES: usize = 256;
@@ -139,8 +139,11 @@ fn encode(a: Elem<M, Unencoded>) -> RSA2048Elem {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::hash::{hash_to_prime, Blake2b};
+  use crate::primitive::accumulator::{add, setup};
   use crate::util::bu;
   use num_traits::Unsigned;
+  use rand::Rng;
 
   fn elem_of<U: Unsigned>(n: U) -> RSA2048Elem
   where
@@ -193,5 +196,23 @@ mod tests {
     let x = elem_of(2u32);
     let inv = RSA2048::inv(&x);
     assert!(RSA2048::op(&x, &inv) == RSA2048::id());
+  }
+
+  #[test]
+  fn test_add_failure() {
+    let mut elems = Vec::new();
+    // Works fine for 8 elements, 9 elements causes a panic on .unwrap, indicating ring is likely
+    // unable to process this exponent (product of 9 elements).
+    for _ in 0..9 {
+      let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
+      let prime = hash_to_prime(&Blake2b::default, &random_bytes);
+      elems.push(prime);
+    }
+    let mut borrowed_elems = Vec::new();
+    let acc = &setup::<RSA2048>();
+    for elem in &elems {
+      borrowed_elems.push(elem)
+    }
+    add::<RSA2048>(&acc, &borrowed_elems[..]);
   }
 }

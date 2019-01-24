@@ -4,6 +4,7 @@ use crate::util::{bezout, bu, product, shamir_trick};
 use num;
 use num::BigUint;
 use num_traits::identities::One;
+use std::fmt::Debug;
 
 #[derive(Debug)]
 pub enum AccError {
@@ -18,8 +19,13 @@ pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
 
 /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are co-prime with the
 /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multi-set.
-pub fn add<G: UnknownOrderGroup>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>) {
+pub fn add<G: UnknownOrderGroup + Debug>(acc: &G::Elem, elems: &[&BigUint]) -> (G::Elem, PoE<G>)
+where
+  G::Elem: Debug,
+{
   let x = product(elems);
+  println!("x: {:?}", x);
+  println!("acc {:?}", acc);
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::<G>::prove(&acc, &x, &new_acc);
   (new_acc, poe_proof)
