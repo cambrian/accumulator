@@ -24,6 +24,7 @@ where
   G::Elem: Debug,
 {
   let x = product(elems);
+  // TODO: Remove this.
   println!("x: {:?}", x);
   println!("acc {:?}", acc);
   let new_acc = G::exp(&acc, &x);

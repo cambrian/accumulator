@@ -1,6 +1,6 @@
 // TODO (Also, how to aggregate?)
 use super::super::hash::{hash_to_prime, Blake2b};
-use super::accumulator;
+// use super::accumulator;
 use super::accumulator::AccError;
 use crate::group::UnknownOrderGroup;
 use crate::proof::{PoE, PoKE2};
@@ -43,11 +43,12 @@ pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
   G::unknown_order_elem()
 }
 
-// TODO 1. Somehow check if element is already in accumulator
-// Find a better way to pass a reference to vector of references, or remove this in accumulator.rs
-// TODO Option type to allow for only deletion or only addition
+// TODO: Somehow check if element is already in accumulator.
+// TODO: Option type to allow for only deletion or only addition.
+// TODO: Find a better way to pass a reference to vector of references, or remove this in
+// accumulator.rs?
 pub fn update<G: UnknownOrderGroup>(
-  acc: &G::Elem,
+  _acc: &G::Elem,
   bits: &BitVec,
   indices: &[&BigUint],
   del_witnesses: &[&G::Elem],
