@@ -45,22 +45,20 @@ pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
 
 // TODO: Somehow check if element is already in accumulator.
 // TODO: Option type to allow for only deletion or only addition.
-// TODO: Find a better way to pass a reference to vector of references, or remove this in
-// accumulator.rs?
 pub fn update<G: UnknownOrderGroup>(
-  _acc: &G::Elem,
+  _acc: G::Elem,
   bits: &BitVec,
-  indices: &[&BigUint],
-  del_witnesses: &[&G::Elem],
+  indices: &[BigUint],
+  del_witnesses: &[G::Elem],
 ) -> Result<UpdateResult<G>, AccError> {
   // Must hold hash commitments in vec in order to pass by reference to accumulator fns
   let mut add_commitments = vec![];
   let mut del_commitments = vec![];
   for i in 0..bits.len() {
     if bits[i] {
-      add_commitments.push(hash_to_prime(&Blake2b::default, indices[i]));
+      add_commitments.push(hash_to_prime(&Blake2b::default, &indices[i]));
     } else {
-      del_commitments.push(hash_to_prime(&Blake2b::default, indices[i]));
+      del_commitments.push(hash_to_prime(&Blake2b::default, &indices[i]));
     }
   }
   let mut add_commitments_ref = vec![];
@@ -69,7 +67,7 @@ pub fn update<G: UnknownOrderGroup>(
   }
   let mut del_commitments_ref = vec![];
   for i in 0..del_commitments.len() {
-    del_commitments_ref.push((&del_commitments[i], del_witnesses[i]));
+    del_commitments_ref.push((&del_commitments[i], &del_witnesses[i]));
   }
   unimplemented!();
   // // let (added_acc, add_poe) = accumulator::add::<G>(acc, &add_commitments_ref);
@@ -132,7 +130,7 @@ mod tests {
     let vc = setup::<DummyRSA>();
     let mut bv: BitVec = BitVec::new();
     bv.push(true);
-    let proofs = update::<DummyRSA>(&vc, &bv, &[&bu(2u8)], &[&DummyRSA::unknown_order_elem()]);
+    let proofs = update::<DummyRSA>(vc, &bv, &[bu(2u8)], &[DummyRSA::unknown_order_elem()]);
     println!("{:?}", proofs);
     //    G: UnknownOrderGroup>(
     //   acc: &G::Elem,
