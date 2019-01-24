@@ -3,9 +3,9 @@
 extern crate criterion;
 
 use criterion::Criterion;
+use crypto::accumulator::{add, setup};
 use crypto::group::DummyRSA;
 use crypto::hash::{hash_to_prime, Blake2b};
-use crypto::primitive::accumulator::{add, setup};
 use num::bigint::BigUint;
 use rand::Rng;
 
