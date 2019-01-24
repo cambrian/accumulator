@@ -1,6 +1,4 @@
-//! Dummy RSA group for 64-bit numbers.
-//! Use this group for testing while we figure out ring integration.
-
+//! Dummy RSA group but with the actual modulus.
 use super::{ElemFromUnsigned, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{bi, bu, Singleton};
