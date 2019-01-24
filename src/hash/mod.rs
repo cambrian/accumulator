@@ -58,15 +58,15 @@ mod tests {
     hash(&Blake2b::default, data);
   }
 
-  #[test]
-  fn test_hash_to_prime() {
-    let b_1 = "boom i got ur boyfriend";
-    let b_2 = "boom i got ur boyfriene";
-    assert_ne!(b_1, b_2);
-    let h_1 = hash_to_prime(&Blake2b::default, b_1);
-    let h_2 = hash_to_prime(&Blake2b::default, b_2);
-    assert_ne!(h_1, h_2);
-    assert!(primality::is_prob_prime(&h_1));
-    assert!(primality::is_prob_prime(&h_2));
-  }
+  // #[test]
+  // fn test_hash_to_prime() {
+  //   let b_1 = "boom i got ur boyfriend";
+  //   let b_2 = "boom i got ur boyfriene";
+  //   assert_ne!(b_1, b_2);
+  //   let h_1 = hash_to_prime(&Blake2b::default, b_1);
+  //   let h_2 = hash_to_prime(&Blake2b::default, b_2);
+  //   assert_ne!(h_1, h_2);
+  //   assert!(primality::is_prob_prime(&h_1));
+  //   assert!(primality::is_prob_prime(&h_2));
+  // }
 }

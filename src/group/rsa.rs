@@ -87,48 +87,48 @@ mod tests {
 
   #[test]
   fn test_op() {
-    let a = RSA2048::op(&RSA2048::elem_of(2u8), &RSA2048::elem_of(3u8));
-    assert!(a == RSA2048::elem_of(6u8));
+    let a = RSA2048::op(&RSA2048::elem(2), &RSA2048::elem(3));
+    assert!(a == RSA2048::elem(6));
     let b = RSA2048::op(
-      &RSA2048::elem_of(RSA2048_MODULUS.clone() - int(2u8)),
-      &RSA2048::elem_of(RSA2048_MODULUS.clone() - int(3u8)),
+      &RSA2048::elem(RSA2048_MODULUS.clone() - int(2)),
+      &RSA2048::elem(RSA2048_MODULUS.clone() - int(3)),
     );
-    assert!(b == RSA2048::elem_of(6u8));
+    assert!(b == RSA2048::elem(6));
   }
 
   /// Tests that -x and x are treated as the same element.
   #[test]
   fn test_cosets() {
     unimplemented!();
-    // assert!(elem_of(2) == elem_of(2_794_712_452_613_795));
-    // let r = RSA2048::op(&elem_of(931_570_817_537_932), &elem_of(2));
-    // assert!(r == elem_of(931_570_817_537_933));
+    // assert!(elem(2) == elem(2_794_712_452_613_795));
+    // let r = RSA2048::op(&elem(931_570_817_537_932), &elem(2));
+    // assert!(r == elem(931_570_817_537_933));
   }
 
   #[test]
   fn test_exp() {
-    let a = RSA2048::exp(&RSA2048::elem_of(2u8), &int(3u8));
-    assert!(a == RSA2048::elem_of(8u8));
-    let b = RSA2048::exp(&RSA2048::elem_of(2u8), &int(4096u16));
-    assert!(b == RSA2048::elem_of(BigUint::from_str("217207389955395428589369158781869218697519159898401521658993038615824872408108784926597517\
+    let a = RSA2048::exp(&RSA2048::elem(2), &int(3));
+    assert!(a == RSA2048::elem(8));
+    let b = RSA2048::exp(&RSA2048::elem(2), &int(4096u16));
+    assert!(b == RSA2048::elem(Integer::parse("217207389955395428589369158781869218697519159898401521658993038615824872408108784926597517\
         496727372037176277380476487000099770530440575029170919732871116716934260655466121508332329\
         543615367099810550371217642707848747209719337160655740326150736137284544974770721296865388\
         733305727739636960186370782308858960903126545368015203728531224712542949463283059298449823\
         194163842041340565518401459166858709515078878951293564147044227487142171138804897039341476\
         125519380825017530552968018297030172607314398711102156189885095451290884843968486448057303\
         47466581515692959313583208325725034506693916571047785061884094866050395109710").unwrap()));
-    let c = RSA2048::exp(&RSA2048::elem_of(2u8), &RSA2048_MODULUS);
+    let c = RSA2048::exp(&RSA2048::elem(2), &RSA2048_MODULUS);
     dbg!(c);
     let d = RSA2048::exp(
-      &RSA2048::elem_of(2u8),
-      &(RSA2048_MODULUS.clone() * int(2u8)),
+      &RSA2048::elem(2),
+      &(RSA2048_MODULUS.clone() * int(2)),
     );
     dbg!(d);
   }
 
   #[test]
   fn test_inv() {
-    let x = RSA2048::elem_of(2u8);
+    let x = RSA2048::elem(2);
     let inv = RSA2048::inv(&x);
     assert!(RSA2048::op(&x, &inv) == RSA2048::id());
   }

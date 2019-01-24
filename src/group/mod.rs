@@ -114,23 +114,23 @@ pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::util::bi;
+  use crate::util::int;
 
   #[test]
   fn test_multi_exp() {
-    let alpha_1 = DummyRSA::elem_of(2);
-    let alpha_2 = DummyRSA::elem_of(3);
-    let x_1 = bi(3);
-    let x_2 = bi(2);
-    let res = multi_exp::<DummyRSA>(
+    let alpha_1 = RSA2048::elem(2);
+    let alpha_2 = RSA2048::elem(3);
+    let x_1 = int(3);
+    let x_2 = int(2);
+    let res = multi_exp::<RSA2048>(
       &[alpha_1.clone(), alpha_2.clone()],
       &[x_1.clone(), x_2.clone()],
     );
-    assert!(res == DummyRSA::elem_of(108));
-    let alpha_3 = DummyRSA::elem_of(5);
-    let x_3 = bi(1);
-    let res_2 = multi_exp::<DummyRSA>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
-    assert!(res_2 == DummyRSA::elem_of(1_687_500));
+    assert!(res == RSA2048::elem(108));
+    let alpha_3 = RSA2048::elem(5);
+    let x_3 = int(1);
+    let res_2 = multi_exp::<RSA2048>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
+    assert!(res_2 == RSA2048::elem(1_687_500));
   }
 }
 

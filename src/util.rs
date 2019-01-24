@@ -74,27 +74,14 @@ pub fn shamir_trick<G: Group>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use num_traits::identities::One;
 
   #[test]
   fn test_bezout() {
     let x = int(7);
     let y = int(165);
     let (a, b, gcd) = bezout(&x, &y);
-    assert!(gcd.is_one());
+    assert!(gcd == int(1));
     assert!(a == int(-47));
     assert!(b == int(2));
-  }
-
-  #[test]
-  fn test_mod_euc_big() {
-    let r = mod_euc_big(&int(-8), &(3u8));
-    assert!(r == BigUint::one());
-  }
-
-  #[test]
-  fn test_product() {
-    let elems = [int(2), int(3), int(4), int(5), int(6), int(7)];
-    assert!(product(&elems) == int(5040));
   }
 }
