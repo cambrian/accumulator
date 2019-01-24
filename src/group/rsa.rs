@@ -139,8 +139,8 @@ fn encode(a: Elem<M, Unencoded>) -> RSA2048Elem {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::hash::{hash_to_prime, Blake2b};
   use crate::accumulator::{add, setup};
+  use crate::hash::{hash_to_prime, Blake2b};
   use crate::util::bu;
   use num_traits::Unsigned;
   use rand::Rng;
@@ -189,6 +189,10 @@ mod tests {
         194163842041340565518401459166858709515078878951293564147044227487142171138804897039341476\
         125519380825017530552968018297030172607314398711102156189885095451290884843968486448057303\
         47466581515692959313583208325725034506693916571047785061884094866050395109710").unwrap()));
+    let c = RSA2048::exp(&elem_of(2u32), &RSA2048_MODULUS);
+    dbg!(c);
+    let d = RSA2048::exp(&elem_of(2u32), &(RSA2048_MODULUS.clone() * bu(2u32)));
+    dbg!(d);
   }
 
   #[test]
