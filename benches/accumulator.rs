@@ -4,20 +4,20 @@ extern crate criterion;
 
 use criterion::Criterion;
 use crypto::accumulator::{add, setup};
-use crypto::group::DummyRSA;
+use crypto::group::RSA2048;
 use crypto::hash::{hash_to_prime, Blake2b};
-use num::bigint::BigUint;
 use rand::Rng;
+use rug::Integer;
 
-fn bench_add(elems: &[BigUint]) {
-  let acc = setup::<DummyRSA>();
-  add::<DummyRSA>(acc, elems);
+fn bench_add(elems: &[Integer]) {
+  let acc = setup::<RSA2048>();
+  add::<RSA2048>(acc, elems);
 }
 
-fn bench_iterative_add(elems: &[BigUint]) {
-  let mut acc = setup::<DummyRSA>();
+fn bench_iterative_add(elems: &[Integer]) {
+  let mut acc = setup::<RSA2048>();
   for elem in elems.chunks(1) {
-    acc = add::<DummyRSA>(acc, elem).0;
+    acc = add::<RSA2048>(acc, elem).0;
   }
 }
 
