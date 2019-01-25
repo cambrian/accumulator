@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::hash::primality::passes_miller_rabin_base_2;
+use crypto::hash::primality::{passes_miller_rabin_base_2, is_square};
 use rand::Rng;
 use rug::integer::Order;
 use rug::Integer;
@@ -37,10 +37,17 @@ fn bench_mr2_rug() {
   n.is_probably_prime(1);
 }
 
+fn bench_is_square() {
+  let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
+  let n = Integer::from_digits(&random_bytes, Order::MsfBe);
+  is_square(&n);
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function("jacobi_rug", |b| b.iter(bench_jacobi_rug));
   c.bench_function("mr2_pablo", |b| b.iter(bench_mr2_pablo));
   c.bench_function("mr2_rug", |b| b.iter(bench_mr2_rug));
+  c.bench_function("is_square", |b| b.iter(bench_is_square));
 }
 
 criterion_group!(benches, criterion_benchmark);
