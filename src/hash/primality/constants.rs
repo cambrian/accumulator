@@ -55,4 +55,11 @@ pub const LARGE_PRIMES: [u64; 4] = [
 ];
 
 #[allow(dead_code)]
-pub const EXTRA_STRONG_LUCAS_PSEUDOPRIMES: [u64; 4] = [989, 3239, 5777, 10877];
+pub const STRONG_BASE_2_PSEUDOPRIMES: [u32; 10] = [
+  2047, 3277, 4033, 4681, 8321, 15841, 29341, 42799, 49141, 52633,
+];
+
+#[allow(dead_code)]
+pub const STRONG_LUCAS_PSEUDOPRIMES: [u32; 10] = [
+  5459, 5777, 10877, 16109, 18971, 22499, 24569, 25199, 40309, 58519,
+  ];
