@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 
 mod blake2b;
 pub use blake2b::Blake2b;
-// pub mod primality;
+pub mod primality;
 
 /// Like std::hash::Hasher, but general over output type.
 pub trait GeneralHasher: Hasher {
