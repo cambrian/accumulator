@@ -41,7 +41,7 @@ impl<G: UnknownOrderGroup> PoKE2<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{Group, GroupElemFrom, RSA2048};
+  use crate::group::{ElemFrom, Group, RSA2048};
   use crate::util::int;
 
   #[test]

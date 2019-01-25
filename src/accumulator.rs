@@ -53,23 +53,31 @@ pub fn delete<G: UnknownOrderGroup>(
   Ok((acc_next, poe_proof))
 }
 
-/// See `delete`.
+pub struct MembershipProof<G: UnknownOrderGroup> {
+  witness: G::Elem,
+  proof: PoE<G>,
+}
+
+/// Returns a proof (and associated variables) that `elem_witnesses` are aggregated in `acc`.
 pub fn prove_membership<G: UnknownOrderGroup>(
   acc: &G::Elem,
   elem_witnesses: &[(Integer, G::Elem)],
-) -> Result<(G::Elem, PoE<G>), AccError> {
-  delete::<G>(acc.clone(), elem_witnesses)
+) -> Result<MembershipProof<G>, AccError> {
+  let delete_result = delete::<G>(acc.clone(), elem_witnesses);
+  match delete_result {
+    Ok((witness, proof)) => Ok(MembershipProof { witness, proof }),
+    Err(e) => Err(e),
+  }
 }
 
-/// Verifies the PoE returned by `prove_membership` s.t. `witness` ^ `elems` = `result`.
+/// Verifies the PoE returned by `prove_membership`.
 pub fn verify_membership<G: UnknownOrderGroup>(
-  witness: &G::Elem,
+  acc: &G::Elem,
   elems: &[Integer],
-  result: &G::Elem,
-  proof: &PoE<G>,
+  MembershipProof { witness, proof }: &MembershipProof<G>,
 ) -> bool {
   let exp = elems.iter().product();
-  PoE::verify(witness, &exp, result, proof)
+  PoE::verify(witness, &exp, acc, proof)
 }
 
 pub struct NonMembershipProof<G: UnknownOrderGroup> {
@@ -126,6 +134,7 @@ pub fn verify_nonmembership<G: UnknownOrderGroup>(
   PoKE2::verify(acc, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
 }
 
+// TODO: Add test for `prove_membership`.
 #[cfg(test)]
 mod tests {
   use super::*;

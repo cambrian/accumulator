@@ -28,19 +28,23 @@ pub trait Group: Singleton {
   /// Default implementation of exponentiation via repeated squaring.
   /// Group implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
-  /// TODO: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
-  /// calls don't appear to be implemented in Rust).
-  fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
-    if *n < int(0) {
-      Self::exp_(rep, &Self::inv(a), &-n.clone())
-    } else if *n == int(0) {
-      Self::id()
-    } else if *n == int(1) {
-      a.clone()
-    } else if n.is_odd() {
-      Self::op(a, &Self::exp_(rep, &Self::op(a, a), &(n.clone() >> 1)))
-    } else {
-      Self::exp_(rep, &Self::op(a, a), &(n.clone() >> 1))
+  fn exp_(_rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
+    let (mut val, mut a, mut n) = {
+      if *n < int(0) {
+        (Self::id(), Self::inv(a), int(-n))
+      } else {
+        (Self::id(), a.clone(), n.clone())
+      }
+    };
+    loop {
+      if n == int(0) {
+        return val;
+      }
+      if n.is_odd() {
+        val = Self::op(&val, &a);
+      }
+      a = Self::op(&a, &a);
+      n >>= 1;
     }
   }
 
@@ -88,7 +92,6 @@ pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   let alpha_r = &alphas[n_half..];
   let x_l = &x[..n_half];
   let x_r = &x[n_half..];
-  // G::op expects a Integer.
   let x_star_l = x_l.iter().product();
   let x_star_r = x_r.iter().product();
   let l = multi_exp::<G>(alpha_l, x_l);
@@ -119,7 +122,7 @@ mod tests {
   }
 }
 
-/// Like From<T>, but implemented on the Group instead of on the elements.
-pub trait GroupElemFrom<T>: Group {
+/// Like From<T>, but implemented on the Group instead of the element type.
+pub trait ElemFrom<T>: Group {
   fn elem(val: T) -> Self::Elem;
 }
