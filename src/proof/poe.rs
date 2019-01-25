@@ -50,7 +50,7 @@ mod tests {
     );
 
     // 2^35 = 34359738368
-    let exp_2 = int(35u8);
+    let exp_2 = int(35);
     let result_2 = RSA2048::elem(34_359_738_368u64);
     let proof_2 = PoE::<RSA2048>::prove(&base, &exp_2, &result_2);
     assert!(PoE::verify(&base, &exp_2, &result_2, &proof_2));

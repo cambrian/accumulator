@@ -40,20 +40,25 @@ impl Group for RSA2048 {
     RSA2048::elem((a.0.clone() * b.0.clone()) % modulus)
   }
   fn id_(_: &Integer) -> RSA2048Elem {
-    RSA2048::elem(int(1))
+    RSA2048::elem(1)
   }
   fn inv_(modulus: &Integer, x: &RSA2048Elem) -> RSA2048Elem {
     RSA2048::elem(x.0.clone().invert(modulus).unwrap())
   }
   fn exp_(modulus: &Integer, x: &RSA2048Elem, n: &Integer) -> RSA2048Elem {
-    RSA2048::elem(x.0.clone().pow_mod(n, modulus).unwrap())
+    assert!(*n >= int(0));
+    if n.is_congruent(&int(0), &int(2)) {
+      return RSA2048::elem(x.0.clone().pow_mod(n, modulus).unwrap());
+    }
+    // For odd positive exponents, secure_pow_mod is side-channel resistant.
+    RSA2048::elem(x.0.clone().secure_pow_mod(n, modulus))
   }
 }
 
 // We would normally do this inline, but the Integer: From<T> constraint on GroupElemFrom creates
 // problems with doing so.
 fn half(x: &Integer) -> Integer {
-  Integer::from(x / 2)
+  int(x / 2)
 }
 
 impl<T> GroupElemFrom<T> for RSA2048
@@ -62,7 +67,7 @@ where
 {
   fn elem(t: T) -> RSA2048Elem {
     let modulus = Self::rep();
-    let val = Integer::from(t) % modulus;
+    let val = int(t) % modulus;
     if val > half(modulus) {
       RSA2048Elem((-val).div_rem_euc(modulus.clone()).1)
     } else {
@@ -73,7 +78,7 @@ where
 
 impl UnknownOrderGroup for RSA2048 {
   fn unknown_order_elem_(_: &Integer) -> RSA2048Elem {
-    RSA2048::elem(int(2))
+    RSA2048::elem(2)
   }
 }
 
@@ -108,7 +113,7 @@ mod tests {
   fn test_exp() {
     let a = RSA2048::exp(&RSA2048::elem(2), &int(3));
     assert!(a == RSA2048::elem(8));
-    let b = RSA2048::exp(&RSA2048::elem(2), &int(4096u16));
+    let b = RSA2048::exp(&RSA2048::elem(2), &int(4096));
     assert!(
       b == RSA2048::elem(
         Integer::parse(
