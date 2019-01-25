@@ -17,6 +17,15 @@ where
   Integer::from(val)
 }
 
+/// Computes base^exponent (mod modulus) and stores in base. Panics if exponentiation fails, i.e.
+/// in the case that exponent is negative and base has no inverse modulo modulus.
+pub fn modpow_inplace(base: &mut Integer, exponent: &Integer, modulus: &Integer) {
+  match base.pow_mod_mut(exponent, modulus) {
+    Ok(()) => (),
+    Err(()) => panic!("Modular exponentiation could not be performed!"),
+  }
+}
+
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
 /// Consider moving this to accumulator?
 pub fn shamir_trick<G: Group>(

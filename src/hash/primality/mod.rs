@@ -1,5 +1,5 @@
 // TODO: Add reading links.
-use crate::util::int;
+use crate::util::{int, modpow_inplace};
 use rug::Integer;
 mod constants;
 
@@ -41,13 +41,12 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   }
   // compute 2^d (mod n)
   let mut x = int(2);
-  x.pow_mod_mut(&d, n);
+  modpow_inplace(&mut x, &d, n);
   if x == 1 || x == n.clone() - 1 {
     return true;
   }
-  let two = int(2);
   for _ in 1..r {
-    x.pow_mod_mut(&two, n);
+    modpow_inplace(&mut x, &int(2), n);
     if x == 1 {
       return false;
     }
@@ -78,47 +77,6 @@ fn choose_d(n: &Integer, max_iter: u64) -> Option<Integer> {
   }
   None
 }
-
-// /// Jacobi symbol (a / n). WARNING: use only for odd a
-// pub fn jacobi_symbol(a: &Integer, n: &Integer) -> i64 {
-//   // Base cases.
-//   if n == &bi(1) {
-//     return 1;
-//   }
-//   if a == &bi(0) {
-//     return 0;
-//   } else if a == &bi(1) {
-//     return 1;
-//   } else if a == &bi(2) {
-//     let n_mod_8 = n % 8;
-//     if n_mod_8 == int(3) || n_mod_8 == int(5) {
-//       return -1;
-//     } else if n_mod_8 == int(1) || n_mod_8 == int(7) {
-//       return 1;
-//     }
-//   }
-
-//   // Recursive cases.
-//   if *a < int(0) {
-//     // Symbol is (-1)^((n-1)/2) (-a/n).
-//     let j = jacobi_symbol(&(a * &bi(-1)), n);
-//     let exp_mod_2 = ((n - int(1)) / int(2)) % 2;
-//     if exp_mod_2 == int(0) {
-//       return j;
-//     } else {
-//       return -j;
-//     }
-//   }
-//   if a % 2 == int(0) {
-//     jacobi_symbol(&bi(2), n) * jacobi_symbol(&(a / &bi(2)), n)
-//   } else if a % n != *a {
-//     jacobi_symbol(&(a % n), n)
-//   } else if a % 4 == int(3) && n % 4 == int(3) {
-//     -jacobi_symbol(n, a)
-//   } else {
-//     jacobi_symbol(n, a)
-//   }
-// }
 
 // Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
 // factorization of n-1).
@@ -178,7 +136,7 @@ fn compute_u_and_v_k(
     // u_2k = u_k * v_k % n
     // v_2k = v_k^2 - 2*q^k
     u_k = mod_n(&(u_k.clone() * v_k.clone()));
-    v_k.pow_mod_mut(&int(2), n);
+    modpow_inplace(&mut v_k, &int(2), n);
     v_k = mod_n(&(v_k - 2 * q_k.clone()));
     q_k = mod_n(&(q_k.clone() * q_k.clone()));
     k *= 2;
@@ -232,30 +190,30 @@ mod tests {
   #[test]
   fn test_is_prob_prime() {
     // Sanity checks.
-    assert!(is_prob_prime(&int(2u64)));
-    assert!(is_prob_prime(&int(5u64)));
-    assert!(is_prob_prime(&int(7u64)));
-    assert!(is_prob_prime(&int(241u64)));
-    assert!(is_prob_prime(&int(7919u64)));
-    assert!(is_prob_prime(&int(48131u64)));
-    assert!(is_prob_prime(&int(75913u64)));
-    assert!(is_prob_prime(&int(76463u64)));
-    assert!(is_prob_prime(&int(115_547u64)));
+    assert!(is_prob_prime(&int(2)));
+    assert!(is_prob_prime(&int(5)));
+    assert!(is_prob_prime(&int(7)));
+    assert!(is_prob_prime(&int(241)));
+    assert!(is_prob_prime(&int(7919)));
+    assert!(is_prob_prime(&int(48131)));
+    assert!(is_prob_prime(&int(75913)));
+    assert!(is_prob_prime(&int(76463)));
+    assert!(is_prob_prime(&int(115_547)));
 
     // Medium primes.
     for &p in constants::MED_PRIMES.iter() {
-      assert!(is_prob_prime(&int(p as u64)));
+      assert!(is_prob_prime(&int(p)));
     }
 
     // Large primes.
     for &p in constants::LARGE_PRIMES.iter() {
-      assert!(is_prob_prime(&int(p as u64)));
+      assert!(is_prob_prime(&int(p)));
     }
 
     // Large, difficult-to-factor composites.
     for &p in constants::LARGE_PRIMES.iter() {
       for &q in constants::LARGE_PRIMES.iter() {
-        assert!(!is_prob_prime(&(int(p as u64) * int(q as u64))));
+        assert!(!is_prob_prime(&(int(p) * int(q))));
       }
     }
   }

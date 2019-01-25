@@ -11,3 +11,7 @@ Crypto primitives in Rust.
 1. Leave `cargo watch` running to type-check on save.
 2. Run `cargo build [--package PACKAGE] [--release]` to build package(s).
 3. Run `cargo run [--package PACKAGE]` to run package executables.
+
+## Troubleshooting
+- If your RLS hangs at `building`, run `cargo clean && rustup update`.
+- If you get unexpected build errors, delete `Cargo.lock` and re-build.
