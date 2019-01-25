@@ -1,5 +1,4 @@
-// TODO: Add reading links.
-use crate::util::{int, modpow_inplace};
+use crate::util::int;
 use rug::Integer;
 mod constants;
 
@@ -38,12 +37,12 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   }
   // compute 2^d (mod n)
   let mut x = int(2);
-  modpow_inplace(&mut x, &d, n);
+  x.pow_mod_mut(&d, n).unwrap();
   if x == 1 || x == n.clone() - 1 {
     return true;
   }
   for _ in 1..r {
-    modpow_inplace(&mut x, &int(2), n);
+    x.pow_mod_mut(&int(2), n).unwrap();
     if x == 1 {
       return false;
     }
@@ -154,7 +153,7 @@ fn compute_lucas_sequences(
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
     u_k = mod_n(&(u_k.clone() * v_k.clone()));
-    modpow_inplace(&mut v_k, &int(2), n);
+    v_k.pow_mod_mut(&int(2), n).unwrap();
     v_k = mod_n(&(v_k - 2 * q_k.clone()));
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
     q_k_over_2 = q_k.clone();
