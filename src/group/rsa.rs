@@ -34,6 +34,9 @@ impl Singleton for RSA2048 {
   }
 }
 
+/// Review: whoever changed all of the RSA2048Elem(x) constructors to RSA2048::Elem change them
+/// back. In these cases we know that the int value satisfies 0 <= x < modulus so we don't need to
+/// pay the price of checking.
 impl Group for RSA2048 {
   type Elem = RSA2048Elem;
   fn op_(modulus: &Integer, a: &RSA2048Elem, b: &RSA2048Elem) -> RSA2048Elem {
@@ -43,14 +46,18 @@ impl Group for RSA2048 {
     RSA2048::elem(1)
   }
   fn inv_(modulus: &Integer, x: &RSA2048Elem) -> RSA2048Elem {
-    RSA2048::elem(x.0.clone().invert(modulus).unwrap())
+    RSA2048::elem(x.0.invert_ref(modulus).unwrap())
   }
   fn exp_(modulus: &Integer, x: &RSA2048Elem, n: &Integer) -> RSA2048Elem {
-    if n.is_congruent(&int(0), &int(2)) {
-      return RSA2048::elem(x.0.clone().pow_mod(n, modulus).unwrap());
-    }
-    // For odd positive exponents, secure_pow_mod is side-channel resistant.
-    RSA2048::elem(x.0.clone().secure_pow_mod(n, modulus))
+    RSA2048::elem(x.0.pow_mod_ref(n, modulus).unwrap())
+    // This is the code we'd use if we need side-channel attack resilience. It's 40% slower so not
+    // using it til we decide we have to.
+    // if *n < int(0) {
+    //   RSA2048::elem(Integer::from(x.0.invert_ref(modulus).unwrap()).secure_pow_mod(&-n.clone(), modulus))
+    // }
+    // else {
+    //   RSA2048::elem(x.0.secure_pow_mod_ref(n, modulus))
+    // }
   }
 }
 
