@@ -24,9 +24,8 @@ impl<G: UnknownOrderGroup> PoKE2<G> {
   }
 
   /// See page 16 of B&B.
-  pub fn verify(base: &G::Elem, result: &G::Elem, proof: &PoKE2<G>) -> bool {
-    #[allow(non_snake_case)]
-    let PoKE2 { z, Q, r } = proof;
+  #[allow(non_snake_case)]
+  pub fn verify(base: &G::Elem, result: &G::Elem, PoKE2 { z, Q, r }: &PoKE2<G>) -> bool {
     let g = G::unknown_order_elem();
     let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
     let alpha = hash(&Blake2b::default, &(base, result, &z, &l));

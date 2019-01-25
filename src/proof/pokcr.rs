@@ -15,9 +15,8 @@ impl<G: Group> PoKCR<G> {
   }
 
   pub fn verify(alphas: &[G::Elem], x: &[Integer], proof: &PoKCR<G>) -> bool {
-    let x_star = x.iter().product();
     let y = multi_exp::<G>(alphas, x);
-    let lhs = G::exp(&proof.w, &x_star);
+    let lhs = G::exp(&proof.w, &x.iter().product());
     lhs == y
   }
 }

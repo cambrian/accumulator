@@ -30,6 +30,10 @@ pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -
 }
 
 /// Hashes t with an incrementing counter until a prime is found.
+///
+/// REVIEW: This fn currently uses rug's implementation of Miller-Rabin for primality checking.
+/// Our version (which is possibly more likely to be correct, idk) is 30% slower. (700us vs 1ms).
+/// We should make optimizations to is_prob_prime.
 pub fn hash_to_prime<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> Integer
 where
   Integer: From<H::Output>,

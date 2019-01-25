@@ -19,6 +19,10 @@ where
 
 /// Computes base^exponent (mod modulus) and stores in base. Panics if exponentiation fails, i.e.
 /// in the case that exponent is negative and base has no inverse modulo modulus.
+///
+/// REVIEW: you should use Result::expect instead of matching here, but for this specific case I
+/// would prefer if you replaced every instance of modpow_inplace(b, e, m) with
+/// b.pow_mod_mut(e, m).unwrap()
 pub fn modpow_inplace(base: &mut Integer, exponent: &Integer, modulus: &Integer) {
   match base.pow_mod_mut(exponent, modulus) {
     Ok(()) => (),
