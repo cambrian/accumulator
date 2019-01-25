@@ -31,8 +31,10 @@ pub trait Group: Singleton {
   /// TODO: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
   /// calls don't appear to be implemented in Rust).
   fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
-    assert!(*n >= int(0));
-    if *n == int(0) {
+    if *n < int(0) {
+      Self::exp_(rep, &Self::inv(a), &-n.clone())
+    }
+    else if *n == int(0) {
       Self::id()
     } else if *n == int(1) {
       a.clone()
@@ -58,13 +60,7 @@ pub trait Group: Singleton {
   }
 
   fn exp(a: &Self::Elem, n: &Integer) -> Self::Elem {
-    // Note: Writing a specialized inv() that takes an exponent is only a marginal speedup over
-    // inv() then exp() in the negative exponent case. (That is, the complexity does not change.)
-    if *n >= int(0) {
-      Self::exp_(Self::rep(), a, n)
-    } else {
-      Self::exp_(Self::rep(), &Self::inv(a), &-n.clone())
-    }
+    Self::exp_(Self::rep(), a, n)
   }
 
   fn inv(a: &Self::Elem) -> Self::Elem {
