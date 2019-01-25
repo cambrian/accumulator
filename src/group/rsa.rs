@@ -40,7 +40,7 @@ impl Group for RSA2048 {
     RSA2048::elem((a.0.clone() * b.0.clone()) % modulus)
   }
   fn id_(_: &Integer) -> RSA2048Elem {
-    RSA2048::elem(int(1))
+    RSA2048::elem(1)
   }
   fn inv_(modulus: &Integer, x: &RSA2048Elem) -> RSA2048Elem {
     RSA2048::elem(x.0.clone().invert(modulus).unwrap())
@@ -78,7 +78,7 @@ where
 
 impl UnknownOrderGroup for RSA2048 {
   fn unknown_order_elem_(_: &Integer) -> RSA2048Elem {
-    RSA2048::elem(int(2))
+    RSA2048::elem(2)
   }
 }
 
