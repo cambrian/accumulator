@@ -58,7 +58,7 @@ impl Group for RSA2048 {
 // We would normally do this inline, but the Integer: From<T> constraint on GroupElemFrom creates
 // problems with doing so.
 fn half(x: &Integer) -> Integer {
-  Integer::from(x / 2)
+  int(x / 2)
 }
 
 impl<T> GroupElemFrom<T> for RSA2048
@@ -67,7 +67,7 @@ where
 {
   fn elem(t: T) -> RSA2048Elem {
     let modulus = Self::rep();
-    let val = Integer::from(t) % modulus;
+    let val = int(t) % modulus;
     if val > half(modulus) {
       RSA2048Elem((-val).div_rem_euc(modulus.clone()).1)
     } else {
