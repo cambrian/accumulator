@@ -3,19 +3,14 @@ use crate::util::{int, modpow_inplace};
 use rug::Integer;
 mod constants;
 
-const MAX_JACOBI_ITERS: u64 = 500;
+pub const MAX_JACOBI_ITERS: u32 = 500;
 
-// Baillie-PSW probabilistic primality test:
-// 1. Filter composites with small divisors.
-// 2. Do Miller-Rabin base 2.
-// 3. Filter squares.
-// 4. Do Lucas.
-// Many BPSW implementations filter out square values of x after the base-2 Miller-Rabin test. We
-// do not do this for several reasons: (1) See comments above choose_d. (2) num::bigint does not
-// have a native sqrt function using e.g. Newton's method. (3) Since this implementation is geared
-// toward very large (256-bit and up) values of n, for which squares are far sparser than primes,
-// the expected marginal utility of catching squares before running out MAX_JACOBI_ITERS is
-// extremely low.
+/// Implements the Baillie-PSW probabilistic primality test, which is known to be deterministic over
+/// all integers up to 64 bits (u64).
+/// 1. Accept small primes and reject multiples of them.
+/// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).
+/// 3. Filter squares.
+/// 4. Do a strong probabilistic Lucas test.
 pub fn is_prob_prime(n: &Integer) -> bool {
   for &p in constants::SMALL_PRIMES.iter() {
     if n.is_congruent_u(0, p) {
@@ -25,10 +20,10 @@ pub fn is_prob_prime(n: &Integer) -> bool {
   if !passes_miller_rabin_base_2(&n) {
     return false;
   }
-  match choose_d(&n, MAX_JACOBI_ITERS) {
-    Some(d) => passes_lucas(&n, &d),
-    None => false,
+  if is_square(&n) {
+    return false;
   }
+  passes_lucas(&n)
 }
 
 pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
@@ -57,17 +52,35 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   false
 }
 
-// Finds and returns first D in [5, -7, 9, ..., 5 + 2 * max_iter] for which Jacobi symbol (D/n) =
-// -1, or None if no such D exists. In the case that n is square, there is no such D even with
-// max_iter infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a
-// low value to max_iter to avoid wasting too much time. Note that the average number of iterations
-// required for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.
-fn choose_d(n: &Integer, max_iter: u64) -> Option<Integer> {
-  let mut d = int(5);
+pub fn is_square(n: &Integer) -> bool {
+  let (_root, rem) = n.clone().sqrt_rem(Integer::new());
+  rem == 0
+}
 
-  for _ in 0..max_iter {
+/// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
+/// factorization of n-1). Selects parameters d, p, q according to Selfridge's method.
+fn passes_lucas(n: &Integer) -> bool {
+  let d = choose_d(&n);
+  let p = int(1);
+  let q = (1 - d.clone()) / 4;
+  let delta = n.clone() + 1;
+
+  // TODO: Extend to stronger test.
+  let (u_delta, _v_delta) = compute_u_and_v_k(&delta, n, &int(1), &p, &p, &q, &d);
+  // u_delta % n != 0 proves n composite.
+  u_delta == 0
+}
+
+/// Finds and returns first D in [5, -7, 9, ..., 5 + 2 * max_iter] for which Jacobi symbol (D/n) =
+/// -1, or None if no such D exists. In the case that n is square, there is no such D even with
+/// max_iter infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a
+/// low value to max_iter to avoid wasting too much time. Note that the average number of iterations
+/// required for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.
+fn choose_d(n: &Integer) -> Integer {
+  let mut d = int(5);
+  for _ in 0..MAX_JACOBI_ITERS {
     if d.jacobi(&n) == -1 {
-      return Some(d);
+      return d;
     }
     if d < 0 {
       d = -d + 2;
@@ -75,27 +88,14 @@ fn choose_d(n: &Integer, max_iter: u64) -> Option<Integer> {
       d = -d - 2;
     }
   }
-  None
+  panic!("Could not find d with (d/n) = -1! Perhaps n is square?");
 }
 
-// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
-// factorization of n-1).
-fn passes_lucas(n: &Integer, d: &Integer) -> bool {
-  let p = int(1);
-  let q = (1 - d.clone()) / 4;
-  let delta = n.clone() + 1;
-
-  // TODO: Extend to stronger test.
-  let (u_delta, _v_delta) = compute_u_and_v_k(&delta, n, &int(1), &p, &p, &q, d);
-  // u_delta % n != 0 proves n composite.
-  u_delta == 0
-}
-
-// Computes the Lucas sequences {u_i(p, q)} and {v_i(p, q)} up to a specified index k in log(k)
-// time by recursively calculating only the (2i)th and (2i+1)th elements in an order determined by
-// the binary expansion of k. In the Lucas probabilistic primality test we specify that d = p^2 - 4q
-// and are generally concerned with the case that k = delta = n+1.
-// Cf. https://en.wikipedia.org/wiki/Lucas_pseudoprime
+/// Computes the Lucas sequences {u_i(p, q)} and {v_i(p, q)} up to a specified index k in log(k)
+/// time by recursively calculating only the (2i)th and (2i+1)th elements in an order determined by
+/// the binary expansion of k. In the Lucas probabilistic primality test we specify that
+/// d = p^2 - 4q and are generally concerned with the case that k = delta = n+1.
+/// Cf. https://en.wikipedia.org/wiki/Lucas_pseudoprime
 fn compute_u_and_v_k(
   k: &Integer,
   n: &Integer,
@@ -161,14 +161,34 @@ fn to_binary(n: &Integer) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use constants::*;
 
   #[test]
   fn test_miller_rabin() {
     assert!(passes_miller_rabin_base_2(&int(13)));
     assert!(!passes_miller_rabin_base_2(&int(65)));
-    for &p in constants::LARGE_PRIMES.iter() {
+    for &p in LARGE_PRIMES.iter() {
       assert!(passes_miller_rabin_base_2(&int(p)));
       assert!(!passes_miller_rabin_base_2(&(int(p) * int(106957))));
+    }
+    for &n in STRONG_BASE_2_PSEUDOPRIMES.iter() {
+      assert!(passes_miller_rabin_base_2(&int(n)));
+    }
+  }
+
+  #[test]
+  fn test_is_square() {
+    for &p in SMALL_PRIMES.iter() {
+      assert!(!is_square(&int(p)));
+      assert!(is_square(&(int(p) * int(p))));
+    }
+    for &p in MED_PRIMES.iter() {
+      assert!(!is_square(&int(p)));
+      assert!(is_square(&(int(p) * int(p))));
+    }
+    for &p in LARGE_PRIMES.iter() {
+      assert!(!is_square(&int(p)));
+      assert!(is_square(&(int(p) * int(p))));
     }
   }
 
@@ -188,6 +208,23 @@ mod tests {
   }
 
   #[test]
+  fn test_lucas() {
+    // should fail on p = 2
+    for &p in SMALL_PRIMES[1..].iter() {
+      assert!(passes_lucas(&int(p)));
+    }
+    for &p in MED_PRIMES.iter() {
+      assert!(passes_lucas(&int(p)));
+    }
+    for &p in LARGE_PRIMES.iter() {
+      assert!(passes_lucas(&int(p)));
+    }
+    for &n in STRONG_LUCAS_PSEUDOPRIMES.iter() {
+      assert!(passes_lucas(&int(n)));
+    }
+  }
+
+  #[test]
   fn test_is_prob_prime() {
     // Sanity checks.
     assert!(is_prob_prime(&int(2)));
@@ -196,23 +233,22 @@ mod tests {
     assert!(is_prob_prime(&int(241)));
     assert!(is_prob_prime(&int(7919)));
     assert!(is_prob_prime(&int(48131)));
-    assert!(is_prob_prime(&int(75913)));
     assert!(is_prob_prime(&int(76463)));
     assert!(is_prob_prime(&int(115_547)));
 
     // Medium primes.
-    for &p in constants::MED_PRIMES.iter() {
+    for &p in MED_PRIMES.iter() {
       assert!(is_prob_prime(&int(p)));
     }
 
     // Large primes.
-    for &p in constants::LARGE_PRIMES.iter() {
+    for &p in LARGE_PRIMES.iter() {
       assert!(is_prob_prime(&int(p)));
     }
 
     // Large, difficult-to-factor composites.
-    for &p in constants::LARGE_PRIMES.iter() {
-      for &q in constants::LARGE_PRIMES.iter() {
+    for &p in LARGE_PRIMES.iter() {
+      for &q in LARGE_PRIMES.iter() {
         assert!(!is_prob_prime(&(int(p) * int(q))));
       }
     }
