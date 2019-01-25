@@ -4,9 +4,8 @@
 //! you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
 use crate::proof::{PoE, PoKE2};
-use crate::util::{bezout, int, product, shamir_trick};
+use crate::util::{int, shamir_trick};
 use rug::Integer;
-use num_traits::identities::One;
 
 #[derive(Debug)]
 pub enum AccError {
@@ -22,7 +21,7 @@ pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
 /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are co-prime with the
 /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multi-set.
 pub fn add<G: UnknownOrderGroup>(acc: G::Elem, elems: &[Integer]) -> (G::Elem, PoE<G>) {
-  let x = product(elems);
+  let x = elems.iter().product();
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::<G>::prove(&acc, &x, &new_acc);
   (new_acc, poe_proof)
@@ -69,7 +68,7 @@ pub fn verify_membership<G: UnknownOrderGroup>(
   result: &G::Elem,
   proof: &PoE<G>,
 ) -> bool {
-  let exp = product(elems);
+  let exp = elems.iter().product();
   PoE::verify(witness, &exp, result, proof)
 }
 
@@ -87,17 +86,17 @@ pub fn prove_nonmembership<G: UnknownOrderGroup>(
   acc_set: &[Integer],
   elems: &[Integer],
 ) -> Result<NonMembershipProof<G>, AccError> {
-  let x = product(elems);
-  let s = product(acc_set);
-  let (a, b, gcd) = bezout(&x, &s);
+  let x: Integer = elems.iter().product();
+  let s = acc_set.iter().product();
+  let (gcd, a, b) = x.clone().gcd_cofactors(s, Integer::new());
 
-  if !gcd.is_one() {
+  if gcd != int(1) {
     return Err(AccError::InputsNotCoPrime);
   }
 
   let g = G::unknown_order_elem();
-  let d = G::exp_signed(&g, &a);
-  let v = G::exp_signed(acc, &b);
+  let d = G::exp(&g, &a);
+  let v = G::exp(acc, &b);
   let gv_inv = G::op(&g, &G::inv(&v));
 
   let poke2_proof = PoKE2::prove(acc, &b, &v);
@@ -123,7 +122,7 @@ pub fn verify_nonmembership<G: UnknownOrderGroup>(
     poe_proof,
   }: &NonMembershipProof<G>,
 ) -> bool {
-  let x = product(elems);
+  let x = elems.iter().product();
   PoKE2::verify(acc, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
 }
 
@@ -138,19 +137,10 @@ mod tests {
   }
 
   #[test]
-  fn test_shamir_trick() {
-    let (x, y, z) = (&int(13), &int(17), &int(19));
-    let xth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(y * z));
-    let yth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(x * z));
-    let xyth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), z);
-    assert!(shamir_trick::<RSA2048>(&xth_root, &yth_root, x, y) == Some(xyth_root));
-  }
-
-  #[test]
   fn test_shamir_trick_failure() {
     let (x, y, z) = (&int(7), &int(14), &int(19)); // Inputs not co-prime.
-    let xth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(y * z));
-    let yth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &(x * z));
+    let xth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(y * z));
+    let yth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(x * z));
     assert!(shamir_trick::<RSA2048>(&xth_root, &yth_root, x, y) == None);
   }
 

@@ -1,7 +1,7 @@
 use crate::util::int;
+use rug::integer::IsPrime;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
-use rug::integer::IsPrime;
 
 mod blake2b;
 pub use blake2b::Blake2b;
@@ -37,13 +37,12 @@ where
   let mut counter = 0u64;
   loop {
     // REVIEW: If possible, set the last bit to 1 (thus making the candidate prime odd) without
-    // allocating a new biguint. The provided implementation of BitOr for BigUint allocates, so we
-    // get minimal performance gains from doing it the easy way.
+    // allocating a new Integer.
     let candidate_prime = int(hash(new_hasher, &(t, counter)));
     match candidate_prime.is_probably_prime(32) {
-      IsPrime::Probably => panic!("Not deterministic; do more iterations"),
+      IsPrime::Probably => return candidate_prime, // TODO: Panic?
       IsPrime::Yes => return candidate_prime,
-      IsPrime::No => counter += 1
+      IsPrime::No => counter += 1,
     };
   }
 }

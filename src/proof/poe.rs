@@ -38,14 +38,14 @@ mod tests {
   fn test_poe_small_exp() {
     // 2^20 = 1048576
     let base = RSA2048::unknown_order_elem();
-    let exp = int(20u8);
-    let result = RSA2048::elem(1_048_576u32);
+    let exp = int(20);
+    let result = RSA2048::elem(1_048_576);
     let proof = PoE::<RSA2048>::prove(&base, &exp, &result);
     assert!(PoE::verify(&base, &exp, &result, &proof));
     assert!(
       proof
         == PoE {
-          Q: RSA2048::elem(1u8)
+          Q: RSA2048::elem(1)
         }
     );
 
@@ -57,7 +57,7 @@ mod tests {
     assert!(
       proof_2
         == PoE {
-          Q: RSA2048::elem(1u8)
+          Q: RSA2048::elem(1)
         }
     );
   }

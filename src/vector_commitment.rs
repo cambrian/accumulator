@@ -1,11 +1,11 @@
-// TODO (Also, how to aggregate?)
+// WIP TODO (Also, how to aggregate?)
 use crate::hash::{hash_to_prime, Blake2b};
 // use super::accumulator;
 use super::accumulator::AccError;
 use crate::group::UnknownOrderGroup;
 use crate::proof::{PoE, PoKE2};
 use bitvec::BitVec;
-use num::BigUint;
+use rug::Integer;
 
 #[derive(Debug)]
 pub enum UpdateResult<G: UnknownOrderGroup> {
@@ -48,7 +48,7 @@ pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
 pub fn update<G: UnknownOrderGroup>(
   _acc: G::Elem,
   bits: &BitVec,
-  indices: &[BigUint],
+  indices: &[Integer],
   del_witnesses: &[G::Elem],
 ) -> Result<UpdateResult<G>, AccError> {
   // Must hold hash commitments in vec in order to pass by reference to accumulator fns
@@ -89,7 +89,7 @@ pub fn update<G: UnknownOrderGroup>(
 
 pub fn open<G: UnknownOrderGroup>(
   _bits: &BitVec,
-  _indices: &[BigUint],
+  _indices: &[Integer],
 ) -> Result<Vec<Proof>, OpenError> {
   // let mut one_commitment = BigUint::One;
   // let mut zero_commitment;
@@ -113,7 +113,7 @@ pub fn open<G: UnknownOrderGroup>(
 pub fn verify<G: UnknownOrderGroup>(
   _acc: &G::Elem,
   _bits: &[bool],
-  _indices: &[BigUint],
+  _indices: &[Integer],
   _proofs: Vec<Proof>,
 ) -> bool {
   unimplemented!();
@@ -121,22 +121,22 @@ pub fn verify<G: UnknownOrderGroup>(
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::group::DummyRSA;
-  use crate::util::bu;
+  // use super::*;
+  // use crate::group::RSA2048;
+  // use crate::util::int;
 
-  #[test]
-  fn test_update() {
-    let vc = setup::<DummyRSA>();
-    let mut bv: BitVec = BitVec::new();
-    bv.push(true);
-    let proofs = update::<DummyRSA>(vc, &bv, &[bu(2u8)], &[DummyRSA::unknown_order_elem()]);
-    println!("{:?}", proofs);
-    //    G: UnknownOrderGroup>(
-    //   acc: &G::Elem,
-    //   bits: &BitVec,
-    //   indices: &[&BigUint],
-    //   del_witnesses: &[&G::Elem],
-    // )
-  }
+  // #[test]
+  // fn test_update() {
+  //   let vc = setup::<RSA2048>();
+  //   let mut bv: BitVec = BitVec::new();
+  //   bv.push(true);
+  //   let proofs = update::<RSA2048>(vc, &bv, &[int(2)], &[RSA2048::unknown_order_elem()]);
+  //   println!("{:?}", proofs);
+  //      G: UnknownOrderGroup>(
+  //     acc: &G::Elem,
+  //     bits: &BitVec,
+  //     indices: &[&BigUint],
+  //     del_witnesses: &[&G::Elem],
+  //   )
+  // }
 }

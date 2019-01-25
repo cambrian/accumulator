@@ -4,8 +4,6 @@ use std::hash::Hash;
 use std::marker::Sized;
 
 mod class;
-// mod dummy;
-// pub use dummy::{DummyRSA, DummyRSAElem};
 mod rsa;
 pub use rsa::{RSA2048Elem, RSA2048};
 
@@ -30,8 +28,8 @@ pub trait Group: Singleton {
   /// Default implementation of exponentiation via repeated squaring.
   /// Group implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
-  /// REVIEW: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
-  /// calls don't appear to be implemented in rust)
+  /// TODO: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
+  /// calls don't appear to be implemented in Rust).
   fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
     if *n == int(0) {
       Self::id()
@@ -59,26 +57,17 @@ pub trait Group: Singleton {
   }
 
   fn exp(a: &Self::Elem, n: &Integer) -> Self::Elem {
-    Self::exp_(Self::rep(), a, n)
+    // Note: Writing a specialized inv() that takes an exponent is only a marginal speedup over
+    // inv() then exp() in the negative exponent case. (That is, the complexity does not change.)
+    if *n >= int(0) {
+      Self::exp_(Self::rep(), a, n)
+    } else {
+      Self::exp_(Self::rep(), &Self::inv(a), &-n.clone())
+    }
   }
 
   fn inv(a: &Self::Elem) -> Self::Elem {
     Self::inv_(Self::rep(), a)
-  }
-
-  /// REVIEW: now that we've merged InvertibleGroup, should this be rolled in with exp?
-  fn exp_signed(a: &Self::Elem, n: &Integer) -> Self::Elem {
-    // After further discussion: Writing a specialized inv() that takes an exponent is only a
-    // marginal speedup over inv() then exp() in the negative exponent case. (That is, the
-    // complexity does not change.)
-    if *n >= int(0) {
-      Self::exp(a, n)
-    } else {
-      Self::exp(
-        &Self::inv(a),
-        &-n.clone(),
-      )
-    }
   }
 }
 
@@ -134,7 +123,7 @@ mod tests {
   }
 }
 
-/// Like From<T>, but implemented on the Group instead of on the elements
+/// Like From<T>, but implemented on the Group instead of on the elements.
 pub trait GroupElemFrom<T>: Group {
   fn elem(val: T) -> Self::Elem;
 }
