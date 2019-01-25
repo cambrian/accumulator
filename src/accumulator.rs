@@ -149,22 +149,22 @@ mod tests {
     let acc = init_acc::<RSA2048>();
     let new_elems = [int(5), int(7), int(11)];
     let (new_acc, poe) = add::<RSA2048>(acc.clone(), &new_elems);
-    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(94_125_955u32));
+    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(94_125_955));
     assert!(new_acc == expected_acc);
-    assert!(PoE::verify(&acc, &int(385u16), &new_acc, &poe));
+    assert!(PoE::verify(&acc, &int(385), &new_acc, &poe));
   }
 
   #[test]
   fn test_delete() {
     let acc = init_acc::<RSA2048>();
-    let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(3649u16));
-    let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(2747u16));
+    let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(3649));
+    let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(2747));
     let (new_acc, poe) =
       delete::<RSA2048>(acc.clone(), &[(int(67), y_witness), (int(89), z_witness)])
         .expect("valid delete expected");
     let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(41));
     assert!(new_acc == expected_acc);
-    assert!(PoE::verify(&new_acc, &int(5963u16), &acc, &poe));
+    assert!(PoE::verify(&new_acc, &int(5963), &acc, &poe));
   }
 
   #[test]
@@ -179,8 +179,8 @@ mod tests {
   #[test]
   fn test_delete_bad_witness() {
     let acc = init_acc::<RSA2048>();
-    let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(3648u16));
-    let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(2746u16));
+    let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(3648));
+    let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(2746));
     delete::<RSA2048>(acc, &[(int(67), y_witness), (int(89), z_witness)]).unwrap();
   }
 

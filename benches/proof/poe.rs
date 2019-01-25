@@ -9,7 +9,7 @@ use crypto::util::int;
 
 fn bench_poe_rsa() {
   let base = RSA2048::unknown_order_elem();
-  let exp = int(20u8);
+  let exp = int(20);
   let result = RSA2048::elem(1_048_576);
   let proof = PoE::<RSA2048>::prove(&base, &exp, &result);
   PoE::<RSA2048>::verify(&base, &exp, &result, &proof);

@@ -113,7 +113,7 @@ mod tests {
   fn test_exp() {
     let a = RSA2048::exp(&RSA2048::elem(2), &int(3));
     assert!(a == RSA2048::elem(8));
-    let b = RSA2048::exp(&RSA2048::elem(2), &int(4096u16));
+    let b = RSA2048::exp(&RSA2048::elem(2), &int(4096));
     assert!(
       b == RSA2048::elem(
         Integer::parse(
