@@ -34,9 +34,6 @@ impl Singleton for RSA2048 {
   }
 }
 
-/// Review: whoever changed all of the RSA2048Elem(x) constructors to RSA2048::Elem change them
-/// back. In these cases we know that the int value satisfies 0 <= x < modulus so we don't need to
-/// pay the price of checking.
 impl Group for RSA2048 {
   type Elem = RSA2048Elem;
   fn op_(modulus: &Integer, a: &RSA2048Elem, b: &RSA2048Elem) -> RSA2048Elem {
