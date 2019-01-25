@@ -4,7 +4,6 @@ extern crate criterion;
 
 use criterion::Criterion;
 use crypto::hash::primality::passes_miller_rabin_base_2;
-use crypto::util::int;
 use rand::Rng;
 use rug::integer::Order;
 use rug::Integer;
