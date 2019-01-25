@@ -31,6 +31,7 @@ pub trait Group: Singleton {
   /// TODO: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
   /// calls don't appear to be implemented in Rust).
   fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
+    assert!(*n >= int(0));
     if *n == int(0) {
       Self::id()
     } else if *n == int(1) {
