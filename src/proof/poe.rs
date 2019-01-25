@@ -31,7 +31,7 @@ impl<G: Group> PoE<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{GroupElemFrom, UnknownOrderGroup, RSA2048};
+  use crate::group::{ElemFrom, UnknownOrderGroup, RSA2048};
   use crate::util::int;
 
   #[test]

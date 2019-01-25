@@ -4,7 +4,7 @@ extern crate criterion;
 
 use criterion::Criterion;
 use crypto::group::RSA2048;
-use crypto::group::{GroupElemFrom, UnknownOrderGroup};
+use crypto::group::{ElemFrom, UnknownOrderGroup};
 use crypto::proof::PoKE2;
 use crypto::util::int;
 

@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::{GroupElemFrom, UnknownOrderGroup, RSA2048};
+use crypto::group::{ElemFrom, UnknownOrderGroup, RSA2048};
 use crypto::proof::PoE;
 use crypto::util::int;
 

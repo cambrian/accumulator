@@ -1,5 +1,5 @@
 //! RSA (2048) group using rug's GMP integers.
-use super::{Group, GroupElemFrom, UnknownOrderGroup};
+use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util::{int, Singleton};
 use rug::Integer;
 use std::str::FromStr;
@@ -52,7 +52,7 @@ impl Group for RSA2048 {
   }
 }
 
-impl<T> GroupElemFrom<T> for RSA2048
+impl<T> ElemFrom<T> for RSA2048
 where
   Integer: From<T>,
 {

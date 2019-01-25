@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::{Group, GroupElemFrom, RSA2048};
+use crypto::group::{ElemFrom, Group, RSA2048};
 use rug::Integer;
 
 fn bench_op<G: Group + GroupElemFrom<Integer>>() {

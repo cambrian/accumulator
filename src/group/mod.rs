@@ -123,7 +123,7 @@ mod tests {
   }
 }
 
-/// Like From<T>, but implemented on the Group instead of on the elements.
-pub trait GroupElemFrom<T>: Group {
+/// Like From<T>, but implemented on the Group instead of the element type.
+pub trait ElemFrom<T>: Group {
   fn elem(val: T) -> Self::Elem;
 }
