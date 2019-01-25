@@ -46,7 +46,7 @@ impl Group for RSA2048 {
     RSA2048::elem(x.0.clone().invert(modulus).unwrap())
   }
   fn exp_(modulus: &Integer, x: &RSA2048Elem, n: &Integer) -> RSA2048Elem {
-    RSA2048Elem(x.0.clone().pow_mod(n, modulus).unwrap())
+    RSA2048::elem(x.0.clone().pow_mod(n, modulus).unwrap())
   }
 }
 
