@@ -41,13 +41,13 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   }
   // compute 2^d (mod n)
   let mut x = int(2);
-  x.secure_pow_mod_mut(&d, n);
+  x.pow_mod_mut(&d, n);
   if x == 1 || x == n.clone() - 1 {
     return true;
   }
   let two = int(2);
   for _ in 1..r {
-    x.secure_pow_mod_mut(&two, n);
+    x.pow_mod_mut(&two, n);
     if x == 1 {
       return false;
     }
@@ -178,7 +178,7 @@ fn compute_u_and_v_k(
     // u_2k = u_k * v_k % n
     // v_2k = v_k^2 - 2*q^k
     u_k = mod_n(&(u_k.clone() * v_k.clone()));
-    v_k.secure_pow_mod_mut(&int(2), n);
+    v_k.pow_mod_mut(&int(2), n);
     v_k = mod_n(&(v_k - 2 * q_k.clone()));
     q_k = mod_n(&(q_k.clone() * q_k.clone()));
     k *= 2;
