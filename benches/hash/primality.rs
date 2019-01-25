@@ -3,28 +3,13 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use num::bigint::{BigInt, Sign};
-use crypto::hash::primality::{jacobi_symbol, passes_miller_rabin_base_2};
+use crypto::hash::primality::passes_miller_rabin_base_2;
+use crypto::util::int;
 use rand::Rng;
-use crypto::util::bi;
-use rug::Integer;
 use rug::integer::Order;
+use rug::Integer;
 
 const NUM_JACOBI_AS: u64 = 100;
-
-fn bench_jacobi_pablo() {
-  let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-  let n = BigInt::from_bytes_be(Sign::Plus, &random_bytes);
-  let mut a = bi(5);
-  for _ in 0..NUM_JACOBI_AS {
-    jacobi_symbol(&a, &n);
-    if a < bi(0) {
-      a = bi(-1) * a + bi(2);
-    } else {
-      a = bi(-1) * a - bi(2);
-    }
-  }
-}
 
 fn bench_jacobi_rug() {
   let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
@@ -42,19 +27,18 @@ fn bench_jacobi_rug() {
 
 fn bench_mr2_pablo() {
   let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-  let n = BigInt::from_bytes_be(Sign::Plus, &random_bytes);
+  let n = Integer::from_digits(&random_bytes, Order::MsfBe);
   passes_miller_rabin_base_2(&n);
 }
 
 fn bench_mr2_rug() {
   let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-  let n = Integer::from_digits(&random_bytes, Order::MsfLe);
+  let n = Integer::from_digits(&random_bytes, Order::MsfBe);
   // GMP does not let us demand a base-2 Fermat test so we just do 1 of random base
   n.is_probably_prime(1);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("jacobi_pablo", |b| b.iter(bench_jacobi_pablo));
   c.bench_function("jacobi_rug", |b| b.iter(bench_jacobi_rug));
   c.bench_function("mr2_pablo", |b| b.iter(bench_mr2_pablo));
   c.bench_function("mr2_rug", |b| b.iter(bench_mr2_rug));
