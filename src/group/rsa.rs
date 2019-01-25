@@ -22,6 +22,7 @@ const RSA2048_MODULUS_DECIMAL: &str = "25195908475657893494027183240048398571429
 
 lazy_static! {
   pub static ref RSA2048_MODULUS: Integer = Integer::from_str(RSA2048_MODULUS_DECIMAL).unwrap();
+  pub static ref HALF_MODULUS: Integer = RSA2048_MODULUS.clone() / 2;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -46,24 +47,9 @@ impl Group for RSA2048 {
     RSA2048::elem(x.0.invert_ref(modulus).unwrap())
   }
   fn exp_(modulus: &Integer, x: &RSA2048Elem, n: &Integer) -> RSA2048Elem {
+    // A side-channel resistant impl is 40% slower; we'll consider it in the future if we need to.
     RSA2048::elem(x.0.pow_mod_ref(n, modulus).unwrap())
-    // This is the code we'd use if we need side-channel attack resilience. It's 40% slower so not
-    // using it til we decide we have to.
-    // if *n < int(0) {
-    //   RSA2048::elem(Integer::from(x.0.invert_ref(modulus).unwrap()).secure_pow_mod(&-n.clone(), modulus))
-    // }
-    // else {
-    //   RSA2048::elem(x.0.secure_pow_mod_ref(n, modulus))
-    // }
   }
-}
-
-// We would normally do this inline, but the Integer: From<T> constraint on GroupElemFrom creates
-// problems with doing so.
-//
-// REVIEW: if this is slow, replace with a lazy_static constant for the half-modulus.
-fn half(x: &Integer) -> Integer {
-  int(x / 2)
 }
 
 impl<T> GroupElemFrom<T> for RSA2048
@@ -73,7 +59,7 @@ where
   fn elem(t: T) -> RSA2048Elem {
     let modulus = Self::rep();
     let val = int(t) % modulus;
-    if val > half(modulus) {
+    if val > *HALF_MODULUS {
       RSA2048Elem((-val).div_rem_euc(modulus.clone()).1)
     } else {
       RSA2048Elem(val)

@@ -13,7 +13,7 @@ pub trait GeneralHasher: Hasher {
   fn finalize(self) -> Self::Output;
 }
 
-// Note: we explicitly pass in the hasher constructor so we don't have to specify its type via
+// Note: We explicitly pass in the hasher constructor so we don't have to specify its type via
 // generics. Rust has poor support for type applications, so if we wanted to pass H at the
 // type-level, we'd need to fully specify T as well, which is a pain in the ass.
 //
@@ -36,7 +36,7 @@ where
   let mut counter = 0u64;
   loop {
     let mut candidate_prime = int(hash(new_hasher, &(t, counter)));
-    // make the candidate prime odd. This gives ~4% performance gain on a 2018 macbook pro.
+    // Make the candidate prime odd. This gives ~4% performance gain on a 2018 Macbook Pro.
     candidate_prime.set_bit(0, true);
     if primality::is_prob_prime(&candidate_prime) {
       return candidate_prime;
