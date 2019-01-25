@@ -10,8 +10,9 @@ use crypto::proof::PoE;
 use rand::Rng;
 use rug::Integer;
 
+#[allow(dead_code)]
 fn bench_delete<G: UnknownOrderGroup>(acc: G::Elem, witness: &[(Integer, G::Elem)]) {
-  delete::<G>(acc, witness);
+  delete::<G>(acc, witness).expect("valid delete expected");
 }
 
 fn bench_add(elems: &[Integer]) {
@@ -37,7 +38,8 @@ fn bench_iterative_add(elems: &[Integer]) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  // *** Setup ***
+  // Setup (not included in the benchmark time).
+  // REVIEW: Consider breaking up setup into functions (if it's not annoying)?
   let mut elems = Vec::new();
   for _ in 0..100 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
@@ -66,7 +68,6 @@ fn criterion_benchmark(c: &mut Criterion) {
     new_acc = curr_acc;
     poe = curr_poe;
   }
-  // *** End Setup ***
 
   c.bench_function("add_1", move |b| b.iter(|| bench_add(&elems_1)));
   c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
