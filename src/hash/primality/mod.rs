@@ -76,7 +76,7 @@ fn passes_lucas(n: &Integer) -> bool {
   }
   // Additional check which is not strictly part of Lucas test but nonetheless filters some
   // composite n for free. See section "Checking additional congruence conditions" on Wikipedia.
-  if !v_delta.is_congruent(&(2*q.clone()), &n) {
+  if !v_delta.is_congruent(&(2 * q.clone()), &n) {
     return false;
   }
   // Congruence check which holds for prime n by Euler's criterion.
@@ -190,7 +190,7 @@ mod tests {
     assert!(!passes_miller_rabin_base_2(&int(65)));
     for &p in LARGE_PRIMES.iter() {
       assert!(passes_miller_rabin_base_2(&int(p)));
-      assert!(!passes_miller_rabin_base_2(&(int(p) * int(106957))));
+      assert!(!passes_miller_rabin_base_2(&(int(p) * int(106_957))));
     }
     for &n in STRONG_BASE_2_PSEUDOPRIMES.iter() {
       assert!(passes_miller_rabin_base_2(&int(n)));

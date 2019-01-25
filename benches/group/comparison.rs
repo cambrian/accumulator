@@ -6,7 +6,7 @@ use criterion::Criterion;
 use crypto::group::{ElemFrom, Group, RSA2048};
 use rug::Integer;
 
-fn bench_op<G: Group + GroupElemFrom<Integer>>() {
+fn bench_op<G: Group + ElemFrom<Integer>>() {
   G::op(
     &G::elem(
       Integer::from_str_radix(
@@ -25,7 +25,7 @@ fn bench_op<G: Group + GroupElemFrom<Integer>>() {
   );
 }
 
-fn bench_op_large<G: Group + GroupElemFrom<Integer>>() {
+fn bench_op_large<G: Group + ElemFrom<Integer>>() {
   G::op(
     &G::elem(Integer::from_str_radix(
       "2172073899553954285893691587818692186975191598984015216589930386158248724081087849265975174\
@@ -52,7 +52,7 @@ fn bench_op_large<G: Group + GroupElemFrom<Integer>>() {
   );
 }
 
-fn bench_exp<G: Group + GroupElemFrom<u8>>() {
+fn bench_exp<G: Group + ElemFrom<u8>>() {
   G::exp(
     &G::elem(2),
     &Integer::from_str_radix(
@@ -66,7 +66,7 @@ fn bench_exp<G: Group + GroupElemFrom<u8>>() {
   );
 }
 
-fn bench_inv<G: Group + GroupElemFrom<u8>>() {
+fn bench_inv<G: Group + ElemFrom<u8>>() {
   G::inv(&G::elem(2));
 }
 
