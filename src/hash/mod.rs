@@ -1,5 +1,4 @@
 use crate::util::int;
-use rug::integer::IsPrime;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
@@ -30,10 +29,6 @@ pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -
 }
 
 /// Hashes t with an incrementing counter until a prime is found.
-///
-/// REVIEW: This fn currently uses rug's implementation of Miller-Rabin for primality checking.
-/// Our version (which is possibly more likely to be correct, idk) is 30% slower. (700us vs 1ms).
-/// We should make optimizations to is_prob_prime.
 pub fn hash_to_prime<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> Integer
 where
   Integer: From<H::Output>,
@@ -43,15 +38,10 @@ where
     let mut candidate_prime = int(hash(new_hasher, &(t, counter)));
     // make the candidate prime odd. This gives ~4% performance gain on a 2018 macbook pro.
     candidate_prime.set_bit(0, true);
-    // if primality::is_prob_prime(&candidate_prime) {
-    //   return candidate_prime;
-    // }
-    // counter += 1;
-    match candidate_prime.is_probably_prime(32) {
-      IsPrime::Probably => return candidate_prime, // TODO: Panic?
-      IsPrime::Yes => return candidate_prime,
-      IsPrime::No => counter += 1,
-    };
+    if primality::is_prob_prime(&candidate_prime) {
+      return candidate_prime;
+    }
+    counter += 1;
   }
 }
 
@@ -65,15 +55,15 @@ mod tests {
     hash(&Blake2b::default, data);
   }
 
-  // #[test]
-  // fn test_hash_to_prime() {
-  //   let b_1 = "boom i got ur boyfriend";
-  //   let b_2 = "boom i got ur boyfriene";
-  //   assert_ne!(b_1, b_2);
-  //   let h_1 = hash_to_prime(&Blake2b::default, b_1);
-  //   let h_2 = hash_to_prime(&Blake2b::default, b_2);
-  //   assert_ne!(h_1, h_2);
-  //   assert!(primality::is_prob_prime(&h_1));
-  //   assert!(primality::is_prob_prime(&h_2));
-  // }
+  #[test]
+  fn test_hash_to_prime() {
+    let b_1 = "boom i got ur boyfriend";
+    let b_2 = "boom i got ur boyfriene";
+    assert_ne!(b_1, b_2);
+    let h_1 = hash_to_prime(&Blake2b::default, b_1);
+    let h_2 = hash_to_prime(&Blake2b::default, b_2);
+    assert_ne!(h_1, h_2);
+    assert!(primality::is_prob_prime(&h_1));
+    assert!(primality::is_prob_prime(&h_2));
+  }
 }
