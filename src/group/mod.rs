@@ -92,7 +92,6 @@ pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   let alpha_r = &alphas[n_half..];
   let x_l = &x[..n_half];
   let x_r = &x[n_half..];
-  // G::op expects a Integer.
   let x_star_l = x_l.iter().product();
   let x_star_r = x_r.iter().product();
   let l = multi_exp::<G>(alpha_l, x_l);
