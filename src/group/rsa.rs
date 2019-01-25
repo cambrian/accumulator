@@ -60,6 +60,8 @@ impl Group for RSA2048 {
 
 // We would normally do this inline, but the Integer: From<T> constraint on GroupElemFrom creates
 // problems with doing so.
+//
+// REVIEW: if this is slow, replace with a lazy_static constant for the half-modulus.
 fn half(x: &Integer) -> Integer {
   int(x / 2)
 }
