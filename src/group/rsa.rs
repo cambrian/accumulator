@@ -86,10 +86,7 @@ mod tests {
   fn test_op() {
     let a = RSA2048::op(&RSA2048::elem(2), &RSA2048::elem(3));
     assert!(a == RSA2048::elem(6));
-    let b = RSA2048::op(
-      &RSA2048::elem(RSA2048_MODULUS.clone() - int(2)),
-      &RSA2048::elem(RSA2048_MODULUS.clone() - int(3)),
-    );
+    let b = RSA2048::op(&RSA2048::elem(-2), &RSA2048::elem(-3));
     assert!(b == RSA2048::elem(6));
   }
 
