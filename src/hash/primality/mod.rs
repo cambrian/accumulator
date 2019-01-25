@@ -18,13 +18,7 @@ pub fn is_prob_prime(n: &Integer) -> bool {
       return *n == p;
     }
   }
-  if !passes_miller_rabin_base_2(&n) {
-    return false;
-  }
-  if is_square(&n) {
-    return false;
-  }
-  passes_lucas(&n)
+  passes_miller_rabin_base_2(&n) && !n.is_perfect_square() && passes_lucas(&n)
 }
 
 pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
@@ -51,11 +45,6 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
     }
   }
   false
-}
-
-pub fn is_square(n: &Integer) -> bool {
-  let (_root, rem) = n.clone().sqrt_rem(Integer::new());
-  rem == 0
 }
 
 /// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
@@ -194,22 +183,6 @@ mod tests {
     }
     for &n in STRONG_BASE_2_PSEUDOPRIMES.iter() {
       assert!(passes_miller_rabin_base_2(&int(n)));
-    }
-  }
-
-  #[test]
-  fn test_is_square() {
-    for &p in SMALL_PRIMES.iter() {
-      assert!(!is_square(&int(p)));
-      assert!(is_square(&(int(p) * int(p))));
-    }
-    for &p in MED_PRIMES.iter() {
-      assert!(!is_square(&int(p)));
-      assert!(is_square(&(int(p) * int(p))));
-    }
-    for &p in LARGE_PRIMES.iter() {
-      assert!(!is_square(&int(p)));
-      assert!(is_square(&(int(p) * int(p))));
     }
   }
 
