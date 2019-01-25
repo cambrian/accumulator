@@ -1,17 +1,9 @@
-use crate::util::product;
-use crate::util::Singleton;
-use num::integer::Integer;
-use num::{BigInt, BigUint};
-use num_traits::identities::{One, Zero};
-use num_traits::Unsigned;
+use crate::util::{int, Singleton};
+use rug::Integer;
 use std::hash::Hash;
 use std::marker::Sized;
 
 mod class;
-mod dummy;
-pub use dummy::{DummyRSA, DummyRSAElem};
-mod dummy2048;
-pub use dummy2048::{DummyRSA2048, DummyRSA2048Elem};
 mod rsa;
 pub use rsa::{RSA2048Elem, RSA2048};
 
@@ -36,17 +28,17 @@ pub trait Group: Singleton {
   /// Default implementation of exponentiation via repeated squaring.
   /// Group implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
-  /// REVIEW: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
-  /// calls don't appear to be implemented in rust)
-  fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &BigUint) -> Self::Elem {
-    if *n == BigUint::zero() {
+  /// TODO: If this turns out to be slow, reimplement to be tail-recursive (or looping since tail
+  /// calls don't appear to be implemented in Rust).
+  fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
+    if *n == int(0) {
       Self::id()
-    } else if *n == BigUint::one() {
+    } else if *n == int(1) {
       a.clone()
     } else if n.is_odd() {
-      Self::op(a, &Self::exp_(rep, &Self::op(a, a), &(n >> 1)))
+      Self::op(a, &Self::exp_(rep, &Self::op(a, a), &(n.clone() >> 1)))
     } else {
-      Self::exp_(rep, &Self::op(a, a), &(n >> 1))
+      Self::exp_(rep, &Self::op(a, a), &(n.clone() >> 1))
     }
   }
 
@@ -64,27 +56,18 @@ pub trait Group: Singleton {
     Self::op_(Self::rep(), a, b)
   }
 
-  fn exp(a: &Self::Elem, n: &BigUint) -> Self::Elem {
-    Self::exp_(Self::rep(), a, n)
+  fn exp(a: &Self::Elem, n: &Integer) -> Self::Elem {
+    // Note: Writing a specialized inv() that takes an exponent is only a marginal speedup over
+    // inv() then exp() in the negative exponent case. (That is, the complexity does not change.)
+    if *n >= int(0) {
+      Self::exp_(Self::rep(), a, n)
+    } else {
+      Self::exp_(Self::rep(), &Self::inv(a), &-n.clone())
+    }
   }
 
   fn inv(a: &Self::Elem) -> Self::Elem {
     Self::inv_(Self::rep(), a)
-  }
-
-  /// REVIEW: now that we've merged InvertibleGroup, should this be rolled in with exp?
-  fn exp_signed(a: &Self::Elem, n: &BigInt) -> Self::Elem {
-    // After further discussion: Writing a specialized inv() that takes an exponent is only a
-    // marginal speedup over inv() then exp() in the negative exponent case. (That is, the
-    // complexity does not change.)
-    if *n >= BigInt::zero() {
-      Self::exp(a, &n.to_biguint().expect("positive BigInt expected"))
-    } else {
-      Self::exp(
-        &Self::inv(a),
-        &(-n).to_biguint().expect("negative BigInt expected"),
-      )
-    }
   }
 }
 
@@ -99,7 +82,7 @@ pub trait UnknownOrderGroup: Group {
   }
 }
 
-pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[BigInt]) -> G::Elem {
+pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   if alphas.len() == 1 {
     return alphas[0].clone();
   }
@@ -109,9 +92,9 @@ pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[BigInt]) -> G::Elem {
   let alpha_r = &alphas[n_half..];
   let x_l = &x[..n_half];
   let x_r = &x[n_half..];
-  // G::op expects a BigUint.
-  let x_star_l = product(x_l).to_biguint().expect("positive BigInt expected");
-  let x_star_r = product(x_r).to_biguint().expect("positive BigInt expected");
+  // G::op expects a Integer.
+  let x_star_l = x_l.iter().product();
+  let x_star_r = x_r.iter().product();
   let l = multi_exp::<G>(alpha_l, x_l);
   let r = multi_exp::<G>(alpha_r, x_r);
   G::op(&G::exp(&l, &x_star_r), &G::exp(&r, &x_star_l))
@@ -120,34 +103,27 @@ pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[BigInt]) -> G::Elem {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::util::bi;
+  use crate::util::int;
 
   #[test]
   fn test_multi_exp() {
-    let alpha_1 = DummyRSA::elem_of(2);
-    let alpha_2 = DummyRSA::elem_of(3);
-    let x_1 = bi(3);
-    let x_2 = bi(2);
-    let res = multi_exp::<DummyRSA>(
+    let alpha_1 = RSA2048::elem(2);
+    let alpha_2 = RSA2048::elem(3);
+    let x_1 = int(3);
+    let x_2 = int(2);
+    let res = multi_exp::<RSA2048>(
       &[alpha_1.clone(), alpha_2.clone()],
       &[x_1.clone(), x_2.clone()],
     );
-    assert!(res == DummyRSA::elem_of(108));
-    let alpha_3 = DummyRSA::elem_of(5);
-    let x_3 = bi(1);
-    let res_2 = multi_exp::<DummyRSA>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
-    assert!(res_2 == DummyRSA::elem_of(1_687_500));
+    assert!(res == RSA2048::elem(108));
+    let alpha_3 = RSA2048::elem(5);
+    let x_3 = int(1);
+    let res_2 = multi_exp::<RSA2048>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
+    assert!(res_2 == RSA2048::elem(1_687_500));
   }
 }
 
-/// REVIEW: Unsigned trait is unnecessary; BigUint: From<U> is sufficient
-/// REVIEW: ^ ignore the above. Actually, it would be better to express this trait as
-/// pub trait GroupElemOf<T>: Group
-/// such that implementations may define something like
-/// impl GroupElemOf<T> for Dummy where BigUint: From<T> {...}
-/// I'm sure i didn't get the syntax exactly right but you get the idea.
-pub trait ElemFromUnsigned: Group {
-  fn elem_of<U: Unsigned>(n: U) -> Self::Elem
-  where
-    BigUint: From<U>;
+/// Like From<T>, but implemented on the Group instead of on the elements.
+pub trait GroupElemFrom<T>: Group {
+  fn elem(val: T) -> Self::Elem;
 }

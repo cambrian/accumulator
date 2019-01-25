@@ -32,7 +32,7 @@ pub fn is_prob_prime(n: &BigUint) -> bool {
   }
 }
 
-fn passes_miller_rabin_base_2(n: &BigInt) -> bool {
+pub fn passes_miller_rabin_base_2(n: &BigInt) -> bool {
   // Write n-1 = 2^r * d.
   let mut d = n - 1;
   let mut r = 0;
@@ -79,8 +79,8 @@ fn choose_d(n: &BigInt, max_iter: u64) -> Option<BigInt> {
   None
 }
 
-/// Jacobi symbol (a / n).
-fn jacobi_symbol(a: &BigInt, n: &BigInt) -> i64 {
+/// Jacobi symbol (a / n). WARNING: use only for odd a
+pub fn jacobi_symbol(a: &BigInt, n: &BigInt) -> i64 {
   // Base cases.
   if n == &bi(1) {
     return 1;

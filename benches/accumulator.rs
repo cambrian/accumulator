@@ -3,14 +3,22 @@
 extern crate criterion;
 
 use criterion::Criterion;
+<<<<<<< HEAD
 use criterion::Fun;
 use crypto::accumulator::{add, delete, setup, verify_membership};
 use crypto::group::{DummyRSA2048, UnknownOrderGroup, RSA2048};
 use crypto::hash::{hash_to_prime, Blake2b};
 use crypto::proof::PoE;
 use num::bigint::BigUint;
+=======
+use crypto::accumulator::{add, setup};
+use crypto::group::RSA2048;
+use crypto::hash::{hash_to_prime, Blake2b};
+>>>>>>> 4d154eeab5f72b3a53eec1480c9839be7cdbeb70
 use rand::Rng;
+use rug::Integer;
 
+<<<<<<< HEAD
 // fn bench_add_ring(elems: &[BigUint]) {
 //   let acc = setup::<RSA2048>();
 //   add::<RSA2048>(acc, elems);
@@ -32,6 +40,18 @@ fn bench_verify<G: UnknownOrderGroup>(
   proof: &PoE<G>,
 ) {
   assert!(verify_membership::<G>(witness, elems, result, proof));
+=======
+fn bench_add(elems: &[Integer]) {
+  let acc = setup::<RSA2048>();
+  add::<RSA2048>(acc, elems);
+}
+
+fn bench_iterative_add(elems: &[Integer]) {
+  let mut acc = setup::<RSA2048>();
+  for elem in elems.chunks(1) {
+    acc = add::<RSA2048>(acc, elem).0;
+  }
+>>>>>>> 4d154eeab5f72b3a53eec1480c9839be7cdbeb70
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
