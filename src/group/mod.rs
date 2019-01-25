@@ -33,8 +33,7 @@ pub trait Group: Singleton {
   fn exp_(rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
     if *n < int(0) {
       Self::exp_(rep, &Self::inv(a), &-n.clone())
-    }
-    else if *n == int(0) {
+    } else if *n == int(0) {
       Self::id()
     } else if *n == int(1) {
       a.clone()
