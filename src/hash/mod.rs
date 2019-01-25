@@ -1,5 +1,4 @@
 use crate::util::int;
-use rug::integer::IsPrime;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
@@ -39,11 +38,10 @@ where
     // REVIEW: If possible, set the last bit to 1 (thus making the candidate prime odd) without
     // allocating a new Integer.
     let candidate_prime = int(hash(new_hasher, &(t, counter)));
-    match candidate_prime.is_probably_prime(32) {
-      IsPrime::Probably => return candidate_prime, // TODO: Panic?
-      IsPrime::Yes => return candidate_prime,
-      IsPrime::No => counter += 1,
-    };
+    if primality::is_prob_prime(&candidate_prime) {
+      return candidate_prime;
+    }
+    counter += 1;
   }
 }
 
@@ -57,15 +55,15 @@ mod tests {
     hash(&Blake2b::default, data);
   }
 
-  // #[test]
-  // fn test_hash_to_prime() {
-  //   let b_1 = "boom i got ur boyfriend";
-  //   let b_2 = "boom i got ur boyfriene";
-  //   assert_ne!(b_1, b_2);
-  //   let h_1 = hash_to_prime(&Blake2b::default, b_1);
-  //   let h_2 = hash_to_prime(&Blake2b::default, b_2);
-  //   assert_ne!(h_1, h_2);
-  //   assert!(primality::is_prob_prime(&h_1));
-  //   assert!(primality::is_prob_prime(&h_2));
-  // }
+  #[test]
+  fn test_hash_to_prime() {
+    let b_1 = "boom i got ur boyfriend";
+    let b_2 = "boom i got ur boyfriene";
+    assert_ne!(b_1, b_2);
+    let h_1 = hash_to_prime(&Blake2b::default, b_1);
+    let h_2 = hash_to_prime(&Blake2b::default, b_2);
+    assert_ne!(h_1, h_2);
+    assert!(primality::is_prob_prime(&h_1));
+    assert!(primality::is_prob_prime(&h_2));
+  }
 }
