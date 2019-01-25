@@ -70,11 +70,11 @@ fn criterion_benchmark(c: &mut Criterion) {
   }
 
   c.bench_function("add_1", move |b| b.iter(|| bench_add(&elems_1)));
-  c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
-  c.bench_function("add_100", move |b| b.iter(|| bench_add(&elems_3)));
-  c.bench_function("verify_dummy", move |b| {
-    b.iter(|| bench_verify(&acc, &elems, &new_acc, &poe))
-  });
+  // c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
+  // c.bench_function("add_100", move |b| b.iter(|| bench_add(&elems_3)));
+  // c.bench_function("verify_dummy", move |b| {
+  //   b.iter(|| bench_verify(&acc, &elems, &new_acc, &poe))
+  // });
 }
 
 criterion_group!(benches, criterion_benchmark);

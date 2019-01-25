@@ -34,35 +34,39 @@ name = "accumulator"
 path = "benches/accumulator.rs"
 harness = false
 
-[[bench]]
-name = "comparison"
-path = "benches/group/comparison.rs"
-harness = false
+# [[bench]]
+# name = "comparison"
+# path = "benches/group/comparison.rs"
+# harness = false
 
-[[bench]]
-name = "hashes"
-path = "benches/hash/hashes.rs"
-harness = false
+# [[bench]]
+# name = "hashes"
+# path = "benches/hash/hashes.rs"
+# harness = false
 
-[[bench]]
-name = "primality"
-path = "benches/hash/primality.rs"
-harness = false
+# [[bench]]
+# name = "primality"
+# path = "benches/hash/primality.rs"
+# harness = false
 
-[[bench]]
-name = "poe"
-path = "benches/proof/poe.rs"
-harness = false
+# [[bench]]
+# name = "poe"
+# path = "benches/proof/poe.rs"
+# harness = false
 
-[[bench]]
-name = "pokcr"
-path = "benches/proof/pokcr.rs"
-harness = false
+# [[bench]]
+# name = "pokcr"
+# path = "benches/proof/pokcr.rs"
+# harness = false
 
-[[bench]]
-name = "poke2"
-path = "benches/proof/poke2.rs"
-harness = false
+# [[bench]]
+# name = "poke2"
+# path = "benches/proof/poke2.rs"
+# harness = false
 
 [profile.bench]
 opt-level = 3
+debug = true
+
+[profile.release]
+debug = true
