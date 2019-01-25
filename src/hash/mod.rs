@@ -36,9 +36,13 @@ where
 {
   let mut counter = 0u64;
   loop {
-    // REVIEW: If possible, set the last bit to 1 (thus making the candidate prime odd) without
-    // allocating a new Integer.
-    let candidate_prime = int(hash(new_hasher, &(t, counter)));
+    let mut candidate_prime = int(hash(new_hasher, &(t, counter)));
+    // make the candidate prime odd. This gives ~4% performance gain on a 2018 macbook pro.
+    candidate_prime.set_bit(0, true);
+    // if primality::is_prob_prime(&candidate_prime) {
+    //   return candidate_prime;
+    // }
+    // counter += 1;
     match candidate_prime.is_probably_prime(32) {
       IsPrime::Probably => return candidate_prime, // TODO: Panic?
       IsPrime::Yes => return candidate_prime,
