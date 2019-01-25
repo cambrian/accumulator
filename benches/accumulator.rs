@@ -3,10 +3,11 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::accumulator::{add, delete, setup, verify_membership};
+use crypto::accumulator::{add, delete, setup};
 use crypto::group::{UnknownOrderGroup, RSA2048};
 use crypto::hash::{hash_to_prime, Blake2b};
 use crypto::proof::PoE;
+use crypto::util::int;
 use rand::Rng;
 use rug::Integer;
 
@@ -20,13 +21,15 @@ fn bench_add(elems: &[Integer]) {
   add::<RSA2048>(acc, elems);
 }
 
+// TODO: Add a specific bench for `verify_membership` as opposed to verifying a PoE.
 fn bench_verify<G: UnknownOrderGroup>(
   witness: &G::Elem,
   elems: &[Integer],
   result: &G::Elem,
   proof: &PoE<G>,
 ) {
-  assert!(verify_membership::<G>(witness, elems, result, proof));
+  let product = elems.iter().fold(int(1), |a, b| int(a * b));
+  assert!(PoE::verify(witness, &product, result, proof));
 }
 
 #[allow(dead_code)]
@@ -72,7 +75,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function("add_1", move |b| b.iter(|| bench_add(&elems_1)));
   c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
   c.bench_function("add_100", move |b| b.iter(|| bench_add(&elems_3)));
-  c.bench_function("verify_dummy", move |b| {
+  c.bench_function("verify_poe", move |b| {
     b.iter(|| bench_verify(&acc, &elems, &new_acc, &poe))
   });
 }
