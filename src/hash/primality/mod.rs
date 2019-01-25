@@ -104,9 +104,7 @@ fn choose_d(n: &Integer) -> Integer {
 /// a stage of the strong Lucas test. In the Lucas case we specify that d = p^2 - 4q and set
 /// k_target = delta = n - (d/n) = n + 1.
 ///
-/// REVIEW: instead of looping over the string representation of k_target, use Integer::get_bit()
-/// with Integer::significant_bits(). You also might be able to use Integer::lucas() and
-/// Integer::lucas_2() but I'm less sure of that.
+/// TODO: Use Integer::get_bit() on Integer::significant_bits() instead of string hack
 fn compute_lucas_sequences(
   k_target: &Integer,
   n: &Integer,
