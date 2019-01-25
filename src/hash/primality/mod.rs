@@ -111,13 +111,11 @@ fn compute_u_and_v_k(
   let mut q_k = q.clone();
 
   let mod_n = |x: &Integer| {
-    if *x < 0 {
-      n - (-x.clone() % n)
-    } else {
-      x.clone() % n
-    }
+    let (_quotient, rem) = x.clone().div_rem_euc(n.clone());
+    rem
   };
 
+  // Finds k in Z_n with 2k = x (mod n)
   let half = |x: &Integer| {
     if x.is_congruent_u(1, 2) {
       mod_n(&((x.clone() + n) / 2))
