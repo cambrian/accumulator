@@ -66,3 +66,8 @@ harness = false
 
 [profile.bench]
 opt-level = 3
+debug = true
+
+# Flamegraph debug symbols
+[profile.release]
+debug = true
