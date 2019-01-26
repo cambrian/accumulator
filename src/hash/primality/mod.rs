@@ -56,7 +56,6 @@ fn passes_lucas(n: &Integer) -> bool {
   let q = (1 - d.clone()) / 4;
   let delta = n.clone() + 1;
 
-  // TODO: Extend to stronger test.
   let (u_delta, v_delta, q_delta_over_2) =
     compute_lucas_sequences(&delta, n, &int(1), &p, &p, &q, &d);
   // u_delta % n != 0 proves n composite.
@@ -104,7 +103,10 @@ fn choose_d(n: &Integer) -> Integer {
 /// a stage of the strong Lucas test. In the Lucas case we specify that d = p^2 - 4q and set
 /// k_target = delta = n - (d/n) = n + 1.
 ///
-/// TODO: Use Integer::get_bit() on Integer::significant_bits() instead of string hack
+/// TODO: Somehow iterate over bits instead of using string hack.
+/// NOTE: Even after shrink_to_fit, significant_bits does not always return the width of n, so
+/// iterating over bits as n.get_bit(0), ..., n.get_bit(n.significant_bits()) does not behave as
+/// expected. Maybe repeated bitshifts are better.
 fn compute_lucas_sequences(
   k_target: &Integer,
   n: &Integer,

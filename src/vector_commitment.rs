@@ -18,7 +18,6 @@ pub struct VectorProof<G: UnknownOrderGroup> {
 }
 
 pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
-  // G::unknown_order_elem()
   accumulator::setup::<G>()
 }
 
