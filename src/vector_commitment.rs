@@ -1,3 +1,4 @@
+// TODO: Reconsider when/where to group elems by bit.
 use super::accumulator;
 use super::accumulator::{MembershipProof, NonmembershipProof};
 use crate::group::UnknownOrderGroup;
@@ -8,6 +9,7 @@ use std::collections::HashSet;
 #[derive(Debug)]
 pub enum VCError {
   ConflictingIndicesError,
+  InvalidOpenError,
 }
 
 pub struct VectorProof<G: UnknownOrderGroup> {
@@ -42,7 +44,7 @@ pub fn update<G: UnknownOrderGroup>(
   acc_set: &[Integer],
   bits: &[(bool, Integer)],
 ) -> Result<(G::Elem, VectorProof<G>), VCError> {
-  // Must hold hash commitments in vec in order to pass by reference to accumulator fns
+  // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
   let group_result = group_elems_by_bit(&bits);
   if let Err(e) = group_result {
     return Err(e);
@@ -61,17 +63,31 @@ pub fn update<G: UnknownOrderGroup>(
 }
 
 pub fn open<G: UnknownOrderGroup>(
-  _acc: &G::Elem,
-  _acc_set: &[Integer],
-  bits: &[(bool, Integer)],
+  acc: &G::Elem,
+  acc_set: &[Integer],
+  zero_bits: &[Integer],
+  one_bit_witnesses: &[(Integer, G::Elem)],
 ) -> Result<VectorProof<G>, VCError> {
-  let group_result = group_elems_by_bit(&bits);
-  if let Err(e) = group_result {
-    return Err(e);
+  let elems_with_zero: Vec<Integer> = zero_bits
+    .iter()
+    .map(|i| hash_to_prime(&Blake2b::default, &i))
+    .collect();
+  let elem_witnesses_with_one: Vec<(Integer, G::Elem)> = one_bit_witnesses
+    .iter()
+    .map(|(i, witness)| (hash_to_prime(&Blake2b::default, &i), witness.clone()))
+    .collect();
+  let membership_proof = accumulator::prove_membership::<G>(acc, &elem_witnesses_with_one);
+  if membership_proof.is_err() {
+    return Err(VCError::InvalidOpenError);
   }
-  let (_elems_with_zero, _elems_with_one) = group_result.unwrap();
-  //accumulator::prove_membership(acc, elem_witnesses: &[(Integer, G::Elem)])
-  unimplemented!();
+  let nonmembership_proof = accumulator::prove_nonmembership::<G>(acc, acc_set, &elems_with_zero);
+  if nonmembership_proof.is_err() {
+    return Err(VCError::InvalidOpenError);
+  }
+  Ok(VectorProof {
+    membership_proof: membership_proof.unwrap(),
+    nonmembership_proof: nonmembership_proof.unwrap(),
+  })
 }
 
 pub fn verify<G: UnknownOrderGroup>(
