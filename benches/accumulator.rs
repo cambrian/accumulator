@@ -3,40 +3,36 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::accumulator::{add, delete, setup};
+use crypto::accumulator;
+use crypto::accumulator::MembershipProof;
 use crypto::group::{UnknownOrderGroup, RSA2048};
 use crypto::hash::{hash_to_prime, Blake2b};
-use crypto::proof::PoE;
-use crypto::util::int;
 use rand::Rng;
 use rug::Integer;
 
 #[allow(dead_code)]
 fn bench_delete<G: UnknownOrderGroup>(acc: G::Elem, witness: &[(Integer, G::Elem)]) {
-  delete::<G>(acc, witness).expect("valid delete expected");
+  accumulator::delete::<G>(acc, witness).expect("valid delete expected");
 }
 
 fn bench_add(elems: &[Integer]) {
-  let acc = setup::<RSA2048>();
-  add::<RSA2048>(acc, elems);
+  let acc = accumulator::setup::<RSA2048>();
+  accumulator::add::<RSA2048>(acc, elems);
 }
 
-// TODO: Add a specific bench for `verify_membership` as opposed to verifying a PoE.
 fn bench_verify<G: UnknownOrderGroup>(
-  witness: &G::Elem,
+  acc: &G::Elem,
   elems: &[Integer],
-  result: &G::Elem,
-  proof: &PoE<G>,
+  proof: &MembershipProof<G>,
 ) {
-  let product = elems.iter().fold(int(1), |a, b| int(a * b));
-  assert!(PoE::verify(witness, &product, result, proof));
+  assert!(accumulator::verify_membership::<G>(acc, elems, proof));
 }
 
 #[allow(dead_code)]
 fn bench_iterative_add(elems: &[Integer]) {
-  let mut acc = setup::<RSA2048>();
+  let mut acc = accumulator::setup::<RSA2048>();
   for elem in elems.chunks(1) {
-    acc = add::<RSA2048>(acc, elem).0;
+    acc = accumulator::add::<RSA2048>(acc, elem).0;
   }
 }
 
@@ -52,12 +48,12 @@ fn criterion_benchmark(c: &mut Criterion) {
   let elems_1 = [elems[0].clone()];
   let elems_2 = elems.clone();
   let elems_3 = elems.clone();
-  let mut acc = setup::<RSA2048>();
+  let acc = accumulator::setup::<RSA2048>();
   let mut new_acc;
-  let mut poe;
-  let (holder, poe_holder) = add::<RSA2048>(acc.clone(), &elems.clone());
+  let mut proof;
+  let (holder, proof_holder) = accumulator::add::<RSA2048>(acc.clone(), &elems.clone());
   new_acc = holder;
-  poe = poe_holder;
+  proof = proof_holder;
   // Test verification on lots of elements. Added in batches to not go crazy with exponent size.
   for _ in 0..100 {
     elems = vec![];
@@ -66,17 +62,16 @@ fn criterion_benchmark(c: &mut Criterion) {
       let prime = hash_to_prime(&Blake2b::default, &random_bytes);
       elems.push(prime);
     }
-    let (curr_acc, curr_poe) = add::<RSA2048>(new_acc.clone(), &elems.clone());
-    acc = new_acc;
+    let (curr_acc, curr_proof) = accumulator::add::<RSA2048>(new_acc.clone(), &elems.clone());
     new_acc = curr_acc;
-    poe = curr_poe;
+    proof = curr_proof;
   }
 
   c.bench_function("add_1", move |b| b.iter(|| bench_add(&elems_1)));
   c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
   c.bench_function("add_100", move |b| b.iter(|| bench_add(&elems_3)));
-  c.bench_function("verify_poe", move |b| {
-    b.iter(|| bench_verify(&acc, &elems, &new_acc, &poe))
+  c.bench_function("verify", move |b| {
+    b.iter(|| bench_verify(&new_acc, &elems, &proof))
   });
 }
 
