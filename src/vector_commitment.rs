@@ -1,142 +1,97 @@
-// WIP TODO (Also, how to aggregate?)
-use crate::hash::{hash_to_prime, Blake2b};
-// use super::accumulator;
-use super::accumulator::AccError;
+use super::accumulator;
+use super::accumulator::{MembershipProof, NonmembershipProof};
 use crate::group::UnknownOrderGroup;
-use crate::proof::{PoE, PoKE2};
-use bitvec::BitVec;
+use crate::hash::{hash_to_prime, Blake2b};
 use rug::Integer;
+use std::collections::HashSet;
 
 #[derive(Debug)]
-pub enum UpdateResult<G: UnknownOrderGroup> {
-  NoChange(G::Elem),
-  Update((MembershipProof<G>, MembershipProof<G>)),
+pub enum VCError {
+  ConflictingIndicesError,
 }
 
-// TODO: Enumerate error types.
-pub enum OpenError {
-  Error,
-}
-
-pub enum Proof {
-  MembershipProof,
-  NonMembershipProof,
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct MembershipProof<G: UnknownOrderGroup> {
-  acc: G::Elem,
-  proof: PoE<G>,
-}
-
-#[allow(dead_code)]
-struct NonMembershipProof<G: UnknownOrderGroup> {
-  d: G::Elem,
-  v: G::Elem,
-  gv_inverse: G::Elem,
-  poke_proof: PoKE2<G>,
-  poe_proof: PoE<G>,
+pub struct VectorProof<G: UnknownOrderGroup> {
+  membership_proof: MembershipProof<G>,
+  nonmembership_proof: NonmembershipProof<G>,
 }
 
 pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
-  G::unknown_order_elem()
+  // G::unknown_order_elem()
+  accumulator::setup::<G>()
 }
 
-// TODO: Somehow check if element is already in accumulator.
-// TODO: Option type to allow for only deletion or only addition.
-pub fn update<G: UnknownOrderGroup>(
-  _acc: G::Elem,
-  bits: &BitVec,
-  indices: &[Integer],
-  del_witnesses: &[G::Elem],
-) -> Result<UpdateResult<G>, AccError> {
-  // Must hold hash commitments in vec in order to pass by reference to accumulator fns
-  let mut add_commitments = vec![];
-  let mut del_commitments = vec![];
-  for i in 0..bits.len() {
-    if bits[i] {
-      add_commitments.push(hash_to_prime(&Blake2b::default, &indices[i]));
+fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Integer>), VCError> {
+  let mut elems_with_one = vec![];
+  let mut elems_with_zero = vec![];
+  let mut seen_indices = HashSet::new();
+  for (bit, i) in bits {
+    if !seen_indices.insert(i) {
+      return Err(VCError::ConflictingIndicesError);
+    }
+    if *bit {
+      elems_with_one.push(hash_to_prime(&Blake2b::default, &i));
     } else {
-      del_commitments.push(hash_to_prime(&Blake2b::default, &indices[i]));
+      elems_with_zero.push(hash_to_prime(&Blake2b::default, &i));
     }
   }
-  let mut add_commitments_ref = vec![];
-  for item in &add_commitments {
-    add_commitments_ref.push(item);
+  Ok((elems_with_zero, elems_with_one))
+}
+
+pub fn update<G: UnknownOrderGroup>(
+  acc: G::Elem,
+  acc_set: &[Integer],
+  bits: &[(bool, Integer)],
+) -> Result<(G::Elem, VectorProof<G>), VCError> {
+  // Must hold hash commitments in vec in order to pass by reference to accumulator fns
+  let group_result = group_elems_by_bit(&bits);
+  if let Err(e) = group_result {
+    return Err(e);
   }
-  let mut del_commitments_ref = vec![];
-  for i in 0..del_commitments.len() {
-    del_commitments_ref.push((&del_commitments[i], &del_witnesses[i]));
-  }
-  unimplemented!();
-  // // let (added_acc, add_poe) = accumulator::add::<G>(acc, &add_commitments_ref);
-  // // let add_proof = MembershipProof {
-  // //   acc: added_acc,
-  // //   proof: add_poe,
-  // // };
-  // // match accumulator::delete::<G>(acc, &del_commitments_ref) {
-  // //   Ok((del_acc, del_poe)) => {
-  // //     let del_proof = MembershipProof {
-  // //       acc: del_acc,
-  // //       proof: del_poe,
-  // //     };
-  // //     Ok(UpdateResult::Update((add_proof, del_proof)))
-  // //   }
-  // //   Err(n) => Err(n),
-  // }
+  let (elems_with_zero, elems_with_one) = group_result.unwrap();
+  let (new_acc, membership_proof) = accumulator::add::<G>(acc, &elems_with_one);
+  let nonmembership_proof =
+    accumulator::prove_nonmembership(&new_acc, acc_set, &elems_with_zero).unwrap();
+  Ok((
+    new_acc,
+    VectorProof {
+      membership_proof,
+      nonmembership_proof,
+    },
+  ))
 }
 
 pub fn open<G: UnknownOrderGroup>(
-  _bits: &BitVec,
-  _indices: &[Integer],
-) -> Result<Vec<Proof>, OpenError> {
-  // let mut one_commitment = BigUint::One;
-  // let mut zero_commitment;
-  // for i in 0..bits.len() {
-  //   if bits[i] {
-  //     one_commitment *= h_prime(&blake2, indices[i].to_str_radix(16).as_bytes());
-  //   } else {
-  //     zero_commitment *= h_prime(&blake2, indices[i].to_str_radix(16).as_bytes());
-  //   }
-  // }
-  // inclusion_witnesses.iter().map(|(index, witness)| { index = h_prime(&blake2, index.to_str_radix(16).as_bytes(); (index, witness) });
-  // match accumulator::prove_membership(acc, inclusion_witnesses) {
-  //   Ok(inclusion_proof) => {
-  //     match accumulator::prove_nonmembership(acc, acc_set, )
-  //   }
-  //   Err(n) => Err(n),
-  // }
+  _acc: &G::Elem,
+  _acc_set: &[Integer],
+  bits: &[(bool, Integer)],
+) -> Result<VectorProof<G>, VCError> {
+  let group_result = group_elems_by_bit(&bits);
+  if let Err(e) = group_result {
+    return Err(e);
+  }
+  let (_elems_with_zero, _elems_with_one) = group_result.unwrap();
+  //accumulator::prove_membership(acc, elem_witnesses: &[(Integer, G::Elem)])
   unimplemented!();
 }
 
 pub fn verify<G: UnknownOrderGroup>(
-  _acc: &G::Elem,
-  _bits: &[bool],
-  _indices: &[Integer],
-  _proofs: Vec<Proof>,
+  acc: &G::Elem,
+  bits: &[(bool, Integer)],
+  VectorProof {
+    membership_proof,
+    nonmembership_proof,
+  }: &VectorProof<G>,
 ) -> bool {
-  unimplemented!();
+  let group_result = group_elems_by_bit(&bits);
+  if group_result.is_err() {
+    return false;
+  }
+  let (elems_with_zero, elems_with_one) = group_result.unwrap();
+  let verified_membership = accumulator::verify_membership(acc, &elems_with_one, membership_proof);
+  let verified_nonmembership =
+    accumulator::verify_nonmembership(acc, &elems_with_zero, nonmembership_proof);
+  verified_membership && verified_nonmembership
 }
 
 #[cfg(test)]
-mod tests {
-  // use super::*;
-  // use crate::group::RSA2048;
-  // use crate::util::int;
-
-  // #[test]
-  // fn test_update() {
-  //   let vc = setup::<RSA2048>();
-  //   let mut bv: BitVec = BitVec::new();
-  //   bv.push(true);
-  //   let proofs = update::<RSA2048>(vc, &bv, &[int(2)], &[RSA2048::unknown_order_elem()]);
-  //   println!("{:?}", proofs);
-  //      G: UnknownOrderGroup>(
-  //     acc: &G::Elem,
-  //     bits: &BitVec,
-  //     indices: &[&BigUint],
-  //     del_witnesses: &[&G::Elem],
-  //   )
-  // }
-}
+mod tests {}

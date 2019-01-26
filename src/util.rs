@@ -53,4 +53,12 @@ mod tests {
     let xyth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), z);
     assert!(shamir_trick::<RSA2048>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
+
+  #[test]
+  fn test_shamir_trick_failure() {
+    let (x, y, z) = (&int(7), &int(14), &int(19)); // Inputs not co-prime.
+    let xth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(y * z));
+    let yth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(x * z));
+    assert!(shamir_trick::<RSA2048>(&xth_root, &yth_root, x, y) == None);
+  }
 }

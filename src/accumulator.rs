@@ -10,7 +10,7 @@ use rug::Integer;
 #[derive(Debug)]
 pub enum AccError {
   BadWitness,
-  InputsNotCoPrime,
+  InputsNotCoprime,
 }
 
 /// Initializes the accumulator to a group element.
@@ -18,20 +18,25 @@ pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
   G::unknown_order_elem()
 }
 
+pub struct MembershipProof<G: UnknownOrderGroup> {
+  witness: G::Elem,
+  proof: PoE<G>,
+}
+
 /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are co-prime with the
 /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multi-set.
-pub fn add<G: UnknownOrderGroup>(acc: G::Elem, elems: &[Integer]) -> (G::Elem, PoE<G>) {
+pub fn add<G: UnknownOrderGroup>(acc: G::Elem, elems: &[Integer]) -> (G::Elem, MembershipProof<G>) {
   let x = elems.iter().product();
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::<G>::prove(&acc, &x, &new_acc);
-  (new_acc, poe_proof)
+  (new_acc, MembershipProof { witness: acc.clone(), proof: poe_proof })
 }
 
 /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
 pub fn delete<G: UnknownOrderGroup>(
   acc: G::Elem,
   elem_witnesses: &[(Integer, G::Elem)],
-) -> Result<(G::Elem, PoE<G>), AccError> {
+) -> Result<(G::Elem, MembershipProof<G>), AccError> {
   let mut elem_aggregate = int(1);
   let mut acc_next = acc.clone();
 
@@ -43,19 +48,14 @@ pub fn delete<G: UnknownOrderGroup>(
     let acc_next_option = shamir_trick::<G>(&acc_next, witness, &elem_aggregate, elem);
     match acc_next_option {
       Some(acc_next_value) => acc_next = acc_next_value,
-      None => return Err(AccError::InputsNotCoPrime),
+      None => return Err(AccError::InputsNotCoprime),
     };
 
     elem_aggregate *= elem;
   }
 
   let poe_proof = PoE::<G>::prove(&acc_next, &elem_aggregate, &acc);
-  Ok((acc_next, poe_proof))
-}
-
-pub struct MembershipProof<G: UnknownOrderGroup> {
-  witness: G::Elem,
-  proof: PoE<G>,
+  Ok((acc_next.clone(), MembershipProof { witness: acc_next, proof: poe_proof }))
 }
 
 /// Returns a proof (and associated variables) that `elem_witnesses` are aggregated in `acc`.
@@ -65,7 +65,7 @@ pub fn prove_membership<G: UnknownOrderGroup>(
 ) -> Result<MembershipProof<G>, AccError> {
   let delete_result = delete::<G>(acc.clone(), elem_witnesses);
   match delete_result {
-    Ok((witness, proof)) => Ok(MembershipProof { witness, proof }),
+    Ok((_, membership_proof)) => Ok(membership_proof),
     Err(e) => Err(e),
   }
 }
@@ -80,7 +80,7 @@ pub fn verify_membership<G: UnknownOrderGroup>(
   PoE::verify(witness, &exp, acc, proof)
 }
 
-pub struct NonMembershipProof<G: UnknownOrderGroup> {
+pub struct NonmembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,
   gv_inv: G::Elem,
@@ -93,13 +93,13 @@ pub fn prove_nonmembership<G: UnknownOrderGroup>(
   acc: &G::Elem,
   acc_set: &[Integer],
   elems: &[Integer],
-) -> Result<NonMembershipProof<G>, AccError> {
+) -> Result<NonmembershipProof<G>, AccError> {
   let x: Integer = elems.iter().product();
   let s = acc_set.iter().product();
   let (gcd, a, b) = x.clone().gcd_cofactors(s, Integer::new());
 
   if gcd != int(1) {
-    return Err(AccError::InputsNotCoPrime);
+    return Err(AccError::InputsNotCoprime);
   }
 
   let g = G::unknown_order_elem();
@@ -109,7 +109,7 @@ pub fn prove_nonmembership<G: UnknownOrderGroup>(
 
   let poke2_proof = PoKE2::prove(acc, &b, &v);
   let poe_proof = PoE::prove(&d, &x, &gv_inv);
-  Ok(NonMembershipProof {
+  Ok(NonmembershipProof {
     d,
     v,
     gv_inv,
@@ -122,13 +122,13 @@ pub fn prove_nonmembership<G: UnknownOrderGroup>(
 pub fn verify_nonmembership<G: UnknownOrderGroup>(
   acc: &G::Elem,
   elems: &[Integer],
-  NonMembershipProof {
+  NonmembershipProof {
     d,
     v,
     gv_inv,
     poke2_proof,
     poe_proof,
-  }: &NonMembershipProof<G>,
+  }: &NonmembershipProof<G>,
 ) -> bool {
   let x = elems.iter().product();
   PoKE2::verify(acc, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
@@ -146,21 +146,13 @@ mod tests {
   }
 
   #[test]
-  fn test_shamir_trick_failure() {
-    let (x, y, z) = (&int(7), &int(14), &int(19)); // Inputs not co-prime.
-    let xth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(y * z));
-    let yth_root = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(x * z));
-    assert!(shamir_trick::<RSA2048>(&xth_root, &yth_root, x, y) == None);
-  }
-
-  #[test]
   fn test_add() {
     let acc = init_acc::<RSA2048>();
     let new_elems = [int(5), int(7), int(11)];
-    let (new_acc, poe) = add::<RSA2048>(acc.clone(), &new_elems);
+    let (new_acc, proof) = add::<RSA2048>(acc.clone(), &new_elems);
     let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(94_125_955));
     assert!(new_acc == expected_acc);
-    assert!(PoE::verify(&acc, &int(385), &new_acc, &poe));
+    assert!(verify_membership(&new_acc, &new_elems, &proof));
   }
 
   #[test]
@@ -168,20 +160,20 @@ mod tests {
     let acc = init_acc::<RSA2048>();
     let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(3649));
     let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(2747));
-    let (new_acc, poe) =
+    let (new_acc, proof) =
       delete::<RSA2048>(acc.clone(), &[(int(67), y_witness), (int(89), z_witness)])
         .expect("valid delete expected");
     let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(41));
     assert!(new_acc == expected_acc);
-    assert!(PoE::verify(&new_acc, &int(5963), &acc, &poe));
+    assert!(verify_membership(&acc, &[int(67), int(89)], &proof));
   }
 
   #[test]
   fn test_delete_empty() {
     let acc = init_acc::<RSA2048>();
-    let (new_acc, poe) = delete::<RSA2048>(acc.clone(), &[]).expect("valid delete expected");
+    let (new_acc, proof) = delete::<RSA2048>(acc.clone(), &[]).expect("valid delete expected");
     assert!(new_acc == acc);
-    assert!(PoE::verify(&new_acc, &int(1), &acc, &poe));
+    assert!(verify_membership(&acc, &[], &proof));
   }
 
   #[should_panic(expected = "BadWitness")]
@@ -203,7 +195,7 @@ mod tests {
     assert!(verify_nonmembership::<RSA2048>(&acc, &elems, &proof));
   }
 
-  #[should_panic(expected = "InputsNotCoPrime")]
+  #[should_panic(expected = "InputsNotCoprime")]
   #[test]
   fn test_prove_nonmembership_failure() {
     let acc = init_acc::<RSA2048>();
