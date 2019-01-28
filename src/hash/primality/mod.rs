@@ -22,16 +22,8 @@ pub fn is_prob_prime(n: &Integer) -> bool {
 }
 
 pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
-  // Write n-1 = 2^r * d.
-  let mut d: Integer = n.clone() - 1;
-  let mut r = 0;
-  while d.is_congruent_u(0, 2) {
-    d /= 2;
-    r += 1;
-  }
-  // compute 2^d (mod n)
-  let mut x = int(2);
-  x.pow_mod_mut(&d, n).unwrap();
+  let (d, r) = int(n - 1).remove_factor(&int(2));
+  let mut x = int(2).pow_mod(&d, n).unwrap();
   if x == 1 || x == n.clone() - 1 {
     return true;
   }

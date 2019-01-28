@@ -29,7 +29,6 @@ pub fn shamir_trick<G: Group>(
     return None;
   }
 
-  // Could use `gcd_cofactors_mut` here, but it looks messy and doesn't do much.
   let (gcd, a, b) = x.clone().gcd_cofactors(y.clone(), Integer::new());
 
   if gcd != int(1) {
