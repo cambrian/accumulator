@@ -138,7 +138,7 @@ impl Group for ClassGroup {
   }
 
   fn inv_(discriminant: &Integer, x: &ClassElem) -> ClassElem {
-    unimplemented!();
+    ClassElem {a: Integer::from(&x.a), b: Integer::from(-(&x.b)), c: Integer::from(&x.c)}
   }
 
   fn exp_(discriminant: &Integer, x: &ClassElem, n: &Integer) -> ClassElem {
