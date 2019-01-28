@@ -2,8 +2,6 @@ use crate::util::int;
 use rug::Integer;
 mod constants;
 
-pub const MAX_JACOBI_ITERS: u32 = 500;
-
 /// Implements the Baillie-PSW probabilistic primality test, which is known to be deterministic over
 /// all integers up to 64 bits (u64). Offers more bang for your buck than Miller-Rabin (i.e.
 /// iterated Fermat tests of random base) at wide n since Fermat and Lucas pseudoprimes have been
@@ -75,15 +73,10 @@ fn passes_lucas(n: &Integer) -> bool {
 /// low value to max_iter to avoid wasting too much time. Note that the average number of iterations
 /// required for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.
 fn choose_d(n: &Integer) -> Integer {
-  let mut d = int(5);
-  for _ in 0..MAX_JACOBI_ITERS {
-    if d.jacobi(&n) == -1 {
-      return d;
-    }
-    if d < 0 {
-      d = -d + 2;
-    } else {
-      d = -d - 2;
+  for &d in constants::DS.iter() {
+    let d_ = int(d);
+    if d_.jacobi(&n) == -1 {
+      return d_;
     }
   }
   panic!("Could not find d with (d/n) = -1! Perhaps n is square?");
