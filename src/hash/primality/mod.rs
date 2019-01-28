@@ -1,4 +1,5 @@
 use crate::util::int;
+use rug::integer::Order;
 use rug::{Assign, Integer};
 mod constants;
 
@@ -81,11 +82,6 @@ fn choose_d(n: &Integer) -> Integer {
 /// order determined by the binary expansion of k. Also returns q^{k/2} (mod n), which is used in
 /// a stage of the strong Lucas test. In the Lucas case we specify that d = p^2 - 4q and set
 /// k_target = delta = n - (d/n) = n + 1.
-///
-/// TODO: Somehow iterate over bits instead of using string hack.
-/// NOTE: Even after shrink_to_fit, significant_bits does not always return the width of n, so
-/// iterating over bits as n.get_bit(0), ..., n.get_bit(n.significant_bits()) does not behave as
-/// expected. Maybe repeated bitshifts are better.
 fn compute_lucas_sequences(
   k_target: &Integer,
   n: &Integer,
@@ -113,7 +109,8 @@ fn compute_lucas_sequences(
   // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
   // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
   // we will have computed u_k and v_k, with k as given, in log(delta) time.
-  for i in (0..k_target.significant_bits() - 1).rev() {
+  let k_target_bits = k_target.to_digits::<bool>(Order::MsfBe);
+  for &bit in k_target_bits.iter().skip(1) {
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
@@ -122,7 +119,7 @@ fn compute_lucas_sequences(
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
     q_k_over_2.assign(&q_k);
     q_k = int(&q_k * &q_k) % n;
-    if k_target.get_bit(i) {
+    if bit {
       // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
       // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
