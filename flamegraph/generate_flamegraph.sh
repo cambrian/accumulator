@@ -1,3 +1,5 @@
+#!/bin/sh
+
 if [ $# -eq 0 ]
   then
       echo "Please supply bench name as argument"
