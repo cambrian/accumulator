@@ -52,6 +52,7 @@ impl ClassElem {
       self.b = -self.b + 2 * &s * &old_c;
       self.a.assign(old_c);
     }
+    self.normalize();
   }
 }
 
