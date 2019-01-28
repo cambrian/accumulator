@@ -38,7 +38,7 @@ impl Singleton for RSA2048 {
 impl Group for RSA2048 {
   type Elem = RSA2048Elem;
   fn op_(modulus: &Integer, a: &RSA2048Elem, b: &RSA2048Elem) -> RSA2048Elem {
-    RSA2048::elem((a.0.clone() * b.0.clone()) % modulus)
+    RSA2048::elem(int(&a.0 * &b.0) % modulus)
   }
   fn id_(_: &Integer) -> RSA2048Elem {
     RSA2048::elem(1)
@@ -60,7 +60,7 @@ where
     let modulus = Self::rep();
     let val = int(t) % modulus;
     if val > *HALF_MODULUS {
-      RSA2048Elem((-val).div_rem_euc(modulus.clone()).1)
+      RSA2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(&modulus)).1)
     } else {
       RSA2048Elem(val)
     }
