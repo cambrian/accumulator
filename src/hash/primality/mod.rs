@@ -1,5 +1,5 @@
 use crate::util::int;
-use rug::Integer;
+use rug::{Assign, Integer};
 mod constants;
 
 /// Implements the Baillie-PSW probabilistic primality test, which is known to be deterministic over
@@ -122,7 +122,7 @@ fn compute_lucas_sequences(
     v_k.pow_mod_mut(&int(2), n).unwrap();
     v_k = (v_k - 2 * &q_k) % n;
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
-    q_k_over_2 = q_k.clone();
+    q_k_over_2.assign(&q_k);
     q_k = int(&q_k * &q_k) % n;
     k *= 2;
     if bit == '1' {
