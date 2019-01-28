@@ -107,17 +107,12 @@ fn compute_lucas_sequences(
   let mut q_k = q.clone();
   let mut q_k_over_2 = q.clone();
 
-  let mod_n = |x: &Integer| {
-    let (_quotient, rem) = x.clone().div_rem_euc(n.clone());
-    rem
-  };
-
   // Finds t in Z_n with 2t = x (mod n)
   let half = |x: &Integer| {
     if x.is_congruent_u(1, 2) {
-      mod_n(&((x.clone() + n) / 2))
+      ((x.clone() + n) / 2) % n
     } else {
-      mod_n(&(x.clone() / 2))
+      (x.clone() / 2) % n
     }
   };
 
@@ -130,12 +125,12 @@ fn compute_lucas_sequences(
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
-    u_k = mod_n(&(u_k.clone() * v_k.clone()));
+    u_k = (u_k.clone() * v_k.clone()) % n;
     v_k.pow_mod_mut(&int(2), n).unwrap();
-    v_k = mod_n(&(v_k - 2 * q_k.clone()));
+    v_k = (v_k - 2 * q_k.clone()) % n;
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
     q_k_over_2 = q_k.clone();
-    q_k = mod_n(&(q_k.clone() * q_k.clone()));
+    q_k = (q_k.clone() * q_k.clone()) % n;
     k *= 2;
     if bit == '1' {
       // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
@@ -143,10 +138,10 @@ fn compute_lucas_sequences(
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
       // TODO: Why is mod_n necessary here?
       let pu_plus_v = p * u_k.clone() + v_k.clone();
-      let du_plus_pv = mod_n(&(d * u_k.clone() + p * v_k.clone()));
+      let du_plus_pv = (d * u_k.clone() + p * v_k.clone()) % n;
       u_k = half(&pu_plus_v);
       v_k = half(&du_plus_pv);
-      q_k = mod_n(&(q_k.clone() * q.clone()));
+      q_k = (q_k.clone() * q.clone()) % n;
       k += 1;
     }
   }
