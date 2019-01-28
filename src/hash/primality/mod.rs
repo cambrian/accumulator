@@ -113,29 +113,23 @@ fn compute_lucas_sequences(
   // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
   // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
   // we will have computed u_k and v_k, with k as given, in log(delta) time.
-  let mut k = int(1);
   for bit in k_target_bits[1..].chars() {
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
     u_k = int(&u_k * &v_k) % n;
-    v_k.pow_mod_mut(&int(2), n).unwrap();
-    v_k = (v_k - 2 * &q_k) % n;
+    v_k = (int(&v_k * &v_k) - 2 * &q_k) % n;
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
     q_k_over_2.assign(&q_k);
     q_k = int(&q_k * &q_k) % n;
-    k *= 2;
     if bit == '1' {
       // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
       // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
-      // TODO: Why is mod_n necessary here?
-      let pu_plus_v = int(p * &u_k + &v_k);
-      let du_plus_pv = (int(d * &u_k) + int(p * &v_k)) % n;
-      u_k = half(pu_plus_v);
+      let du_plus_pv = int(d * &u_k) + int(p * &v_k);
+      u_k = half(int(p * &u_k + &v_k));
       v_k = half(du_plus_pv);
       q_k = (q_k * q) % n;
-      k += 1;
     }
   }
   (u_k, v_k, q_k_over_2)
