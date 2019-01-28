@@ -10,6 +10,7 @@ mod constants;
 /// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).
 /// 3. Filter squares.
 /// 4. Do a strong probabilistic Lucas test.
+/// REVIEW: parallelize subtests
 pub fn is_prob_prime(n: &Integer) -> bool {
   for &p in constants::SMALL_PRIMES.iter() {
     if n.is_congruent_u(0, p) {
@@ -94,7 +95,6 @@ fn compute_lucas_sequences(
   q: &Integer,
   d: &Integer,
 ) -> (Integer, Integer, Integer) {
-  let k_target_bits = to_binary(k_target);
   let mut u_k = u_1.clone();
   let mut v_k = v_1.clone();
   let mut q_k = q.clone();
@@ -113,7 +113,8 @@ fn compute_lucas_sequences(
   // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
   // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
   // we will have computed u_k and v_k, with k as given, in log(delta) time.
-  for bit in k_target_bits[1..].chars() {
+  let len = k_target.significant_bits();
+  for i in (0..len - 1).rev() {
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
@@ -122,7 +123,7 @@ fn compute_lucas_sequences(
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
     q_k_over_2.assign(&q_k);
     q_k = int(&q_k * &q_k) % n;
-    if bit == '1' {
+    if k_target.get_bit(i) {
       // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
       // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
@@ -133,10 +134,6 @@ fn compute_lucas_sequences(
     }
   }
   (u_k, v_k, q_k_over_2)
-}
-
-fn to_binary(n: &Integer) -> String {
-  format!("{:b}", n)
 }
 
 #[cfg(test)]
@@ -167,12 +164,6 @@ mod tests {
   }
 
   #[test]
-  fn test_to_binary() {
-    assert_eq!(to_binary(&int(1)), "1");
-    assert_eq!(to_binary(&int(44)), "101100");
-  }
-
-  #[test]
   fn test_lucas() {
     // should fail on p = 2
     for &sp in SMALL_PRIMES[1..].iter() {
@@ -196,6 +187,7 @@ mod tests {
     assert!(is_prob_prime(&int(5)));
     assert!(is_prob_prime(&int(7)));
     assert!(is_prob_prime(&int(241)));
+    // assert!(false);
     assert!(is_prob_prime(&int(7919)));
     assert!(is_prob_prime(&int(48131)));
     assert!(is_prob_prime(&int(76463)));
