@@ -36,7 +36,7 @@ where
   let mut counter = 0u64;
   loop {
     let mut candidate_prime = int(hash(new_hasher, &(t, counter)));
-    // Make the candidate prime odd. This gives ~4% performance gain on a 2018 Macbook Pro.
+    // Make the candidate prime odd. This gives ~7% performance gain on a 2018 Macbook Pro.
     candidate_prime.set_bit(0, true);
     if primality::is_prob_prime(&candidate_prime) {
       return candidate_prime;
