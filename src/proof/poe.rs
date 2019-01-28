@@ -1,5 +1,6 @@
 use crate::group::Group;
 use crate::hash::{hash_to_prime, Blake2b};
+use crate::util::int;
 use rug::Integer;
 
 #[allow(non_snake_case)]
@@ -21,7 +22,7 @@ impl<G: Group> PoE<G> {
   /// See page 16 of B&B.
   pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &PoE<G>) -> bool {
     let l = hash_to_prime(&Blake2b::default, &(base, exp, result));
-    let r = exp % l.clone();
+    let r = int(exp % &l);
     // w = Q^l * u^r
     let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
     w == *result

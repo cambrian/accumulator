@@ -17,7 +17,7 @@ impl<G: UnknownOrderGroup> PoKE2<G> {
     let z = G::exp(&g, exp);
     let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
     let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
-    let (q, r) = exp.clone().div_rem_euc(l);
+    let (q, r) = <(Integer, Integer)>::from(exp.div_rem_euc_ref(&l));
     #[allow(non_snake_case)]
     let Q = G::exp(&G::op(&base, &G::exp(&g, &alpha)), &q);
     PoKE2 { z, Q, r }
