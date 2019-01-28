@@ -113,8 +113,7 @@ fn compute_lucas_sequences(
   // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
   // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
   // we will have computed u_k and v_k, with k as given, in log(delta) time.
-  let len = k_target.significant_bits();
-  for i in (0..len - 1).rev() {
+  for i in (0..k_target.significant_bits() - 1).rev() {
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
