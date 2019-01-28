@@ -40,31 +40,24 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
 /// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
 /// factorization of n-1). Selects parameters d, p, q according to Selfridge's method.
 /// Cf. https://en.wikipedia.org/wiki/Lucas_pseudoprime
+/// If n passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
+/// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
+/// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
 fn passes_lucas(n: &Integer) -> bool {
   let d = choose_d(&n);
   let p = int(1);
-  let q = (1 - d.clone()) / 4;
+  let q = int(1 - &d) / 4;
   let delta = n.clone() + 1;
 
   let (u_delta, v_delta, q_delta_over_2) =
     compute_lucas_sequences(&delta, n, &int(1), &p, &p, &q, &d);
   // u_delta % n != 0 proves n composite.
-  if u_delta != 0 {
-    return false;
-  }
-  // Additional check which is not strictly part of Lucas test but nonetheless filters some
-  // composite n for free. See section "Checking additional congruence conditions" on Wikipedia.
-  if !v_delta.is_congruent(&(2 * q.clone()), &n) {
-    return false;
-  }
-  // Congruence check which holds for prime n by Euler's criterion.
-  if !q_delta_over_2.is_congruent(&(q.clone() * q.jacobi(&n)), &n) {
-    return false;
-  }
-  // n is either prime or a "strong" Lucas pseudoprime. (The precise meaning of "strong" is not
-  // fixed in the literature.) Procedure can be further strengthened by implementing more tests in
-  // section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
-  true
+  u_delta == 0
+    // Additional check which is not strictly part of Lucas test but nonetheless filters some
+    // composite n for free. See section "Checking additional congruence conditions" on Wikipedia.
+    && v_delta.is_congruent(&int(2 * &q), &n)
+    // Congruence check which holds for prime n by Euler's criterion.
+    && q_delta_over_2.is_congruent(&int(&q * q.jacobi(&n)), &n)
 }
 
 /// Finds and returns first D in [5, -7, 9, ..., 5 + 2 * max_iter] for which Jacobi symbol (D/n) =
