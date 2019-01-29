@@ -1,11 +1,9 @@
 use crate::group::Group;
 use rug::Integer;
 
-/// We use the singleton pattern to fake type-level programming.
-/// Self::Rep stores info that we would like to "reflect" from the type-level at runtime.
-/// We use a separate type Self::Rep from Self so that Self can be an uninhabitable type and exist
-/// purely at the type-level.
-pub trait Singleton {
+/// Poor man's type-level programming.
+/// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
+pub trait TypeRep {
   type Rep: 'static;
   fn rep() -> &'static Self::Rep;
 }

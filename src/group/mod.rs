@@ -1,4 +1,4 @@
-use crate::util::{int, Singleton};
+use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::hash::Hash;
 use std::marker::Sized;
@@ -7,17 +7,11 @@ mod class;
 mod rsa;
 pub use rsa::{RSA2048Elem, RSA2048};
 
-/// We need a runtime representation for the group itself because reading in group parameters
-/// (i.e. RSA modulus) is infeasible to do at the type-level in Rust.
+/// We avoid having to pass group objects around by using the TypeRep trait.
 ///
-/// We mimic type-level programming by using the singleton pattern here. For each group, there
-/// should be a single, constant, static instance of the group representation accessible at all
-/// times. This way, we can "reflect" information about the group type by accessing the singleton.
-/// Refer to dummy.rs for an example.
-///
-/// The trait Clone is required here because Rust can't figure out how to clone a wrapped
-/// Group::Elem when parameterized only by the Group type.
-pub trait Group: Singleton + Clone {
+/// Clone is only required here because Rust can't figure out how to clone a wrapped Group::Elem
+/// when parameterized by the Group type. If possible we'd remove it.
+pub trait Group: TypeRep + Clone {
   /// In theory the association Group::Elem is bijective, such that it makes sense to write
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
   /// type and avoid using prefix notation for all of our group operations.
