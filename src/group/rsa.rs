@@ -1,6 +1,6 @@
 //! RSA (2048) group using rug's GMP integers.
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::util::{int, Singleton};
+use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::str::FromStr;
 
@@ -28,7 +28,7 @@ lazy_static! {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct RSA2048Elem(Integer);
 
-impl Singleton for RSA2048 {
+impl TypeRep for RSA2048 {
   type Rep = Integer;
   fn rep() -> &'static Self::Rep {
     &RSA2048_MODULUS

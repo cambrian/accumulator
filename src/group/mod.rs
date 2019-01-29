@@ -23,7 +23,7 @@ pub trait Group: TypeRep + Clone {
   fn op_(rep: &Self::Rep, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
 
   /// Default implementation of exponentiation via repeated squaring.
-  /// Group implementations may provide more performant specializations
+  /// Implementations may provide more performant specializations
   /// (e.g. Montgomery multiplication for RSA groups).
   fn exp_(_rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
     let (mut val, mut a, mut n) = {
