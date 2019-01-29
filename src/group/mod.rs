@@ -14,7 +14,10 @@ pub use rsa::{RSA2048Elem, RSA2048};
 /// should be a single, constant, static instance of the group representation accessible at all
 /// times. This way, we can "reflect" information about the group type by accessing the singleton.
 /// Refer to dummy.rs for an example.
-pub trait Group: Singleton {
+///
+/// The trait Clone is required here because Rust can't figure out how to clone a wrapped
+/// Group::Elem when parameterized only by the Group type.
+pub trait Group: Singleton + Clone {
   /// In theory the association Group::Elem is bijective, such that it makes sense to write
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
   /// type and avoid using prefix notation for all of our group operations.

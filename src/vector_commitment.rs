@@ -1,6 +1,5 @@
 // TODO: Reconsider when/where to group elems by bit.
-use super::accumulator;
-use super::accumulator::{MembershipProof, NonmembershipProof};
+use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof};
 use crate::group::UnknownOrderGroup;
 use crate::hash::hash_to_prime;
 use rug::Integer;
@@ -17,8 +16,8 @@ pub struct VectorProof<G: UnknownOrderGroup> {
   nonmembership_proof: NonmembershipProof<G>,
 }
 
-pub fn setup<G: UnknownOrderGroup>() -> G::Elem {
-  accumulator::setup::<G>()
+pub fn setup<G: UnknownOrderGroup>() -> Accumulator<G> {
+  Accumulator::<G>::new()
 }
 
 fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Integer>), VCError> {
@@ -39,10 +38,10 @@ fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Int
 }
 
 pub fn update<G: UnknownOrderGroup>(
-  acc: G::Elem,
+  acc: Accumulator<G>,
   acc_set: &[Integer],
   bits: &[(bool, Integer)],
-) -> Result<(G::Elem, VectorProof<G>), VCError> {
+) -> Result<(Accumulator<G>, VectorProof<G>), VCError> {
   // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
   // REVIEW: use Result::? operator to cleanup error handling logic
   let group_result = group_elems_by_bit(&bits);
@@ -50,9 +49,10 @@ pub fn update<G: UnknownOrderGroup>(
     return Err(e);
   }
   let (elems_with_zero, elems_with_one) = group_result.unwrap();
-  let (new_acc, membership_proof) = accumulator::add::<G>(acc, &elems_with_one);
-  let nonmembership_proof =
-    accumulator::prove_nonmembership(&new_acc, acc_set, &elems_with_zero).unwrap();
+  let (new_acc, membership_proof) = acc.add(&elems_with_one);
+  let nonmembership_proof = new_acc
+    .prove_nonmembership(acc_set, &elems_with_zero)
+    .unwrap();
   Ok((
     new_acc,
     VectorProof {
@@ -63,22 +63,22 @@ pub fn update<G: UnknownOrderGroup>(
 }
 
 pub fn open<G: UnknownOrderGroup>(
-  acc: &G::Elem,
+  acc: &Accumulator<G>,
   acc_set: &[Integer],
   zero_bits: &[Integer],
-  one_bit_witnesses: &[(Integer, G::Elem)],
+  one_bit_witnesses: &[(Integer, Accumulator<G>)],
 ) -> Result<VectorProof<G>, VCError> {
   let elems_with_zero: Vec<Integer> = zero_bits.iter().map(|i| hash_to_prime(&i)).collect();
-  let elem_witnesses_with_one: Vec<(Integer, G::Elem)> = one_bit_witnesses
+  let elem_witnesses_with_one: Vec<(Integer, Accumulator<G>)> = one_bit_witnesses
     .iter()
     .map(|(i, witness)| (hash_to_prime(&i), witness.clone()))
     .collect();
-  let membership_proof = accumulator::prove_membership::<G>(acc, &elem_witnesses_with_one);
+  let membership_proof = acc.prove_membership(&elem_witnesses_with_one);
   // REVIEW: use Result::? operator and Result::map_err to cleanup error handling logic
   if membership_proof.is_err() {
     return Err(VCError::InvalidOpenError);
   }
-  let nonmembership_proof = accumulator::prove_nonmembership::<G>(acc, acc_set, &elems_with_zero);
+  let nonmembership_proof = acc.prove_nonmembership(acc_set, &elems_with_zero);
   if nonmembership_proof.is_err() {
     return Err(VCError::InvalidOpenError);
   }
@@ -89,7 +89,7 @@ pub fn open<G: UnknownOrderGroup>(
 }
 
 pub fn verify<G: UnknownOrderGroup>(
-  acc: &G::Elem,
+  acc: &Accumulator<G>,
   bits: &[(bool, Integer)],
   VectorProof {
     membership_proof,
@@ -101,9 +101,8 @@ pub fn verify<G: UnknownOrderGroup>(
     return false;
   }
   let (elems_with_zero, elems_with_one) = group_result.unwrap();
-  let verified_membership = accumulator::verify_membership(acc, &elems_with_one, membership_proof);
-  let verified_nonmembership =
-    accumulator::verify_nonmembership(acc, &elems_with_zero, nonmembership_proof);
+  let verified_membership = acc.verify_membership(&elems_with_one, membership_proof);
+  let verified_nonmembership = acc.verify_nonmembership(&elems_with_zero, nonmembership_proof);
   verified_membership && verified_nonmembership
 }
 

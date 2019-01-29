@@ -4,7 +4,7 @@ use crate::util::{int, Singleton};
 use rug::Integer;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RSA2048 {}
 
 /// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048.

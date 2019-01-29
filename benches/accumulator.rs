@@ -3,36 +3,35 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::accumulator;
-use crypto::accumulator::MembershipProof;
+use crypto::accumulator::{Accumulator, MembershipProof};
 use crypto::group::{UnknownOrderGroup, RSA2048};
-use crypto::hash::{hash_to_prime};
+use crypto::hash::hash_to_prime;
 use rand::Rng;
 use rug::Integer;
 
 #[allow(dead_code)]
-fn bench_delete<G: UnknownOrderGroup>(acc: G::Elem, witness: &[(Integer, G::Elem)]) {
-  accumulator::delete::<G>(acc, witness).expect("valid delete expected");
+fn bench_delete<G: UnknownOrderGroup>(acc: Accumulator<G>, witness: &[(Integer, Accumulator<G>)]) {
+  acc.delete(witness).expect("valid delete expected");
 }
 
 fn bench_add(elems: &[Integer]) {
-  let acc = accumulator::setup::<RSA2048>();
-  accumulator::add::<RSA2048>(acc, elems);
+  let acc = Accumulator::<RSA2048>::new();
+  acc.add(elems);
 }
 
 fn bench_verify<G: UnknownOrderGroup>(
-  acc: &G::Elem,
+  acc: &Accumulator<G>,
   elems: &[Integer],
   proof: &MembershipProof<G>,
 ) {
-  assert!(accumulator::verify_membership::<G>(acc, elems, proof));
+  assert!(acc.verify_membership(elems, proof));
 }
 
 #[allow(dead_code)]
 fn bench_iterative_add(elems: &[Integer]) {
-  let mut acc = accumulator::setup::<RSA2048>();
+  let mut acc = Accumulator::<RSA2048>::new();
   for elem in elems.chunks(1) {
-    acc = accumulator::add::<RSA2048>(acc, elem).0;
+    acc = acc.add(elem).0;
   }
 }
 
@@ -48,10 +47,10 @@ fn criterion_benchmark(c: &mut Criterion) {
   let elems_1 = [elems[0].clone()];
   let elems_2 = elems.clone();
   let elems_3 = elems.clone();
-  let acc = accumulator::setup::<RSA2048>();
+  let acc = Accumulator::<RSA2048>::new();
   let mut new_acc;
   let mut proof;
-  let (holder, proof_holder) = accumulator::add::<RSA2048>(acc.clone(), &elems.clone());
+  let (holder, proof_holder) = acc.clone().add(&elems.clone());
   new_acc = holder;
   proof = proof_holder;
   // Test verification on lots of elements. Added in batches to not go crazy with exponent size.
@@ -62,7 +61,7 @@ fn criterion_benchmark(c: &mut Criterion) {
       let prime = hash_to_prime(&random_bytes);
       elems.push(prime);
     }
-    let (curr_acc, curr_proof) = accumulator::add::<RSA2048>(new_acc.clone(), &elems.clone());
+    let (curr_acc, curr_proof) = new_acc.clone().add(&elems.clone());
     new_acc = curr_acc;
     proof = curr_proof;
   }
