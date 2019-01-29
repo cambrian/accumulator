@@ -43,12 +43,7 @@ pub fn update<G: UnknownOrderGroup>(
   bits: &[(bool, Integer)],
 ) -> Result<(Accumulator<G>, VectorProof<G>), VCError> {
   // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
-  // REVIEW: use Result::? operator to cleanup error handling logic
-  let group_result = group_elems_by_bit(&bits);
-  if let Err(e) = group_result {
-    return Err(e);
-  }
-  let (elems_with_zero, elems_with_one) = group_result.unwrap();
+  let (elems_with_zero, elems_with_one) = group_elems_by_bit(&bits)?;
   let (new_acc, membership_proof) = acc.add(&elems_with_one);
   let nonmembership_proof = new_acc
     .prove_nonmembership(acc_set, &elems_with_zero)
@@ -73,18 +68,15 @@ pub fn open<G: UnknownOrderGroup>(
     .iter()
     .map(|(i, witness)| (hash_to_prime(&i), witness.clone()))
     .collect();
-  let membership_proof = acc.prove_membership(&elem_witnesses_with_one);
-  // REVIEW: use Result::? operator and Result::map_err to cleanup error handling logic
-  if membership_proof.is_err() {
-    return Err(VCError::InvalidOpenError);
-  }
-  let nonmembership_proof = acc.prove_nonmembership(acc_set, &elems_with_zero);
-  if nonmembership_proof.is_err() {
-    return Err(VCError::InvalidOpenError);
-  }
+  let membership_proof = acc
+    .prove_membership(&elem_witnesses_with_one)
+    .map_err(|_| VCError::InvalidOpenError)?;
+  let nonmembership_proof = acc
+    .prove_nonmembership(acc_set, &elems_with_zero)
+    .map_err(|_| VCError::InvalidOpenError)?;
   Ok(VectorProof {
-    membership_proof: membership_proof.unwrap(),
-    nonmembership_proof: nonmembership_proof.unwrap(),
+    membership_proof,
+    nonmembership_proof,
   })
 }
 

@@ -1,7 +1,6 @@
 use crypto::accumulator::Accumulator;
-use crypto::group::{UnknownOrderGroup, RSA2048};
+use crypto::group::RSA2048;
 use crypto::hash::hash_to_prime;
-use crypto::util::int;
 use rand::Rng;
 
 /// Adds 10,000 random primes to accumulator (unverified), then tests 100 more random additions
