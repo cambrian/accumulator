@@ -162,10 +162,12 @@ mod tests {
 
   #[test]
   fn test_lucas() {
-    // should fail on p = 2
+    // Should fail on p = 2.
     for &sp in SMALL_PRIMES[1..].iter() {
       assert!(passes_lucas(&int(sp)));
-      assert!(!passes_lucas(&(int(sp) * 241)));
+      // Note: The factor cannot be in SMALL_PRIMES or this test will fail because `choose_d` fails
+      // on square numbers.
+      assert!(!passes_lucas(&(int(sp) * 2047)));
     }
     for &mp in MED_PRIMES.iter() {
       assert!(passes_lucas(&int(mp)));
