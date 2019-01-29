@@ -28,8 +28,12 @@ pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -
   h.finalize()
 }
 
+pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
+  hash(&Blake2b::default, t)
+}
+
 /// Hashes t with an incrementing counter until a prime is found.
-pub fn hash_to_prime<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> Integer
+pub fn hash_to_prime_<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> Integer
 where
   Integer: From<H::Output>,
 {
@@ -43,6 +47,11 @@ where
     }
     counter += 1;
   }
+}
+
+/// Calls hash_to_prime_ with Blake2b hasher.
+pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
+  hash_to_prime_(&Blake2b::default, t)
 }
 
 #[cfg(test)]
@@ -60,8 +69,8 @@ mod tests {
     let b_1 = "boom i got ur boyfriend";
     let b_2 = "boom i got ur boyfriene";
     assert_ne!(b_1, b_2);
-    let h_1 = hash_to_prime(&Blake2b::default, b_1);
-    let h_2 = hash_to_prime(&Blake2b::default, b_2);
+    let h_1 = hash_to_prime(b_1);
+    let h_2 = hash_to_prime(b_2);
     assert_ne!(h_1, h_2);
     assert!(primality::is_prob_prime(&h_1));
     assert!(primality::is_prob_prime(&h_2));

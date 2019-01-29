@@ -2,7 +2,7 @@
 use super::accumulator;
 use super::accumulator::{MembershipProof, NonmembershipProof};
 use crate::group::UnknownOrderGroup;
-use crate::hash::{hash_to_prime, Blake2b};
+use crate::hash::hash_to_prime;
 use rug::Integer;
 use std::collections::HashSet;
 
@@ -30,9 +30,9 @@ fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Int
       return Err(VCError::ConflictingIndicesError);
     }
     if *bit {
-      elems_with_one.push(hash_to_prime(&Blake2b::default, &i));
+      elems_with_one.push(hash_to_prime(&i));
     } else {
-      elems_with_zero.push(hash_to_prime(&Blake2b::default, &i));
+      elems_with_zero.push(hash_to_prime(&i));
     }
   }
   Ok((elems_with_zero, elems_with_one))
@@ -67,13 +67,10 @@ pub fn open<G: UnknownOrderGroup>(
   zero_bits: &[Integer],
   one_bit_witnesses: &[(Integer, G::Elem)],
 ) -> Result<VectorProof<G>, VCError> {
-  let elems_with_zero: Vec<Integer> = zero_bits
-    .iter()
-    .map(|i| hash_to_prime(&Blake2b::default, &i))
-    .collect();
+  let elems_with_zero: Vec<Integer> = zero_bits.iter().map(|i| hash_to_prime(&i)).collect();
   let elem_witnesses_with_one: Vec<(Integer, G::Elem)> = one_bit_witnesses
     .iter()
-    .map(|(i, witness)| (hash_to_prime(&Blake2b::default, &i), witness.clone()))
+    .map(|(i, witness)| (hash_to_prime(&i), witness.clone()))
     .collect();
   let membership_proof = accumulator::prove_membership::<G>(acc, &elem_witnesses_with_one);
   if membership_proof.is_err() {

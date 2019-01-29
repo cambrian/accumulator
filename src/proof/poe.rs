@@ -1,5 +1,5 @@
 use crate::group::Group;
-use crate::hash::{hash_to_prime, Blake2b};
+use crate::hash::hash_to_prime;
 use crate::util::int;
 use rug::Integer;
 
@@ -12,7 +12,7 @@ pub struct PoE<G: Group> {
 impl<G: Group> PoE<G> {
   /// See page 16 of B&B.
   pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> PoE<G> {
-    let l = hash_to_prime(&Blake2b::default, &(base, exp, result));
+    let l = hash_to_prime(&(base, exp, result));
     let q = exp / l;
     PoE {
       Q: G::exp(&base, &q),
@@ -21,7 +21,7 @@ impl<G: Group> PoE<G> {
 
   /// See page 16 of B&B.
   pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &PoE<G>) -> bool {
-    let l = hash_to_prime(&Blake2b::default, &(base, exp, result));
+    let l = hash_to_prime(&(base, exp, result));
     let r = int(exp % &l);
     // w = Q^l * u^r
     let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));

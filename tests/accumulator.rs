@@ -3,7 +3,7 @@ use crypto::accumulator::{
   verify_nonmembership,
 };
 use crypto::group::{Group, UnknownOrderGroup, RSA2048};
-use crypto::hash::{hash_to_prime, Blake2b};
+use crypto::hash::hash_to_prime;
 use crypto::util::int;
 use rand::Rng;
 
@@ -29,7 +29,7 @@ fn stress_test() {
   let mut acc = setup::<RSA2048>();
   for _ in 0..100 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-    let prime = hash_to_prime(&Blake2b::default, &random_bytes);
+    let prime = hash_to_prime(&random_bytes);
     acc_set.push(prime);
   }
   println!("Starting add");
@@ -38,7 +38,7 @@ fn stress_test() {
   println!("{}", acc_set.len());
   for _ in 0..100 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-    let prime = hash_to_prime(&Blake2b::default, &random_bytes);
+    let prime = hash_to_prime(&random_bytes);
     assert!(!acc_set.contains(&prime));
     let (new_acc, add_proof) = add::<RSA2048>(acc.clone(), &[prime.clone()]);
     assert!(verify_membership(&new_acc, &[prime.clone()], &add_proof));
@@ -54,7 +54,7 @@ fn stress_test() {
     ));
     for _ in 0..100 {
       let random_bytes_2 = rand::thread_rng().gen::<[u8; 32]>();
-      let random_exp = hash_to_prime(&Blake2b::default, &random_bytes_2);
+      let random_exp = hash_to_prime(&random_bytes_2);
       let false_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &random_exp);
       assert!(prove_membership::<RSA2048>(&acc, &[(prime.clone(), false_witness)]).is_err());
     }

@@ -1,5 +1,5 @@
 use crate::group::UnknownOrderGroup;
-use crate::hash::{hash, hash_to_prime, Blake2b};
+use crate::hash::{blake2b, hash_to_prime};
 use rug::Integer;
 
 #[allow(non_snake_case)]
@@ -15,8 +15,8 @@ impl<G: UnknownOrderGroup> PoKE2<G> {
   pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> PoKE2<G> {
     let g = G::unknown_order_elem();
     let z = G::exp(&g, exp);
-    let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
-    let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
+    let l = hash_to_prime(&(base, result, &z));
+    let alpha = blake2b(&(base, result, &z, &l));
     let (q, r) = <(Integer, Integer)>::from(exp.div_rem_euc_ref(&l));
     #[allow(non_snake_case)]
     let Q = G::exp(&G::op(&base, &G::exp(&g, &alpha)), &q);
@@ -27,8 +27,8 @@ impl<G: UnknownOrderGroup> PoKE2<G> {
   #[allow(non_snake_case)]
   pub fn verify(base: &G::Elem, result: &G::Elem, PoKE2 { z, Q, r }: &PoKE2<G>) -> bool {
     let g = G::unknown_order_elem();
-    let l = hash_to_prime(&Blake2b::default, &(base, result, &z));
-    let alpha = hash(&Blake2b::default, &(base, result, &z, &l));
+    let l = hash_to_prime(&(base, result, &z));
+    let alpha = blake2b(&(base, result, &z, &l));
     let lhs = G::op(
       &G::exp(Q, &l),
       &G::exp(&G::op(&base, &G::exp(&g, &alpha)), &r),
