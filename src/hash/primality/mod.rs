@@ -11,7 +11,8 @@ mod constants;
 /// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).
 /// 3. Filter squares.
 /// 4. Do a strong probabilistic Lucas test.
-/// REVIEW: parallelize subtests
+/// REVIEW: Parallelize subtests (Rust will parallelize individual top-level tests by default, but
+/// obviously not internal asserts).
 pub fn is_prob_prime(n: &Integer) -> bool {
   for &p in constants::SMALL_PRIMES.iter() {
     if n.is_congruent_u(0, p) {
@@ -68,7 +69,7 @@ fn passes_lucas(n: &Integer) -> bool {
 /// low value to max_iter to avoid wasting too much time. Note that the average number of iterations
 /// required for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.
 fn choose_d(n: &Integer) -> Integer {
-  for &d in constants::DS.iter() {
+  for &d in constants::D_VALUES.iter() {
     let d_ = int(d);
     if d_.jacobi(&n) == -1 {
       return d_;
