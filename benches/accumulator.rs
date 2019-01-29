@@ -6,7 +6,7 @@ use criterion::Criterion;
 use crypto::accumulator;
 use crypto::accumulator::MembershipProof;
 use crypto::group::{UnknownOrderGroup, RSA2048};
-use crypto::hash::{hash_to_prime, Blake2b};
+use crypto::hash::{hash_to_prime};
 use rand::Rng;
 use rug::Integer;
 
@@ -42,7 +42,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   let mut elems = Vec::new();
   for _ in 0..100 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-    let prime = hash_to_prime(&Blake2b::default, &random_bytes);
+    let prime = hash_to_prime(&random_bytes);
     elems.push(prime);
   }
   let elems_1 = [elems[0].clone()];
@@ -59,7 +59,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     elems = vec![];
     for _ in 0..100 {
       let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-      let prime = hash_to_prime(&Blake2b::default, &random_bytes);
+      let prime = hash_to_prime(&random_bytes);
       elems.push(prime);
     }
     let (curr_acc, curr_proof) = accumulator::add::<RSA2048>(new_acc.clone(), &elems.clone());

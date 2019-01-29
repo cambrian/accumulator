@@ -3,16 +3,16 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::hash::{hash, hash_to_prime, Blake2b};
+use crypto::hash::{blake2b, hash_to_prime};
 use rand::Rng;
 
 fn bench_blake2() {
-  hash(&Blake2b::default, b"werg");
+  blake2b("werg");
 }
 
 fn bench_hash_to_prime() {
   let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-  hash_to_prime(&Blake2b::default, &random_bytes);
+  hash_to_prime(&random_bytes);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
