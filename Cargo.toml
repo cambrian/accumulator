@@ -1,11 +1,10 @@
 [package]
 name = "crypto"
 version = "0.1.0"
-edition = "2018"
+edition = "2019"
 authors = [
   "Pablo Aldape <pablo@vest.com>",
   "Lucas Ege <lucas@vest.com>",
-  "Noah Golub <noah@vest.com>",
   "Sanjay Kannan <sanjay@vest.com>",
   "Eddie Wang <eddie@vest.com>"
 ]
