@@ -3,10 +3,10 @@ name = "crypto"
 version = "0.1.0"
 edition = "2018"
 authors = [
-  "Pablo Aldape <pablo@vest.com>",
-  "Lucas Ege <lucas@vest.com>",
-  "Sanjay Kannan <sanjay@vest.com>",
-  "Eddie Wang <eddie@vest.com>"
+  "Pablo Aldape <pablo@vest.io>",
+  "Lucas Ege <lucas@vest.io>",
+  "Sanjay Kannan <sanjay@vest.io>",
+  "Eddie Wang <eddie@vest.io>"
 ]
 description = "Accumulators and associated cryptographic primitives in Rust."
 keywords = ["cryptography", "crypto", "accumulator", "rsa", "vector", "commitment"]
