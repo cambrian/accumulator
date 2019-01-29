@@ -76,6 +76,7 @@ pub fn prove_membership<G: UnknownOrderGroup>(
   elem_witnesses: &[(Integer, G::Elem)],
 ) -> Result<MembershipProof<G>, AccError> {
   let delete_result = delete::<G>(acc.clone(), elem_witnesses);
+  // REVIEW: use Result::? operator to cleanup error handling logic
   match delete_result {
     Ok((_, membership_proof)) => Ok(membership_proof),
     Err(e) => Err(e),

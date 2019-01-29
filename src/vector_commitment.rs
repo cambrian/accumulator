@@ -44,6 +44,7 @@ pub fn update<G: UnknownOrderGroup>(
   bits: &[(bool, Integer)],
 ) -> Result<(G::Elem, VectorProof<G>), VCError> {
   // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
+  // REVIEW: use Result::? operator to cleanup error handling logic
   let group_result = group_elems_by_bit(&bits);
   if let Err(e) = group_result {
     return Err(e);
@@ -73,6 +74,7 @@ pub fn open<G: UnknownOrderGroup>(
     .map(|(i, witness)| (hash_to_prime(&i), witness.clone()))
     .collect();
   let membership_proof = accumulator::prove_membership::<G>(acc, &elem_witnesses_with_one);
+  // REVIEW: use Result::? operator and Result::map_err to cleanup error handling logic
   if membership_proof.is_err() {
     return Err(VCError::InvalidOpenError);
   }
