@@ -10,8 +10,8 @@ pub use rsa::{RSA2048Elem, RSA2048};
 
 /// We avoid having to pass group objects around by using the TypeRep trait.
 ///
-/// Clone is only required here because Rust can't figure out how to clone a wrapped Group::Elem
-/// when parameterized by the Group type. If possible we'd remove it.
+/// Clone is only required here because Rust can't figure out how to clone an Accumulator<G> even
+/// though it's just a wrapped G::Elem. If possible we'd remove it.
 pub trait Group: TypeRep + Clone {
   /// In theory the association Group::Elem is bijective, such that it makes sense to write
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
