@@ -29,7 +29,13 @@ pub fn add<G: UnknownOrderGroup>(acc: G::Elem, elems: &[Integer]) -> (G::Elem, M
   let x = elems.iter().product();
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::<G>::prove(&acc, &x, &new_acc);
-  (new_acc, MembershipProof { witness: acc.clone(), proof: poe_proof })
+  (
+    new_acc,
+    MembershipProof {
+      witness: acc,
+      proof: poe_proof,
+    },
+  )
 }
 
 /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
@@ -55,7 +61,13 @@ pub fn delete<G: UnknownOrderGroup>(
   }
 
   let poe_proof = PoE::<G>::prove(&acc_next, &elem_aggregate, &acc);
-  Ok((acc_next.clone(), MembershipProof { witness: acc_next, proof: poe_proof }))
+  Ok((
+    acc_next.clone(),
+    MembershipProof {
+      witness: acc_next,
+      proof: poe_proof,
+    },
+  ))
 }
 
 /// Returns a proof (and associated variables) that `elem_witnesses` are aggregated in `acc`.
@@ -96,7 +108,7 @@ pub fn prove_nonmembership<G: UnknownOrderGroup>(
 ) -> Result<NonmembershipProof<G>, AccError> {
   let x: Integer = elems.iter().product();
   let s = acc_set.iter().product();
-  let (gcd, a, b) = x.clone().gcd_cofactors(s, Integer::new());
+  let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&s));
 
   if gcd != int(1) {
     return Err(AccError::InputsNotCoprime);
@@ -149,7 +161,7 @@ mod tests {
   fn test_add() {
     let acc = init_acc::<RSA2048>();
     let new_elems = [int(5), int(7), int(11)];
-    let (new_acc, proof) = add::<RSA2048>(acc.clone(), &new_elems);
+    let (new_acc, proof) = add::<RSA2048>(acc, &new_elems);
     let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(94_125_955));
     assert!(new_acc == expected_acc);
     assert!(verify_membership(&new_acc, &new_elems, &proof));
