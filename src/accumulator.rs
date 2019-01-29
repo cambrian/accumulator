@@ -89,12 +89,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     &self,
     elem_witnesses: &[(Integer, Self)],
   ) -> Result<MembershipProof<G>, AccError> {
-    let delete_result = self.clone().delete(elem_witnesses);
-    // REVIEW: use Result::? operator to cleanup error handling logic
-    match delete_result {
-      Ok((_, membership_proof)) => Ok(membership_proof),
-      Err(e) => Err(e),
-    }
+    Ok(self.clone().delete(elem_witnesses)?.1)
   }
 
   /// Verifies the PoE returned by `prove_membership`.
