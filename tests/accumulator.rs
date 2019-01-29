@@ -5,7 +5,7 @@ use rand::Rng;
 
 /// Adds 10,000 random primes to accumulator (unverified), then tests 100 more random additions
 /// (with verification) and 100 random elements are verified to be nonmembers.
-/// Takes about 5 minutes
+/// Takes about 5 minutes. (TODO: Disable by default since it takes so long?)
 #[test]
 fn stress_test() {
   let mut acc_set = Vec::new();

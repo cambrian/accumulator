@@ -13,7 +13,7 @@ pub enum AccError {
   InputsNotCoprime,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
 pub struct MembershipProof<G: UnknownOrderGroup> {
@@ -29,13 +29,15 @@ pub struct NonmembershipProof<G: UnknownOrderGroup> {
   poe_proof: PoE<G>,
 }
 
-// TODO: determine best way to address clippys
 impl<G: UnknownOrderGroup> Accumulator<G> {
   /// Initializes the accumulator to a group element.
   pub fn new() -> Self {
     Accumulator(G::unknown_order_elem())
   }
 
+  // The conciseness of accumulator.add() and low probability of confusion with implementations of
+  // the Add trait probably justify this...
+  #[allow(clippy::should_implement_trait)]
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are co-prime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multi-set.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
@@ -64,13 +66,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
         return Err(AccError::BadWitness);
       }
 
-      // REVIEW: use Option::ok_or
-      let acc_next_option = shamir_trick::<G>(&acc_next, &witness.0, &elem_aggregate, elem);
-      match acc_next_option {
-        Some(acc_next_value) => acc_next = acc_next_value,
-        None => return Err(AccError::InputsNotCoprime),
-      };
-
+      acc_next = shamir_trick::<G>(&acc_next, &witness.0, &elem_aggregate, elem)
+        .ok_or(AccError::InputsNotCoprime)?;
       elem_aggregate *= elem;
     }
 
