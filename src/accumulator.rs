@@ -75,12 +75,7 @@ pub fn prove_membership<G: UnknownOrderGroup>(
   acc: &G::Elem,
   elem_witnesses: &[(Integer, G::Elem)],
 ) -> Result<MembershipProof<G>, AccError> {
-  let delete_result = delete::<G>(acc.clone(), elem_witnesses);
-  // REVIEW: use Result::? operator to cleanup error handling logic
-  match delete_result {
-    Ok((_, membership_proof)) => Ok(membership_proof),
-    Err(e) => Err(e),
-  }
+  delete::<G>(acc.clone(), elem_witnesses).map(|(_, membership_proof)| Ok(membership_proof))?
 }
 
 /// Verifies the PoE returned by `prove_membership`.
