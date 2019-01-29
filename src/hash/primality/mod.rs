@@ -11,8 +11,7 @@ mod constants;
 /// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).
 /// 3. Filter squares.
 /// 4. Do a strong probabilistic Lucas test.
-/// REVIEW: Parallelize subtests (Rust will parallelize individual top-level tests by default, but
-/// obviously not internal asserts).
+/// REVIEW: Parallelize subtests (passes_miller_rabin_base_2, passes_lucas).
 pub fn is_prob_prime(n: &Integer) -> bool {
   for &p in constants::SMALL_PRIMES.iter() {
     if n.is_congruent_u(0, p) {
