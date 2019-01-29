@@ -8,7 +8,7 @@ Crypto primitives in Rust.
 4. Restart VS Code.
 
 ## Development
-1. Leave `cargo watch` running to type-check on save.
+1. Leave `cargo watch -x clippy` running to type-check on save.
 2. Run `cargo build [--package PACKAGE] [--release]` to build package(s).
 3. Run `cargo run [--package PACKAGE]` to run package executables.
 
