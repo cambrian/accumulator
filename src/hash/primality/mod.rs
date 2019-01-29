@@ -97,11 +97,12 @@ fn compute_lucas_sequences(
   let mut q_k_over_2 = q.clone();
 
   // Finds t in Z_n with 2t = x (mod n)
+  // assumes x in 0..n
   let half = |x: Integer| {
-    if x.is_congruent_u(1, 2) {
-      ((x + n) / 2) % n
+    if x.is_odd() {
+      (x + n) / 2
     } else {
-      (x / 2) % n
+      x / 2
     }
   };
 
@@ -124,8 +125,8 @@ fn compute_lucas_sequences(
       // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
       let du_plus_pv = int(d * &u_k) + int(p * &v_k);
-      u_k = half(int(p * &u_k + &v_k));
-      v_k = half(du_plus_pv);
+      u_k = half(int(p * &u_k + &v_k)) % n;
+      v_k = half(du_plus_pv) % n;
       q_k = (q_k * q) % n;
     }
   }
