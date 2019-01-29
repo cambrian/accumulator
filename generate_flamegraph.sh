@@ -1,6 +1,6 @@
 #!/bin/sh
 
-FLAMEGRAPH_FILENAME=$.svg
+FLAMEGRAPH_FILENAME=$1.svg
 FLAMEGRAPH_DIR=./flamegraph/graphs
 STACKS_FILENAME=$1.stacks
 STACKS_DIR=./flamegraph/stacks
