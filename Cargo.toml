@@ -68,10 +68,6 @@ harness = false
 opt-level = 3
 debug = true
 
-[profile.test]
-opt-level = 3
-debug = true
-
 # Flamegraph debug symbols. TODO: Remove when we actually cut releases?
 [profile.release]
 debug = true
