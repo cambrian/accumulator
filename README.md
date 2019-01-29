@@ -14,4 +14,4 @@ Crypto primitives in Rust.
 
 ## Troubleshooting
 - If your RLS hangs at `building`, run `cargo clean && rustup update`.
-- If you get unexpected build errors, delete `Cargo.lock` and re-build.
+- If you get unexpected build errors, delete `Cargo.lock`, run `cargo update`, and re-build.

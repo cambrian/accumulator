@@ -29,7 +29,7 @@ pub fn shamir_trick<G: Group>(
     return None;
   }
 
-  let (gcd, a, b) = x.clone().gcd_cofactors(y.clone(), Integer::new());
+  let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&y));
 
   if gcd != int(1) {
     return None;
