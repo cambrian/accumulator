@@ -28,6 +28,7 @@ pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -
   h.finalize()
 }
 
+/// Calls hash with Blake2b hasher.
 pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
   hash(&Blake2b::default, t)
 }
