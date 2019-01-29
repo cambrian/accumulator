@@ -82,6 +82,11 @@ pub trait UnknownOrderGroup: Group {
   }
 }
 
+/// Like From<T>, but implemented on the Group instead of the element type.
+pub trait ElemFrom<T>: Group {
+  fn elem(val: T) -> Self::Elem;
+}
+
 pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   if alphas.len() == 1 {
     return alphas[0].clone();
@@ -120,9 +125,4 @@ mod tests {
     let res_2 = multi_exp::<RSA2048>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
     assert!(res_2 == RSA2048::elem(1_687_500));
   }
-}
-
-/// Like From<T>, but implemented on the Group instead of the element type.
-pub trait ElemFrom<T>: Group {
-  fn elem(val: T) -> Self::Elem;
 }
