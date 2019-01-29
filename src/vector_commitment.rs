@@ -48,6 +48,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
     let (elems_with_zero, elems_with_one) = group_elems_by_bit(&bits)?;
     let (new_acc, membership_proof) = vc.0.add(&elems_with_one);
+    // REVIEW: pass error thru instead of using unwrap
     let nonmembership_proof = new_acc
       .prove_nonmembership(vc_acc_set, &elems_with_zero)
       .unwrap();
