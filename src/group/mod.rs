@@ -5,6 +5,7 @@ use std::hash::Hash;
 use std::marker::Sized;
 
 mod class;
+mod ecc;
 mod rsa;
 pub use rsa::{RSA2048Elem, RSA2048};
 
