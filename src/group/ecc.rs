@@ -34,6 +34,7 @@ impl PartialEq for ED25519Elem {
 /// Unsure of correct rep for this group. BASEPOINT_ORDER is described as the order of the Ristretto
 /// Group. I don't believe this will actually be used in the ops since it is likely used internally
 /// but it seemed like the best fit for TypeRep. Review welcome.
+/// REVIEW: If you never use the type rep, just make Rep = ()
 impl TypeRep for ED25519 {
   type Rep = Scalar;
   fn rep() -> &'static Self::Rep {
