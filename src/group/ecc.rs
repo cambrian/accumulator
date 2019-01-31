@@ -44,19 +44,24 @@ impl TypeRep for ED25519 {
 impl Group for ED25519 {
   type Elem = ED25519Elem;
 
-  fn op_(_rep: &Scalar, _a: &ED25519Elem, _b: &ED25519Elem) -> ED25519Elem {
-    unimplemented!();
+  fn op_(_: &Scalar, a: &ED25519Elem, b: &ED25519Elem) -> ED25519Elem {
+    ED25519Elem(a.0 + b.0)
   }
 
   fn id_(_: &Scalar) -> ED25519Elem {
-    unimplemented!();
+    ED25519Elem(RistrettoPoint::identity())
   }
 
   fn inv_(_: &Scalar, _x: &ED25519Elem) -> ED25519Elem {
+    // assert(not point at infinity)
+    // Convert x.Y to -x.Y, but I believe this requires control of FieldElems, which are in the
+    // private crate field.
     unimplemented!();
   }
 
   fn exp_(_: &Scalar, _x: &ED25519Elem, _n: &Integer) -> ED25519Elem {
+    // Need to implement Integer -> Scalar, or x * Integer
+    // ED25519(x.0 * n)
     unimplemented!();
   }
 }
