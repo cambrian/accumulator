@@ -29,7 +29,8 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
     return true;
   }
   for _ in 1..r {
-    x.pow_mod_mut(&int(2), n).unwrap();
+    x *= x.clone();
+    x %= n;
     if x == 1 {
       return false;
     }
