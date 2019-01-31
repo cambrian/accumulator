@@ -94,9 +94,9 @@ mod tests {
   #[test]
   fn test_exp() {
     let bp = Ed25519Elem(constants::RISTRETTO_BASEPOINT_POINT);
-    let exp_512 = Ed25519::exp(&bp, &int(2).pow(256));
-    let exp_256 = Ed25519::exp(&bp, &int(2).pow(255));
-    let exp_256_2 = Ed25519::exp(&exp_256, &int(2));
-    assert_eq!(exp_512, exp_256_2);
+    let exp_a = Ed25519::exp(&bp, &int(2).pow(258));
+    let exp_b = Ed25519::exp(&bp, &int(2).pow(257));
+    let exp_b_2 = Ed25519::exp(&exp_b, &int(2));
+    assert_eq!(exp_a, exp_b_2);
   }
 }
