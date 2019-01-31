@@ -23,8 +23,11 @@ pub fn is_prob_prime(n: &Integer) -> bool {
 
 pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   let (d, r) = int(n - 1).remove_factor(&int(2));
-  let mut x = int(2).pow_mod(&d, n).unwrap();
-  if x == 1 || x == n.clone() - 1 {
+  // Reserving capacity lets us avoid reallocations related to x increasing in size
+  let mut x = Integer::with_capacity(2048);
+  x.assign(2);
+  x.pow_mod_mut(&d, n).unwrap();
+  if x == 1 || x == int(n - 1) {
     return true;
   }
   for _ in 1..r {
@@ -32,7 +35,7 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
     if x == 1 {
       return false;
     }
-    if x == n.clone() - 1 {
+    if x == int(n - 1) {
       return true;
     }
   }

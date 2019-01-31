@@ -47,11 +47,9 @@ impl Group for Ed25519 {
     Ed25519Elem(RistrettoPoint::identity())
   }
 
-  fn inv_(_: &(), _x: &Ed25519Elem) -> Ed25519Elem {
+  fn inv_(_: &(), x: &Ed25519Elem) -> Ed25519Elem {
     // assert(not point at infinity)
-    // Convert x.Y to -x.Y, but I believe this requires control of FieldElems, which are in the
-    // private crate field.
-    unimplemented!();
+    Ed25519Elem(-x.0)
   }
 
   fn exp_(_: &(), _x: &Ed25519Elem, _n: &Integer) -> Ed25519Elem {
