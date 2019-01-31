@@ -13,6 +13,11 @@ pub enum Ed25519 {}
 
 lazy_static! {
   pub static ref MAX_SAFE_EXPONENT: Integer = int(2).pow(255) - 1;
+  pub static ref MAX_SAFE_SCALAR: Scalar = {
+    let mut digits: [u8; 32] = [0; 32];
+    MAX_SAFE_EXPONENT.write_digits(&mut digits, Order::LsfLe);
+    Scalar::from_bytes_mod_order(digits)
+  };
 }
 
 impl Ed25519 {
@@ -61,16 +66,14 @@ impl Group for Ed25519 {
 
   fn exp_(_: &(), x: &Ed25519Elem, n: &Integer) -> Ed25519Elem {
     let mut remaining = n.clone();
-    let mut digits: [u8; 32] = [0; 32];
     let mut result = Ed25519::id();
 
-    while remaining > *Ed25519::max_safe_exponent() {
-      Ed25519::max_safe_exponent().write_digits(&mut digits, Order::LsfLe);
-      let factor = Scalar::from_bytes_mod_order(digits);
-      result = Ed25519Elem(result.0 + x.0 * factor);
+    while remaining > *MAX_SAFE_EXPONENT {
+      result = Ed25519Elem(result.0 + x.0 * (*MAX_SAFE_SCALAR));
       remaining -= Ed25519::max_safe_exponent();
     }
 
+    let mut digits: [u8; 32] = [0; 32];
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
     Ed25519Elem(result.0 + x.0 * factor)
