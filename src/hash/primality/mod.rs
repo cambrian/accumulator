@@ -24,7 +24,9 @@ pub fn is_prob_prime(n: &Integer) -> bool {
 pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   let (d, r) = int(n - 1).remove_factor(&int(2));
   // Reserving capacity lets us avoid reallocations related to x increasing in size
-  let mut x = Integer::with_capacity(2048);
+  // REVIEW: Capacity is chosen to work well with 256-bit n, but it may be better to pass in a
+  // size hint.
+  let mut x = Integer::with_capacity(512);
   x.assign(2);
   x.pow_mod_mut(&d, n).unwrap();
   if x == 1 || x == int(n - 1) {
