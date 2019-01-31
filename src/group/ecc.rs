@@ -4,6 +4,7 @@ use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
 use rug::integer::Order;
+use rug::ops::Pow;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
@@ -11,7 +12,7 @@ use std::hash::{Hash, Hasher};
 pub enum Ed25519 {}
 
 lazy_static! {
-  pub static ref MAX_SAFE_EXPONENT: Integer = int(2 ^ 256);
+  pub static ref MAX_SAFE_EXPONENT: Integer = int(2).pow(255) - 1;
 }
 
 impl Ed25519 {
@@ -61,17 +62,41 @@ impl Group for Ed25519 {
   fn exp_(_: &(), x: &Ed25519Elem, n: &Integer) -> Ed25519Elem {
     let mut remaining = n.clone();
     let mut digits: [u8; 32] = [0; 32];
-    let mut result = x.clone();
+    let mut result = Ed25519::id();
 
     while remaining > *Ed25519::max_safe_exponent() {
       Ed25519::max_safe_exponent().write_digits(&mut digits, Order::LsfLe);
       let factor = Scalar::from_bytes_mod_order(digits);
-      result = Ed25519Elem(result.0 * factor);
+      result = Ed25519Elem(result.0 + x.0 * factor);
       remaining -= Ed25519::max_safe_exponent();
     }
 
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
-    Ed25519Elem(result.0 * factor)
+    Ed25519Elem(result.0 + x.0 * factor)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::util::int;
+  use curve25519_dalek::constants;
+
+  #[test]
+  fn test_inv() {
+    let bp = Ed25519Elem(constants::RISTRETTO_BASEPOINT_POINT);
+    let bp_inv = Ed25519::inv(&bp);
+    assert!(Ed25519::op(&bp, &bp_inv) == Ed25519::id());
+    assert_ne!(bp, bp_inv);
+  }
+
+  #[test]
+  fn test_exp() {
+    let bp = Ed25519Elem(constants::RISTRETTO_BASEPOINT_POINT);
+    let exp_a = Ed25519::exp(&bp, &int(2).pow(258));
+    let exp_b = Ed25519::exp(&bp, &int(2).pow(257));
+    let exp_b_2 = Ed25519::exp(&exp_b, &int(2));
+    assert_eq!(exp_a, exp_b_2);
   }
 }
