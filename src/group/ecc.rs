@@ -8,6 +8,7 @@ use curve25519_dalek::traits::Identity;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
+// REVIEW: rename to Ed25519 since the "Ed" is not an acronym (it's short for "Edwards" iirc)
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ED25519 {}
 
@@ -16,6 +17,7 @@ lazy_static! {
 }
 
 /// Derive copy?
+// REVIEW: rename to Ed25519 since the "Ed" is not an acronym (it's short for "Edwards" iirc)
 #[derive(Clone, Debug, Eq)]
 pub struct ED25519Elem(RistrettoPoint);
 
