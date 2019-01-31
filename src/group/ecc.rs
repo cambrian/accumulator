@@ -68,3 +68,27 @@ impl Group for Ed25519 {
     Ed25519Elem(result.0 * factor)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::util::int;
+  use curve25519_dalek::constants;
+
+  #[test]
+  fn test_inv() {
+    let bp = Ed25519Elem(constants::RISTRETTO_BASEPOINT_POINT);
+    let bp_inv = Ed25519::inv(&bp);
+    assert!(Ed25519::op(&bp, &bp_inv) == Ed25519::id());
+    assert_ne!(bp, bp_inv);
+  }
+
+  #[test]
+  fn test_exp() {
+    let bp = Ed25519Elem(constants::RISTRETTO_BASEPOINT_POINT);
+    let exp_512 = Ed25519::exp(&bp, &int(256));
+    let exp_256 = Ed25519::exp(&bp, &int(128));
+    let exp_256 = Ed25519::exp(&exp_256, &int(2));
+    assert_eq!(exp_512, exp_256);
+  }
+}
