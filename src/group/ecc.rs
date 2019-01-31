@@ -1,4 +1,3 @@
-/// TODO
 use super::Group;
 use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -18,14 +17,12 @@ lazy_static! {
 #[derive(Clone, Debug, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
 
-// TODO
 impl Hash for Ed25519Elem {
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.0.compress().as_bytes().hash(state);
   }
 }
 
-// TODO
 impl PartialEq for Ed25519Elem {
   fn eq(&self, other: &Ed25519Elem) -> bool {
     self.0 == other.0
