@@ -28,9 +28,12 @@ impl Ed25519 {
 
 /// REVIEW: Ideally we'd just use RistrettoPoint here, but only traits defined in this crate can
 /// be implemented for arbitrary types. How to fix without wrapping?
+///
+/// It may make sense to fork curve25519-dalek to add the Hash impl. Then we won't need to wrap it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
 
+#[allow(clippy::derive_hash_xor_eq)]
 impl Hash for Ed25519Elem {
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.0.compress().as_bytes().hash(state);
