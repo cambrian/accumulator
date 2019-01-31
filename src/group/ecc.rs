@@ -21,6 +21,8 @@ impl Ed25519 {
   }
 }
 
+/// Review: why not use RistrettoPoint directly? And if we're using the ristretto group,
+/// we should probably rename Ed25519 to RistrettoGroup.
 /// Derive copy?
 #[derive(Clone, Debug, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
