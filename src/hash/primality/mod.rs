@@ -14,7 +14,7 @@ mod constants;
 /// REVIEW: Parallelize subtests (passes_miller_rabin_base_2, passes_lucas).
 pub fn is_prob_prime(n: &Integer) -> bool {
   for &p in constants::SMALL_PRIMES.iter() {
-    if n.is_congruent_u(0, p) {
+    if n.is_divisible_u(p) {
       return *n == p;
     }
   }
@@ -23,17 +23,13 @@ pub fn is_prob_prime(n: &Integer) -> bool {
 
 pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   let (d, r) = int(n - 1).remove_factor(&int(2));
-  // Reserving capacity lets us avoid reallocations related to x increasing in size
-  // REVIEW: Capacity is chosen to work well with 256-bit n, but it may be better to pass in a
-  // size hint.
-  let mut x = Integer::with_capacity(512);
-  x.assign(2);
+  let mut x = int(2);
   x.pow_mod_mut(&d, n).unwrap();
   if x == 1 || x == int(n - 1) {
     return true;
   }
   for _ in 1..r {
-    x = int(&x * &x) % n;
+    x.pow_mod_mut(&int(2), n).unwrap();
     if x == 1 {
       return false;
     }
@@ -54,7 +50,7 @@ fn passes_lucas(n: &Integer) -> bool {
   let d = choose_d(&n);
   let p = int(1);
   let q = int(1 - &d) / 4;
-  let delta = n.clone() + 1;
+  let delta = int(n + 1);
 
   let (u_delta, v_delta, q_delta_over_2) =
     compute_lucas_sequences(&delta, n, &int(1), &p, &p, &q, &d);
@@ -100,6 +96,7 @@ fn compute_lucas_sequences(
   let mut v_k = v_1.clone();
   let mut q_k = q.clone();
   let mut q_k_over_2 = q.clone();
+  let mut u_old = Integer::with_capacity(512); // ugly performance hack
 
   // Finds t in Z_n with 2t = x (mod n)
   // assumes x in 0..n
@@ -120,18 +117,21 @@ fn compute_lucas_sequences(
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
-    u_k = int(&u_k * &v_k) % n;
-    v_k = (int(&v_k * &v_k) - 2 * &q_k) % n;
+    u_k = (u_k * &v_k) % n;
+    // we use *= for squaring to avoid the performance penalty of unboxing a MulIncomplete
+    v_k *= v_k.clone();
+    v_k = (v_k - 2 * &q_k) % n;
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
     q_k_over_2.assign(&q_k);
-    q_k = int(&q_k * &q_k) % n;
+    q_k *= q_k.clone();
+    q_k %= n;
     if bit {
       // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
       // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
-      let du_plus_pv = int(d * &u_k) + int(p * &v_k);
-      u_k = half(int(p * &u_k + &v_k)) % n;
-      v_k = half(du_plus_pv) % n;
+      u_old.assign(&u_k);
+      u_k = half((p * u_k + &v_k) % n);
+      v_k = half((d * &u_old + p * v_k) % n);
       q_k = (q_k * q) % n;
     }
   }
