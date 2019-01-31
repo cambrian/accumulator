@@ -62,12 +62,14 @@ impl Group for Ed25519 {
     let mut remaining = n.clone();
     let mut digits: [u8; 32] = [0; 32];
     let mut result = x.clone();
+
     while remaining > *Ed25519::max_safe_exponent() {
       Ed25519::max_safe_exponent().write_digits(&mut digits, Order::LsfLe);
       let factor = Scalar::from_bytes_mod_order(digits);
       result = Ed25519Elem(result.0 * factor);
       remaining -= Ed25519::max_safe_exponent();
     }
+
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
     Ed25519Elem(result.0 * factor)
