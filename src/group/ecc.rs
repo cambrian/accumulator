@@ -26,9 +26,8 @@ impl Ed25519 {
   }
 }
 
-/// Review: why not use RistrettoPoint directly? And if we're using the ristretto group,
-/// we should probably rename Ed25519 to RistrettoGroup.
-/// Derive copy?
+/// REVIEW: Ideally we'd just use RistrettoPoint here, but only traits defined in this crate can
+/// be implemented for arbitrary types. How to fix without wrapping?
 #[derive(Clone, Debug, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
 
