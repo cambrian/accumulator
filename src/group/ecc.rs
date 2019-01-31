@@ -2,6 +2,7 @@
 use super::Group;
 use crate::util::TypeRep;
 use curve25519_dalek::ristretto::RistrettoPoint;
+// use curve25519_dalek::subtle::ConstantTimeEq;
 use curve25519_dalek::traits::Identity;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
@@ -19,13 +20,15 @@ pub struct Ed25519Elem(RistrettoPoint);
 
 // TODO
 impl Hash for Ed25519Elem {
-  fn hash<H: Hasher>(&self, _state: &mut H) {}
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.0.compress().as_bytes().hash(state);
+  }
 }
 
 // TODO
 impl PartialEq for Ed25519Elem {
-  fn eq(&self, _other: &Ed25519Elem) -> bool {
-    true
+  fn eq(&self, other: &Ed25519Elem) -> bool {
+    self.0 == other.0
   }
 }
 
