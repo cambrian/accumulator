@@ -1,10 +1,9 @@
-/// TODO
 use super::Group;
-use crate::util::TypeRep;
-use curve25519_dalek::constants::BASEPOINT_ORDER;
+use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
+use rug::integer::Order;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
@@ -12,57 +11,67 @@ use std::hash::{Hash, Hasher};
 pub enum Ed25519 {}
 
 lazy_static! {
-  pub static ref rp: RistrettoPoint = RistrettoPoint::identity();
+  pub static ref MAX_SAFE_EXPONENT: Integer = int(2 ^ 256);
+}
+
+impl Ed25519 {
+  fn max_safe_exponent() -> &'static Integer {
+    &MAX_SAFE_EXPONENT
+  }
 }
 
 /// Derive copy?
 #[derive(Clone, Debug, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
 
-// TODO
 impl Hash for Ed25519Elem {
-  fn hash<H: Hasher>(&self, _state: &mut H) {}
-}
-
-// TODO
-impl PartialEq for Ed25519Elem {
-  fn eq(&self, _other: &Ed25519Elem) -> bool {
-    true
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.0.compress().as_bytes().hash(state);
   }
 }
 
-/// Unsure of correct rep for this group. BASEPOINT_ORDER is described as the order of the Ristretto
-/// Group. I don't believe this will actually be used in the ops since it is likely used internally
-/// but it seemed like the best fit for TypeRep. Review welcome.
-/// REVIEW: If you never use the type rep, just make Rep = ()
+impl PartialEq for Ed25519Elem {
+  fn eq(&self, other: &Ed25519Elem) -> bool {
+    self.0 == other.0
+  }
+}
+
 impl TypeRep for Ed25519 {
-  type Rep = Scalar;
+  type Rep = ();
   fn rep() -> &'static Self::Rep {
-    &BASEPOINT_ORDER
+    &()
   }
 }
 
 impl Group for Ed25519 {
   type Elem = Ed25519Elem;
 
-  fn op_(_: &Scalar, a: &Ed25519Elem, b: &Ed25519Elem) -> Ed25519Elem {
+  fn op_(_: &(), a: &Ed25519Elem, b: &Ed25519Elem) -> Ed25519Elem {
     Ed25519Elem(a.0 + b.0)
   }
 
-  fn id_(_: &Scalar) -> Ed25519Elem {
+  fn id_(_: &()) -> Ed25519Elem {
     Ed25519Elem(RistrettoPoint::identity())
   }
 
-  fn inv_(_: &Scalar, _x: &Ed25519Elem) -> Ed25519Elem {
-    // assert(not point at infinity)
-    // Convert x.Y to -x.Y, but I believe this requires control of FieldElems, which are in the
-    // private crate field.
-    unimplemented!();
+  fn inv_(_: &(), x: &Ed25519Elem) -> Ed25519Elem {
+    Ed25519Elem(-x.0)
   }
 
-  fn exp_(_: &Scalar, _x: &Ed25519Elem, _n: &Integer) -> Ed25519Elem {
-    // Need to implement Integer -> Scalar, or x * Integer
-    // Ed25519(x.0 * n)
-    unimplemented!();
+  fn exp_(_: &(), x: &Ed25519Elem, n: &Integer) -> Ed25519Elem {
+    let mut remaining = n.clone();
+    let mut digits: [u8; 32] = [0; 32];
+    let mut result = x.clone();
+
+    while remaining > *Ed25519::max_safe_exponent() {
+      Ed25519::max_safe_exponent().write_digits(&mut digits, Order::LsfLe);
+      let factor = Scalar::from_bytes_mod_order(digits);
+      result = Ed25519Elem(result.0 * factor);
+      remaining -= Ed25519::max_safe_exponent();
+    }
+
+    remaining.write_digits(&mut digits, Order::LsfLe);
+    let factor = Scalar::from_bytes_mod_order(digits);
+    Ed25519Elem(result.0 * factor)
   }
 }
