@@ -38,8 +38,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   // The conciseness of accumulator.add() and low probability of confusion with implementations of
   // the Add trait probably justify this...
   #[allow(clippy::should_implement_trait)]
-  /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are co-prime with the
-  /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multi-set.
+  /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are coprime with the
+  /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
     let x = elems.iter().product();
     let new_acc = G::exp(&self.0, &x);

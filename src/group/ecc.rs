@@ -1,4 +1,3 @@
-/// TODO
 use super::Group;
 use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -12,18 +11,25 @@ use std::hash::{Hash, Hasher};
 pub enum Ed25519 {}
 
 lazy_static! {
-  pub static ref MAX_SAFE_INTEGER: Integer = int(2 ^ 256);
+  pub static ref MAX_SAFE_EXPONENT: Integer = int(2 ^ 256);
 }
+
+impl Ed25519 {
+  fn max_safe_exponent() -> &'static Integer {
+    &MAX_SAFE_EXPONENT
+  }
+}
+
 /// Derive copy?
 #[derive(Clone, Debug, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
 
-// TODO
 impl Hash for Ed25519Elem {
-  fn hash<H: Hasher>(&self, _state: &mut H) {}
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.0.compress().as_bytes().hash(state);
+  }
 }
 
-// TODO
 impl PartialEq for Ed25519Elem {
   fn eq(&self, other: &Ed25519Elem) -> bool {
     self.0 == other.0
@@ -56,13 +62,14 @@ impl Group for Ed25519 {
     let mut remaining = n.clone();
     let mut digits: [u8; 32] = [0; 32];
     let mut result = x.clone();
-    while remaining > *MAX_SAFE_INTEGER {
-      MAX_SAFE_INTEGER.write_digits(&mut digits, Order::LsfLe);
+
+    while remaining > *Ed25519::max_safe_exponent() {
+      Ed25519::max_safe_exponent().write_digits(&mut digits, Order::LsfLe);
       let factor = Scalar::from_bytes_mod_order(digits);
       result = Ed25519Elem(result.0 * factor);
-      // TODO: find way to avoid clone
-      remaining -= MAX_SAFE_INTEGER.clone();
+      remaining -= Ed25519::max_safe_exponent();
     }
+
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
     Ed25519Elem(result.0 * factor)
