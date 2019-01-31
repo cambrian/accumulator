@@ -11,9 +11,7 @@ use constants::{D_VALUES, SMALL_PRIMES};
 /// shown to be anticorrelated. Steps of BPSW are as follows:
 /// 1. Accept small primes and reject multiples of them.
 /// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).
-/// 3. Filter squares.
-/// 4. Do a strong probabilistic Lucas test.
-/// REVIEW: Parallelize subtests (passes_miller_rabin_base_2, passes_lucas).
+/// 4. Do a strong probabilistic Lucas test (squares filtered during test initialization).
 pub fn is_prob_prime(n: &Integer) -> bool {
   for &p in SMALL_PRIMES.iter() {
     if n.is_divisible_u(p) {
