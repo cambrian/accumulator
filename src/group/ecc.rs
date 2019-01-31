@@ -28,18 +28,12 @@ impl Ed25519 {
 
 /// REVIEW: Ideally we'd just use RistrettoPoint here, but only traits defined in this crate can
 /// be implemented for arbitrary types. How to fix without wrapping?
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
 
 impl Hash for Ed25519Elem {
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.0.compress().as_bytes().hash(state);
-  }
-}
-
-impl PartialEq for Ed25519Elem {
-  fn eq(&self, other: &Ed25519Elem) -> bool {
-    self.0 == other.0
   }
 }
 
