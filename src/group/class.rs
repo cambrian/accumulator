@@ -2,14 +2,34 @@
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util::{int, Singleton};
 use rug::{Assign, Integer};
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ClassGroup {}
 
-const CLASS_GROUP_DISCRIMINANT_: i32 = 7;
+// 2048-bit prime, negated.  Generated using OpenSSL.
+//
+// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1,
+// IQ-MPQS for computing discrete logarithms in class groups with a 2048-bit discriminant is
+// comparable in complexity to GNFS for factoring a 4096-bit integer.
+const DISCRIMINANT2048_DECIMAL: &str = "-3061606903480752394709365751632081521549287\
+                                        63761650679027169886578024000373319144482182\
+                                        51590830110218951921584943041318477665819248\
+                                        19762767207780092618088326303048417113668721\
+                                        61223643645001916696949342349722487050631171\
+                                        04912335573294798164577233813687887340799331\
+                                        65653042145718668727765268057567320767851636\
+                                        96501234808269893879755485983099594863614250\
+                                        21860161020248607833276306314923730985457097\
+                                        27023505674117797343725737548405701383103177\
+                                        54359137013512655926325773048926718050691092\
+                                        94533717273440872863614264045883351603859982\
+                                        80988603297435639020911295652025967761702701\
+                                        7014711623966286152805654229445219531956098223";
 
 lazy_static! {
-  pub static ref CLASS_GROUP_DISCRIMINANT: Integer = int(CLASS_GROUP_DISCRIMINANT_);
+  pub static ref CLASS_GROUP_DISCRIMINANT: Integer =
+    Integer::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -29,7 +49,6 @@ impl ClassElem {
     // b = b + 2ra
     // c = ar^2 + br + c
     let aa = Integer::from(2 * &self.a);
-    // TODO: make sure this is floor division
     let r = Integer::from(&self.a - &self.b) / &aa;
 
     self.c = Integer::from(&self.a * &r) * &r + &self.b * &r + &self.c;
@@ -56,7 +75,6 @@ impl ClassElem {
   }
 }
 
-// TODO: Check for solution to congruence?
 pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Integer, Integer) {
   // g = gcd(a, m), da + em = g
   let (g, d, _) = a.clone().gcd_cofactors(m.clone(), Integer::new());
@@ -64,7 +82,8 @@ pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Intege
   // mu = (q * d) % m
   // v = m / g
 
-  let mu = ((b / g.clone()) * d) % m;
+  let q = b / g.clone();
+  let mu = (q * d) % m;
   let v = m / g;
   (mu, v)
 }
@@ -160,8 +179,10 @@ impl UnknownOrderGroup for ClassGroup {
     let a = Integer::from(2);
     let b = Integer::from(1);
     // c = (b*b - d) / 4a
-    let c = Integer::from(-d) / 8;
-    ClassElem { a, b, c }
+    let c = Integer::from(1 - d) / Integer::from(8);
+    let mut ret = ClassElem { a, b, c };
+    ret.reduce();
+    ret
   }
 }
 
@@ -176,7 +197,10 @@ mod tests {
 
   #[test]
   fn test_op() {
-    assert!(false);
+    let g1 = ClassGroup::unknown_order_elem();
+    let g2 = ClassGroup::unknown_order_elem();
+    let x = ClassGroup::op(&g1, &g2);
+    dbg!(x);
   }
 
   #[test]
