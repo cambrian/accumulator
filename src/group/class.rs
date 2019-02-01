@@ -73,6 +73,18 @@ impl ClassElem {
     }
     self.normalize();
   }
+
+  fn square(&mut self) {
+    let (mu, _) = solve_linear_congruence(&self.b, &self.c, &self.a);
+    let m = Integer::from((&self.b * &mu) - &self.c) / &self.a;
+
+    self.b = &self.b - Integer::from(2 * &self.a) * &mu;
+
+    self.a = Integer::from(&self.a * &self.a);
+
+    self.c = Integer::from(&mu * &mu - &m);
+    self.reduce();
+  }
 }
 
 pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Integer, Integer) {
@@ -157,7 +169,7 @@ impl Group for ClassGroup {
     let a = Integer::from(1);
     let b = Integer::from(1);
     // c = (b*b - d) / 4a
-    let c = Integer::from(-d) / 4;
+    let c = Integer::from(1 - d) / 4;
     ClassElem { a, b, c }
   }
 
@@ -169,8 +181,24 @@ impl Group for ClassGroup {
     }
   }
 
-  fn exp_(_: &Integer, x: &ClassElem, n: &Integer) -> ClassElem {
-    unimplemented!();
+  fn exp_(_: &Integer, a: &ClassElem, n: &Integer) -> ClassElem {
+    let (mut val, mut a, mut n) = {
+      if *n < int(0) {
+        (Self::id(), Self::inv(a), int(-n))
+      } else {
+        (Self::id(), a.clone(), n.clone())
+      }
+    };
+    loop {
+      if n == int(0) {
+        return val;
+      }
+      if n.is_odd() {
+        val = Self::op(&val, &a);
+      }
+      a.square();
+      n >>= 1;
+    }
   }
 }
 
@@ -197,10 +225,12 @@ mod tests {
 
   #[test]
   fn test_op() {
-    let g1 = ClassGroup::unknown_order_elem();
+    let mut g1 = ClassGroup::unknown_order_elem();
     let g2 = ClassGroup::unknown_order_elem();
     let x = ClassGroup::op(&g1, &g2);
-    dbg!(x);
+    g1.square();
+    dbg!(&g1);
+    dbg!(&x);
   }
 
   #[test]
@@ -215,6 +245,8 @@ mod tests {
 
   #[test]
   fn test_exp() {
-    assert!(false);
+    let g2 = ClassGroup::unknown_order_elem();
+    let x = ClassGroup::exp(&g2, &int(5));
+    dbg!(&x);
   }
 }
