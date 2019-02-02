@@ -36,11 +36,60 @@ pub fn shamir_trick<G: Group>(
   Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
 }
 
+// Solve a linear congruence of form `ax = b mod m` for the set of solutions x,
+// characterized by integers mu and v such that x = mu + vn where n is any integer.
+pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Integer, Integer) {
+  // g = gcd(a, m) => da + em = g
+  let (g, d, _) = a.clone().gcd_cofactors(m.clone(), Integer::new());
+
+  // q = floor_div(b, g)
+  // r = b % g
+  let (q, r) = b.clone().div_rem_floor(g.clone());
+  if r != Integer::from(0) {
+    panic!("No solution to linear congruence.");
+  }
+
+  // mu = (q * d) % m
+  // v = m / g
+  let mu = (q * d) % m;
+  let (v, _) = m.clone().div_rem_floor(g);
+  (mu, v)
+}
+
+// Compute GCD of three integers.
+#[inline]
+pub fn three_gcd(a: &Integer, b: &Integer, c: &Integer) -> Integer {
+  a.clone().gcd(&b).gcd(&c)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
   use crate::group::{Group, Rsa2048, UnknownOrderGroup};
   use crate::util::int;
+
+  #[test]
+  fn test_linear_congruence_solver_basic() {
+    assert_eq!(
+      (Integer::from(-2), Integer::from(4)),
+      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4))
+    );
+
+    assert_eq!(
+      (Integer::from(-2), Integer::from(4)),
+      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4))
+    );
+
+    assert_eq!(
+      (Integer::from(1), Integer::from(2)),
+      solve_linear_congruence(&Integer::from(5), &Integer::from(1), &Integer::from(2))
+    );
+
+    assert_eq!(
+      (Integer::from(-3), Integer::from(5)),
+      solve_linear_congruence(&Integer::from(2), &Integer::from(4), &Integer::from(5))
+    );
+  }
 
   #[test]
   fn test_shamir_trick() {
