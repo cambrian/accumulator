@@ -8,7 +8,7 @@ use std::str::FromStr;
 #[derive(Debug, PartialEq, Eq)]
 pub enum ClassGroup {}
 
-// 2048-bit prime, negated, congruent to 3 mod 4..  Generated using OpenSSL.
+// 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
 
 // According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1,
 // IQ-MPQS for computing discrete logarithms in class groups with a 2048-bit discriminant is
@@ -407,7 +407,7 @@ mod tests {
     // 1. Take g^100, g^200, ..., g^1000.
     // 2. Compute g^* = g^100 * ... * g^1000
     // 3. For each of g^100, g^200, ..., g^1000
-    //    compute the inverse of the element and
+    //    compute the inverse of that element and
     //    assert that g^* * current_inverse = product of g^100, g^200, ..., g^1000
     //    without the inversed-out element.
     let g_anchor = ClassGroup::unknown_order_elem();
