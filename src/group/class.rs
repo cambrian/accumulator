@@ -1,9 +1,8 @@
 //! Class Group implementation
-use super::{Group, UnknownOrderGroup};
+use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{int, Singleton};
 use rug::{Assign, Integer};
-use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
@@ -249,14 +248,39 @@ impl PartialEq for ClassElem {
   }
 }
 
+impl<T> ElemFrom<(T, T, T)> for ClassGroup
+where
+  Integer: From<T>,
+{
+  fn elem(t: (T, T, T)) -> ClassElem {
+    let mut class_elem = ClassElem {
+      a: Integer::from(t.0),
+      b: Integer::from(t.1),
+      c: Integer::from(t.2),
+    };
+
+    // Ideally, this should return an error and the
+    // return type of ElemFrom should be Result<Self::Elem, Self:err>,
+    // but this would require a lot of ugly "unwraps" in the accumulator
+    // library. Besides, users should not need to create new class group
+    // elements, so an invalid ElemFrom here should signal a severe internal error.
+    assert!(class_elem._validate());
+
+    class_elem.reduce();
+    class_elem
+  }
+}
+
 // Caveat: tests that use "ground truth" use outputs from
 //  Chia's sample implementation in python:
 //    https://github.com/Chia-Network/vdf-competition/blob/master/inkfish/classgroup.py.
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::collections::hash_map::DefaultHasher;
 
-  fn construct_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
+  // Makes a class elem tuple but does not reduce.
+  fn construct_raw_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
     ClassElem {
       a: Integer::from_str(a).unwrap(),
       b: Integer::from_str(b).unwrap(),
@@ -264,9 +288,48 @@ mod tests {
     }
   }
 
+  #[should_panic]
+  #[test]
+  fn test_bad_elem() {
+    let _ = ClassGroup::elem((1, 2, 3));
+  }
+
+  #[test]
+  fn test_elem_from() {
+    let a1 = Integer::from_str("16").unwrap();
+    let b1 = Integer::from_str("105").unwrap();
+    let c1 = Integer::from_str(
+      "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
+      672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
+      531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
+      198871332313399489386997681827578317938792170918711794684859311697439726596656501594138449739\
+      494228617068329664776714484742276158090583495714649193839084110987149118615158361352488488402\
+      038894799695420483272708933239751363849397287571692736881031223140446926522431859701738994562\
+      9057462766047140854869124473221137588347335081555186814207",
+    )
+    .unwrap();
+
+    let a2 = Integer::from_str("16").unwrap();
+    let b2 = Integer::from_str("9").unwrap();
+    let c2 = Integer::from_str(
+      "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
+      672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
+      531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
+      198871332313399489386997681827578317938792170918711794684859311697439726596656501594138449739\
+      494228617068329664776714484742276158090583495714649193839084110987149118615158361352488488402\
+      038894799695420483272708933239751363849397287571692736881031223140446926522431859701738994562\
+      9057462766047140854869124473221137588347335081555186814036",
+    )
+    .unwrap();
+
+    let reduced_elem = ClassGroup::elem((a1, b1, c1));
+    let also_reduced_elem = ClassGroup::elem((a2, b2, c2));
+    assert_eq!(reduced_elem, also_reduced_elem);
+  }
+
   #[test]
   fn test_equality() {
-    let not_reduced = construct_elem_from_strings(
+    let not_reduced = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -278,7 +341,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814207"
     );
 
-    let reduced_ground_truth = construct_elem_from_strings(
+    let reduced_ground_truth = construct_raw_elem_from_strings(
       "16",
       "9",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -290,7 +353,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814036"
     );
 
-    let diff_elem = construct_elem_from_strings(
+    let diff_elem = construct_raw_elem_from_strings(
       "4",
       "1",
       "19135043146754702466933535947700509509683047735103167439198117911126500023332446530136407244\
@@ -303,8 +366,6 @@ mod tests {
     );
 
     assert!(not_reduced == reduced_ground_truth);
-    assert!(not_reduced == not_reduced);
-    assert!(reduced_ground_truth == reduced_ground_truth);
     assert!(not_reduced == not_reduced.clone());
     assert!(reduced_ground_truth == reduced_ground_truth.clone());
     assert!(not_reduced != diff_elem);
@@ -313,7 +374,7 @@ mod tests {
 
   #[test]
   fn test_hash() {
-    let not_reduced = construct_elem_from_strings(
+    let not_reduced = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -325,7 +386,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814207"
     );
 
-    let reduced_ground_truth = construct_elem_from_strings(
+    let reduced_ground_truth = construct_raw_elem_from_strings(
       "16",
       "9",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -337,7 +398,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814036"
     );
 
-    let diff_elem = construct_elem_from_strings(
+    let diff_elem = construct_raw_elem_from_strings(
       "4",
       "1",
       "19135043146754702466933535947700509509683047735103167439198117911126500023332446530136407244\
@@ -366,7 +427,7 @@ mod tests {
 
   #[test]
   fn test_reduce_basic() {
-    let mut to_reduce = construct_elem_from_strings(
+    let mut to_reduce = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -378,7 +439,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814207"
     );
 
-    let reduced_ground_truth = construct_elem_from_strings(
+    let reduced_ground_truth = construct_raw_elem_from_strings(
       "16",
       "9",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -400,7 +461,7 @@ mod tests {
 
   #[test]
   fn test_normalize_basic() {
-    let mut unnormalized = construct_elem_from_strings(
+    let mut unnormalized = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -413,7 +474,7 @@ mod tests {
 
     );
 
-    let normalized_ground_truth = construct_elem_from_strings(
+    let normalized_ground_truth = construct_raw_elem_from_strings(
       "16",
       "9",
       "4783760786688675616733383986925127377420761933775791859799529477781625005833111632534101811\
@@ -452,7 +513,7 @@ mod tests {
 
   #[test]
   fn test_op_single() {
-    let a = construct_elem_from_strings(
+    let a = construct_raw_elem_from_strings(
       "4",
       "1",
       "19135043146754702466933535947700509509683047735103167439198117911126500023332446530136407244\
@@ -464,7 +525,7 @@ mod tests {
       16229851064188563419476497892884550353389340326220747256139"
     );
 
-    let b = construct_elem_from_strings(
+    let b = construct_raw_elem_from_strings(
       "16",
       "41",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -476,7 +537,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814061"
     );
 
-    let ground_truth = construct_elem_from_strings(
+    let ground_truth = construct_raw_elem_from_strings(
       "64",
       "9",
       "11959401966721689041833459967312818443551904834439479649498823694454062514582779081335254527\
@@ -511,7 +572,7 @@ mod tests {
     g = ClassGroup::op(&g_anchor, &g);
     g_star = ClassGroup::op(&g, &g_star);
 
-    let ground_truth = construct_elem_from_strings(
+    let ground_truth = construct_raw_elem_from_strings(
       "64",
       "9",
       "11959401966721689041833459967312818443551904834439479649498823694454062514582779081335254527\
