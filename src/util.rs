@@ -41,6 +41,7 @@ pub fn shamir_trick<G: Group>(
 
 // Solve a linear congruence of form `ax = b mod m` for the set of solutions x,
 // characterized by integers mu and v such that x = mu + vn where n is any integer.
+// REVIEW: instead of panicking, return Result<(Integer, Integer), ErrType>
 pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Integer, Integer) {
   // g = gcd(a, m) => da + em = g
   let (g, d, _) = a.clone().gcd_cofactors(m.clone(), Integer::new());
@@ -60,6 +61,7 @@ pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Intege
 }
 
 // Compute GCD of three integers.
+// REVIEW: you only use this once so remove this fn and just use the body inline
 #[inline]
 pub fn three_gcd(a: &Integer, b: &Integer, c: &Integer) -> Integer {
   a.clone().gcd(&b).gcd(&c)
