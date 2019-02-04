@@ -9,6 +9,15 @@ use std::str::FromStr;
 #[derive(Debug, PartialEq, Eq)]
 pub enum ClassGroup {}
 
+// REVIEW: Replace instances of x.clone().fn() with x.fn_ref() or x.fn_mut() where it makes sense.
+
+// REVIEW: It appears that this group implementation always expects its elements to be reduced.
+// However, the type signature fn reduce(&mut self) implies that there is a valid representation
+// for un-reduced elements. This is suboptimal. Can you restructure the code in such a way that
+// ClassElem instances are only created for valid elements? Likewise for normalize.
+// Hint: change reduce to look something like
+// fn reduce(a: Integer, b: Integer, c: Integer) -> ClassElem { ... }
+
 // 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
 
 // According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1,
@@ -34,6 +43,7 @@ pub struct ClassElem {
   b: Integer,
   c: Integer,
 }
+
 
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
@@ -90,6 +100,9 @@ impl ClassElem {
     self.reduce();
   }
 
+  // REVIEW: don't use a leading underscore to denote an "internal" fn because it tells the linter
+  // something else (that it's ok if the function is never used). In these cases I think it makes
+  // sense to simply call them discriminant, validate, is_reduced, etc.
   fn _discriminant(&self) -> Integer {
     &self.b * &self.b - Integer::from(4) * &self.a * &self.c
   }
