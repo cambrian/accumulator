@@ -133,7 +133,7 @@ impl Group for ClassGroup {
     // w = gcd(a1, a2, g)
     let (g, _) = (Integer::from(&x.b) + &y.b).div_rem_floor(Integer::from(2));
     let (h, _) = (&y.b - Integer::from(&x.b)).div_rem_floor(Integer::from(2));
-    let w = util::three_gcd(&x.a, &y.a, &g);
+    let w = x.a.clone().gcd(&y.a).gcd(&g);
 
     // j = w
     // s = a1 / w
