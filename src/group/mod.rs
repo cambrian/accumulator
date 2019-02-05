@@ -5,6 +5,7 @@ use std::marker::Sized;
 
 mod class;
 mod rsa;
+pub use class::ClassGroup;
 pub use rsa::{RSA2048Elem, RSA2048};
 
 /// We need a runtime representation for the group itself because reading in group parameters

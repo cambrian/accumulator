@@ -29,7 +29,13 @@ pub fn add<G: UnknownOrderGroup>(acc: G::Elem, elems: &[Integer]) -> (G::Elem, M
   let x = elems.iter().product();
   let new_acc = G::exp(&acc, &x);
   let poe_proof = PoE::<G>::prove(&acc, &x, &new_acc);
-  (new_acc, MembershipProof { witness: acc.clone(), proof: poe_proof })
+  (
+    new_acc,
+    MembershipProof {
+      witness: acc.clone(),
+      proof: poe_proof,
+    },
+  )
 }
 
 /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
@@ -55,7 +61,13 @@ pub fn delete<G: UnknownOrderGroup>(
   }
 
   let poe_proof = PoE::<G>::prove(&acc_next, &elem_aggregate, &acc);
-  Ok((acc_next.clone(), MembershipProof { witness: acc_next, proof: poe_proof }))
+  Ok((
+    acc_next.clone(),
+    MembershipProof {
+      witness: acc_next,
+      proof: poe_proof,
+    },
+  ))
 }
 
 /// Returns a proof (and associated variables) that `elem_witnesses` are aggregated in `acc`.
@@ -138,7 +150,7 @@ pub fn verify_nonmembership<G: UnknownOrderGroup>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{Group, RSA2048};
+  use crate::group::{ClassGroup, Group, RSA2048};
   use crate::util::int;
 
   fn init_acc<G: UnknownOrderGroup>() -> G::Elem {
@@ -147,60 +159,95 @@ mod tests {
 
   #[test]
   fn test_add() {
-    let acc = init_acc::<RSA2048>();
-    let new_elems = [int(5), int(7), int(11)];
-    let (new_acc, proof) = add::<RSA2048>(acc.clone(), &new_elems);
-    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(94_125_955));
-    assert!(new_acc == expected_acc);
-    assert!(verify_membership(&new_acc, &new_elems, &proof));
+    fn test_add_generic<G: UnknownOrderGroup>() {
+      let acc = init_acc::<G>();
+      let new_elems = [int(5), int(7), int(11)];
+      let (new_acc, proof) = add::<G>(acc.clone(), &new_elems);
+      let expected_acc = G::exp(&G::unknown_order_elem(), &int(94_125_955));
+      assert!(new_acc == expected_acc);
+      assert!(verify_membership(&new_acc, &new_elems, &proof));
+    }
+    test_add_generic::<RSA2048>();
+    test_add_generic::<ClassGroup>();
   }
 
   #[test]
   fn test_delete() {
-    let acc = init_acc::<RSA2048>();
-    let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(3649));
-    let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(2747));
-    let (new_acc, proof) =
-      delete::<RSA2048>(acc.clone(), &[(int(67), y_witness), (int(89), z_witness)])
-        .expect("valid delete expected");
-    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(41));
-    assert!(new_acc == expected_acc);
-    assert!(verify_membership(&acc, &[int(67), int(89)], &proof));
+    fn test_delete_generic<G: UnknownOrderGroup>() {
+      let acc = init_acc::<G>();
+      let y_witness = G::exp(&G::unknown_order_elem(), &int(3649));
+      let z_witness = G::exp(&G::unknown_order_elem(), &int(2747));
+      let (new_acc, proof) =
+        delete::<G>(acc.clone(), &[(int(67), y_witness), (int(89), z_witness)])
+          .expect("valid delete expected");
+      let expected_acc = G::exp(&G::unknown_order_elem(), &int(41));
+      assert!(new_acc == expected_acc);
+      assert!(verify_membership(&acc, &[int(67), int(89)], &proof));
+    }
+    test_delete_generic::<RSA2048>();
+    test_delete_generic::<ClassGroup>();
   }
 
   #[test]
   fn test_delete_empty() {
-    let acc = init_acc::<RSA2048>();
-    let (new_acc, proof) = delete::<RSA2048>(acc.clone(), &[]).expect("valid delete expected");
-    assert!(new_acc == acc);
-    assert!(verify_membership(&acc, &[], &proof));
+    fn test_delete_empty_generic<G: UnknownOrderGroup>() {
+      let acc = init_acc::<G>();
+      let (new_acc, proof) = delete::<G>(acc.clone(), &[]).expect("valid delete expected");
+      assert!(new_acc == acc);
+      assert!(verify_membership(&acc, &[], &proof));
+    }
+    test_delete_empty_generic::<RSA2048>();
+    test_delete_empty_generic::<ClassGroup>();
   }
 
   #[should_panic(expected = "BadWitness")]
   #[test]
-  fn test_delete_bad_witness() {
+  fn test_delete_bad_witness_rsa() {
     let acc = init_acc::<RSA2048>();
     let y_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(3648));
     let z_witness = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(2746));
     delete::<RSA2048>(acc, &[(int(67), y_witness), (int(89), z_witness)]).unwrap();
   }
 
+  #[should_panic(expected = "BadWitness")]
+  #[test]
+  fn test_delete_bad_witness_class() {
+    // TODO: figure out how to merge this and previous test into one single test.
+    let acc = init_acc::<ClassGroup>();
+    let y_witness = ClassGroup::exp(&ClassGroup::unknown_order_elem(), &int(3648));
+    let z_witness = ClassGroup::exp(&ClassGroup::unknown_order_elem(), &int(2746));
+    delete::<ClassGroup>(acc, &[(int(67), y_witness), (int(89), z_witness)]).unwrap();
+  }
+
   #[test]
   fn test_prove_nonmembership() {
-    let acc = init_acc::<RSA2048>();
-    let acc_set = [int(41), int(67), int(89)];
-    let elems = [int(5), int(7), int(11)];
-    let proof =
-      prove_nonmembership::<RSA2048>(&acc, &acc_set, &elems).expect("valid proof expected");
-    assert!(verify_nonmembership::<RSA2048>(&acc, &elems, &proof));
+    fn test_prove_nonmembership_generic<G: UnknownOrderGroup>() {
+      let acc = init_acc::<G>();
+      let acc_set = [int(41), int(67), int(89)];
+      let elems = [int(5), int(7), int(11)];
+      let proof = prove_nonmembership::<G>(&acc, &acc_set, &elems).expect("valid proof expected");
+      assert!(verify_nonmembership::<G>(&acc, &elems, &proof));
+    }
+    test_prove_nonmembership_generic::<RSA2048>();
+    test_prove_nonmembership_generic::<ClassGroup>();
   }
 
   #[should_panic(expected = "InputsNotCoprime")]
   #[test]
-  fn test_prove_nonmembership_failure() {
+  fn test_prove_nonmembership_failure_rsa() {
     let acc = init_acc::<RSA2048>();
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(41), int(7), int(11)];
     prove_nonmembership::<RSA2048>(&acc, &acc_set, &elems).unwrap();
+  }
+
+  #[should_panic(expected = "InputsNotCoprime")]
+  #[test]
+  fn test_prove_nonmembership_failure_class() {
+    // TODO: figure out how to merge this and previous test into one single test.
+    let acc = init_acc::<ClassGroup>();
+    let acc_set = [int(41), int(67), int(89)];
+    let elems = [int(41), int(7), int(11)];
+    prove_nonmembership::<ClassGroup>(&acc, &acc_set, &elems).unwrap();
   }
 }
