@@ -8,5 +8,6 @@ pub mod accumulator;
 pub mod group;
 pub mod hash;
 pub mod proof;
+pub mod simulation;
 pub mod util;
 pub mod vector_commitment;

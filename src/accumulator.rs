@@ -17,7 +17,7 @@ pub enum AccError {
 pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
 pub struct MembershipProof<G: UnknownOrderGroup> {
-  witness: Accumulator<G>,
+  pub witness: Accumulator<G>,
   proof: Poe<G>,
 }
 
