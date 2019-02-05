@@ -7,6 +7,7 @@ use std::marker::Sized;
 mod class;
 mod ecc;
 mod rsa;
+pub use class::ClassGroup;
 pub use rsa::{Rsa2048, Rsa2048Elem};
 
 /// We avoid having to pass group objects around by using the TypeRep trait.
