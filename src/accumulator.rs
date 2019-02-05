@@ -3,7 +3,7 @@
 //! Operations that "mutate" the accumulator (add, delete) use moves instead of references so that
 //! you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
-use crate::proof::{PoE, PoKE2};
+use crate::proof::{Poe, Poke2};
 use crate::util::{int, shamir_trick};
 use rug::Integer;
 
@@ -18,15 +18,15 @@ pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
 pub struct MembershipProof<G: UnknownOrderGroup> {
   witness: Accumulator<G>,
-  proof: PoE<G>,
+  proof: Poe<G>,
 }
 
 pub struct NonmembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,
   gv_inv: G::Elem,
-  poke2_proof: PoKE2<G>,
-  poe_proof: PoE<G>,
+  poke2_proof: Poke2<G>,
+  poe_proof: Poe<G>,
 }
 
 impl<G: UnknownOrderGroup> Accumulator<G> {
@@ -43,7 +43,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
     let x = elems.iter().product();
     let new_acc = G::exp(&self.0, &x);
-    let poe_proof = PoE::<G>::prove(&self.0, &x, &new_acc);
+    let poe_proof = Poe::<G>::prove(&self.0, &x, &new_acc);
     (
       Accumulator(new_acc),
       MembershipProof {
@@ -71,7 +71,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
       elem_aggregate *= elem;
     }
 
-    let poe_proof = PoE::<G>::prove(&acc_next, &elem_aggregate, &self.0);
+    let poe_proof = Poe::<G>::prove(&acc_next, &elem_aggregate, &self.0);
     Ok((
       Accumulator(acc_next.clone()),
       MembershipProof {
@@ -96,7 +96,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     MembershipProof { witness, proof }: &MembershipProof<G>,
   ) -> bool {
     let exp = elems.iter().product();
-    PoE::verify(&witness.0, &exp, &self.0, proof)
+    Poe::verify(&witness.0, &exp, &self.0, proof)
   }
 
   /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
@@ -118,8 +118,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let v = G::exp(&self.0, &b);
     let gv_inv = G::op(&g, &G::inv(&v));
 
-    let poke2_proof = PoKE2::prove(&self.0, &b, &v);
-    let poe_proof = PoE::prove(&d, &x, &gv_inv);
+    let poke2_proof = Poke2::prove(&self.0, &b, &v);
+    let poe_proof = Poe::prove(&d, &x, &gv_inv);
     Ok(NonmembershipProof {
       d,
       v,
@@ -142,7 +142,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     }: &NonmembershipProof<G>,
   ) -> bool {
     let x = elems.iter().product();
-    PoKE2::verify(&self.0, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
+    Poke2::verify(&self.0, v, poke2_proof) && Poe::verify(d, &x, gv_inv, poe_proof)
   }
 }
 
@@ -150,7 +150,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{Group, RSA2048};
+  use crate::group::{Group, Rsa2048};
   use crate::util::int;
 
   fn init_acc<G: UnknownOrderGroup>() -> Accumulator<G> {
@@ -159,31 +159,31 @@ mod tests {
 
   #[test]
   fn test_add() {
-    let acc = init_acc::<RSA2048>();
+    let acc = init_acc::<Rsa2048>();
     let new_elems = [int(5), int(7), int(11)];
     let (new_acc, proof) = acc.add(&new_elems);
-    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(94_125_955));
+    let expected_acc = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(94_125_955));
     assert!(new_acc.0 == expected_acc);
     assert!(new_acc.verify_membership(&new_elems, &proof));
   }
 
   #[test]
   fn test_delete() {
-    let acc = init_acc::<RSA2048>();
-    let y_witness = Accumulator::<RSA2048>::new().add(&[int(3649)]).0;
-    let z_witness = Accumulator::<RSA2048>::new().add(&[int(2747)]).0;
+    let acc = init_acc::<Rsa2048>();
+    let y_witness = Accumulator::<Rsa2048>::new().add(&[int(3649)]).0;
+    let z_witness = Accumulator::<Rsa2048>::new().add(&[int(2747)]).0;
     let (new_acc, proof) = acc
       .clone()
       .delete(&[(int(67), y_witness), (int(89), z_witness)])
       .expect("valid delete expected");
-    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(41));
+    let expected_acc = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(41));
     assert!(new_acc.0 == expected_acc);
     assert!(acc.verify_membership(&[int(67), int(89)], &proof));
   }
 
   #[test]
   fn test_delete_empty() {
-    let acc = init_acc::<RSA2048>();
+    let acc = init_acc::<Rsa2048>();
     let (new_acc, proof) = acc.clone().delete(&[]).expect("valid delete expected");
     assert!(new_acc == acc);
     assert!(acc.verify_membership(&[], &proof));
@@ -192,9 +192,9 @@ mod tests {
   #[should_panic(expected = "BadWitness")]
   #[test]
   fn test_delete_bad_witness() {
-    let acc = init_acc::<RSA2048>();
-    let y_witness = Accumulator::<RSA2048>::new().add(&[int(3648)]).0;
-    let z_witness = Accumulator::<RSA2048>::new().add(&[int(2746)]).0;
+    let acc = init_acc::<Rsa2048>();
+    let y_witness = Accumulator::<Rsa2048>::new().add(&[int(3648)]).0;
+    let z_witness = Accumulator::<Rsa2048>::new().add(&[int(2746)]).0;
     acc
       .delete(&[(int(67), y_witness), (int(89), z_witness)])
       .unwrap();
@@ -202,7 +202,7 @@ mod tests {
 
   #[test]
   fn test_prove_nonmembership() {
-    let acc = init_acc::<RSA2048>();
+    let acc = init_acc::<Rsa2048>();
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(5), int(7), int(11)];
     let proof = acc
@@ -214,7 +214,7 @@ mod tests {
   #[should_panic(expected = "InputsNotCoprime")]
   #[test]
   fn test_prove_nonmembership_failure() {
-    let acc = init_acc::<RSA2048>();
+    let acc = init_acc::<Rsa2048>();
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(41), int(7), int(11)];
     acc.prove_nonmembership(&acc_set, &elems).unwrap();
