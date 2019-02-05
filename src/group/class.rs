@@ -83,7 +83,7 @@ impl ClassElem {
   fn square(&mut self) {
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
     //
-    let (mu, _) = util::solve_linear_congruence(&self.b, &self.c, &self.a);
+    let (mu, _) = util::solve_linear_congruence(&self.b, &self.c, &self.a).unwrap();
 
     // A = a^2
     // B = b - 2a * mu
@@ -152,7 +152,7 @@ impl Group for ClassGroup {
     let a = Integer::from(&t * &u);
     let b = Integer::from(&h * &u) + (&s * &x.c);
     let mut m = Integer::from(&s * &t);
-    let (mu, v) = util::solve_linear_congruence(&a, &b, &m);
+    let (mu, v) = util::solve_linear_congruence(&a, &b, &m).unwrap();
 
     // a = tv
     // b = h - t * mu
@@ -161,7 +161,7 @@ impl Group for ClassGroup {
     let a = Integer::from(&t * &v);
     let b = &h - Integer::from(&t * &mu);
     m.assign(&s);
-    let (lambda, _) = util::solve_linear_congruence(&a, &b, &m);
+    let (lambda, _) = util::solve_linear_congruence(&a, &b, &m).unwrap();
 
     // k = mu + v * lambda
     // l = (k * t - h) / s
