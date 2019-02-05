@@ -44,13 +44,12 @@ pub struct ClassElem {
   c: Integer,
 }
 
-
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
 impl ClassElem {
   fn normalize(&mut self) {
-    if self._is_normalized() {
+    if self.is_normalized() {
       return;
     }
     // r = floor_div((a - b), 2a)
@@ -64,7 +63,7 @@ impl ClassElem {
 
   fn reduce(&mut self) {
     self.normalize();
-    while !self._is_reduced() {
+    while !self.is_reduced() {
       // s = floor_div(c + b, 2c)
       let (s, _) = Integer::from(&self.c + &self.b).div_rem_floor(Integer::from(2 * &self.c));
       let old_c = self.c.clone();
@@ -100,22 +99,19 @@ impl ClassElem {
     self.reduce();
   }
 
-  // REVIEW: don't use a leading underscore to denote an "internal" fn because it tells the linter
-  // something else (that it's ok if the function is never used). In these cases I think it makes
-  // sense to simply call them discriminant, validate, is_reduced, etc.
-  fn _discriminant(&self) -> Integer {
+  fn discriminant(&self) -> Integer {
     &self.b * &self.b - Integer::from(4) * &self.a * &self.c
   }
 
-  fn _validate(&self) -> bool {
-    &self._discriminant() == ClassGroup::rep()
+  fn validate(&self) -> bool {
+    &self.discriminant() == ClassGroup::rep()
   }
 
-  fn _is_reduced(&self) -> bool {
-    self._is_normalized() && (self.a <= self.c && !(self.a == self.c && self.b < 0))
+  fn is_reduced(&self) -> bool {
+    self.is_normalized() && (self.a <= self.c && !(self.a == self.c && self.b < 0))
   }
 
-  fn _is_normalized(&self) -> bool {
+  fn is_normalized(&self) -> bool {
     -Integer::from(&self.a) < self.b && self.b <= self.a
   }
 }
@@ -277,7 +273,7 @@ where
     // but this would require a lot of ugly "unwraps" in the accumulator
     // library. Besides, users should not need to create new class group
     // elements, so an invalid ElemFrom here should signal a severe internal error.
-    assert!(class_elem._validate());
+    assert!(class_elem.validate());
 
     class_elem.reduce();
     class_elem
@@ -506,7 +502,7 @@ mod tests {
   #[test]
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
-    assert_eq!(&g._discriminant(), ClassGroup::rep());
+    assert_eq!(&g.discriminant(), ClassGroup::rep());
   }
 
   #[test]
@@ -517,11 +513,11 @@ mod tests {
     let g3 = ClassGroup::op(&id, &g2);
     let g3_inv = ClassGroup::inv(&g3);
 
-    assert!(id._validate());
-    assert!(g1._validate());
-    assert!(g2._validate());
-    assert!(g3._validate());
-    assert!(g3_inv._validate());
+    assert!(id.validate());
+    assert!(g1.validate());
+    assert!(g2.validate());
+    assert!(g3.validate());
+    assert!(g3_inv.validate());
   }
 
   #[test]
@@ -617,24 +613,24 @@ mod tests {
     let mut g_star = ClassGroup::id();
     for i in 1..=1000 {
       g = ClassGroup::op(&g_anchor, &g);
-      assert!(g._validate());
+      assert!(g.validate());
       if i % 100 == 0 {
         gs.push(g.clone());
         gs_invs.push(ClassGroup::inv(&g));
         g_star = ClassGroup::op(&g, &g_star);
-        assert!(g_star._validate());
+        assert!(g_star.validate());
       }
     }
 
     let elems_n_invs = gs.iter().zip(gs_invs.iter());
     for (g_elem, g_inv) in elems_n_invs {
-      assert!(g_elem._validate());
-      assert!(g_inv._validate());
+      assert!(g_elem.validate());
+      assert!(g_inv.validate());
       let mut curr_prod = ClassGroup::id();
       for elem in &gs {
         if elem != g_elem {
           curr_prod = ClassGroup::op(&curr_prod, &elem);
-          assert!(curr_prod._validate());
+          assert!(curr_prod.validate());
         }
       }
       assert_eq!(ClassGroup::id(), ClassGroup::op(&g_inv, &g_elem));
