@@ -1,4 +1,4 @@
-//! Rsa (2048) group using rug's GMP integers.
+//! RSA (2048) group using rug's GMP integers.
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util::{int, TypeRep};
 use rug::Integer;
@@ -7,7 +7,7 @@ use std::str::FromStr;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Rsa2048 {}
 
-/// Rsa-2048 modulus, taken from https://en.wikipedia.org/wiki/Rsa_numbers#Rsa-2048.
+/// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048.
 const RSA2048_MODULUS_DECIMAL: &str = "25195908475657893494027183240048398571429282126204032027777\
                                        13783604366202070759555626401852588078440691829064124951508\
                                        21892985591491761845028084891200728449926873928072877767359\

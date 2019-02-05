@@ -89,7 +89,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Ok(self.clone().delete(elem_witnesses)?.1)
   }
 
-  /// Verifies the Poe returned by `prove_membership`.
+  /// Verifies the PoE returned by `prove_membership`.
   pub fn verify_membership(
     &self,
     elems: &[Integer],
@@ -129,7 +129,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     })
   }
 
-  /// Verifies the Poke2 and Poe returned by `prove_nonmembership`.
+  /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
   pub fn verify_nonmembership(
     &self,
     elems: &[Integer],
