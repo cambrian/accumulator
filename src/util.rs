@@ -57,13 +57,6 @@ pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Intege
   (mu, v)
 }
 
-// Compute GCD of three integers.
-// REVIEW: you only use this once so remove this fn and just use the body inline
-#[inline]
-pub fn three_gcd(a: &Integer, b: &Integer, c: &Integer) -> Integer {
-  a.clone().gcd(&b).gcd(&c)
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
