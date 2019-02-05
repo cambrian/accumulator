@@ -9,8 +9,6 @@ use std::str::FromStr;
 #[derive(Debug, PartialEq, Eq)]
 pub enum ClassGroup {}
 
-// REVIEW: Replace instances of x.clone().fn() with x.fn_ref() or x.fn_mut() where it makes sense.
-
 // REVIEW: It appears that this group implementation always expects its elements to be reduced.
 // However, the type signature fn reduce(&mut self) implies that there is a valid representation
 // for un-reduced elements. This is suboptimal. Can you restructure the code in such a way that
@@ -66,10 +64,9 @@ impl ClassElem {
     while !self.is_reduced() {
       // s = floor_div(c + b, 2c)
       let (s, _) = Integer::from(&self.c + &self.b).div_rem_floor(Integer::from(2 * &self.c));
-      let old_c = self.c.clone();
 
       // (a, b, c) = (c, −b + 2sc, cs^2 − bs + a)
-      let new_a = old_c;
+      let new_a = self.c.clone();
       let new_b = Integer::from(-&self.b) + 2 * Integer::from(&s * &new_a);
       let new_c = -Integer::from(&self.b * &s) + &self.a + &self.c * s.square();
       self.a = new_a;
@@ -89,9 +86,11 @@ impl ClassElem {
     // B = b - 2a * mu
     // tmp = (b * mu) / a
     // C = mu^2 - tmp
-    let A = self.a.clone().square();
+    let A = Integer::from(self.a.square_ref());
     let B = &self.b - Integer::from(2 * &self.a) * &mu;
-    let (tmp, _) = Integer::from((&self.b * &mu) - &self.c).div_rem_floor(self.a.clone());
+    let (tmp, _) = <(Integer, Integer)>::from(
+      Integer::from((&self.b * &mu) - &self.c).div_rem_floor_ref(&self.a),
+    );
     let C = mu.square() - tmp;
     self.a = A;
     self.b = B;
@@ -133,17 +132,17 @@ impl Group for ClassGroup {
     // w = gcd(a1, a2, g)
     let (g, _) = (Integer::from(&x.b) + &y.b).div_rem_floor(Integer::from(2));
     let (h, _) = (&y.b - Integer::from(&x.b)).div_rem_floor(Integer::from(2));
-    let w = x.a.clone().gcd(&y.a).gcd(&g);
+    let w = Integer::from(x.a.gcd_ref(&y.a)).gcd(&g);
 
     // j = w
     // s = a1 / w
     // t = a2 / w
-    // u = g / w
+    // u = g / ww
     // r = 0
     let j = Integer::from(&w);
-    let (s, _) = x.a.clone().div_rem_floor(w.clone());
-    let (t, _) = y.a.clone().div_rem_floor(w.clone());
-    let (u, _) = g.div_rem_floor(w.clone());
+    let (s, _) = <(Integer, Integer)>::from(x.a.div_rem_floor_ref(&w));
+    let (t, _) = <(Integer, Integer)>::from(y.a.div_rem_floor_ref(&w));
+    let (u, _) = g.div_rem_floor(w);
 
     // a = tu
     // b = hu + sc
@@ -167,7 +166,7 @@ impl Group for ClassGroup {
     // l = (k * t - h) / s
     // m = (tuk - hu - cs) / st
     let k = &mu + Integer::from(&v * &lambda);
-    let (l, _) = (Integer::from(&k * &t) - &h).div_rem_floor(s.clone());
+    let (l, _) = <(Integer, Integer)>::from((Integer::from(&k * &t) - &h).div_rem_floor_ref(&s));
     let (m, _) =
       (Integer::from(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(Integer::from(&s * &t));
 
