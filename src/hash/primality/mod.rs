@@ -49,17 +49,16 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
 /// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
 /// Filters perfect squares as part of choose_d.
 fn passes_lucas(n: &Integer) -> bool {
-  let res = choose_d(&n);
-  if res.is_err() {
+  let d_res = choose_d(&n);
+  if d_res.is_err() {
     return false;
   }
-  let d = res.unwrap();
-  let p = int(1);
-  let q = int(1 - &d) / 4;
+  let d = d_res.unwrap();
+  let q = (int(1) - &d) / 4;
   let delta = int(n + 1);
 
   let (u_delta, v_delta, q_delta_over_2) =
-    compute_lucas_sequences(&delta, n, &int(1), &p, &p, &q, &d);
+    compute_lucas_sequences(&delta, n, &int(1), &int(1), &int(1), &q, &d);
   // u_delta % n != 0 proves n composite.
   u_delta == 0
     // Additional check which is not strictly part of Lucas test but nonetheless filters some
@@ -112,7 +111,7 @@ fn compute_lucas_sequences(
   let mut v_k = v_1.clone();
   let mut q_k = q.clone();
   let mut q_k_over_2 = q.clone();
-  let mut u_old = Integer::with_capacity(512); // ugly performance hack
+  let mut u_old = Integer::new(); // ugly performance hack
 
   // Finds t in Z_n with 2t = x (mod n)
   // assumes x in 0..n
