@@ -8,6 +8,11 @@ pub trait TypeRep: 'static {
   fn rep() -> &'static Self::Rep;
 }
 
+#[derive(Debug)]
+pub enum UtilityError {
+  NoSolutionToLinearCongruence,
+}
+
 pub fn int<T>(val: T) -> Integer
 where
   Integer: From<T>,
@@ -38,8 +43,11 @@ pub fn shamir_trick<G: Group>(
 
 // Solve a linear congruence of form `ax = b mod m` for the set of solutions x,
 // characterized by integers mu and v such that x = mu + vn where n is any integer.
-// REVIEW: instead of panicking, return Result<(Integer, Integer), ErrType>
-pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Integer, Integer) {
+pub fn solve_linear_congruence(
+  a: &Integer,
+  b: &Integer,
+  m: &Integer,
+) -> Result<(Integer, Integer), UtilityError> {
   // g = gcd(a, m) => da + em = g
   let (g, d, _) = a.clone().gcd_cofactors(m.clone(), Integer::new());
 
@@ -47,14 +55,14 @@ pub fn solve_linear_congruence(a: &Integer, b: &Integer, m: &Integer) -> (Intege
   // r = b % g
   let (q, r) = b.clone().div_rem_floor(g.clone());
   if r != Integer::from(0) {
-    panic!("No solution to linear congruence.");
+    return Err(UtilityError::NoSolutionToLinearCongruence);
   }
 
   // mu = (q * d) % m
   // v = m / g
   let mu = (q * d) % m;
   let (v, _) = m.clone().div_rem_floor(g);
-  (mu, v)
+  Ok((mu, v))
 }
 
 #[cfg(test)]
@@ -64,26 +72,49 @@ mod tests {
   use crate::util::int;
 
   #[test]
-  fn test_linear_congruence_solver_basic() {
+  fn test_linear_congruence_solver() {
     assert_eq!(
       (Integer::from(-2), Integer::from(4)),
-      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4))
+      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4)).unwrap()
     );
 
     assert_eq!(
       (Integer::from(-2), Integer::from(4)),
-      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4))
+      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4)).unwrap()
     );
 
     assert_eq!(
       (Integer::from(1), Integer::from(2)),
-      solve_linear_congruence(&Integer::from(5), &Integer::from(1), &Integer::from(2))
+      solve_linear_congruence(&Integer::from(5), &Integer::from(1), &Integer::from(2)).unwrap()
     );
 
     assert_eq!(
       (Integer::from(-3), Integer::from(5)),
-      solve_linear_congruence(&Integer::from(2), &Integer::from(4), &Integer::from(5))
+      solve_linear_congruence(&Integer::from(2), &Integer::from(4), &Integer::from(5)).unwrap()
     );
+
+    assert_eq!(
+      (Integer::from(2491), Integer::from(529)),
+      solve_linear_congruence(
+        &Integer::from(230),
+        &Integer::from(1081),
+        &Integer::from(12167)
+      )
+      .unwrap()
+    );
+  }
+
+  #[test]
+  fn test_linear_congruence_solver_no_solution() {
+    // Let g = gcd(a, m). If b is not divisible by g, there are no solutions. If b is divisible by
+    // g, there are g solutions.
+    let result =
+      solve_linear_congruence(&Integer::from(33), &Integer::from(7), &Integer::from(143));
+    assert!(result.is_err());
+
+    let result =
+      solve_linear_congruence(&Integer::from(13), &Integer::from(14), &Integer::from(39));
+    assert!(result.is_err());
   }
 
   #[test]
