@@ -23,6 +23,10 @@ curve25519-dalek = "1.0.3"
 criterion = "0.2.9"
 rand = "0.6.5"
 
+[[bin]]
+name = "simulation-miner"
+path = "src/bin/simulation/miner.rs"
+
 [[bench]]
 name = "accumulator"
 path = "benches/accumulator.rs"
