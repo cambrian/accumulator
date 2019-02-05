@@ -73,7 +73,7 @@ fn passes_lucas(n: &Integer) -> bool {
 struct IsPerfectSquare();
 
 /// Finds and returns first D in [5, -7, 9, ..., 5 + 2 * max_iter] for which Jacobi symbol (D/n) =
-/// -1, or None if no such D exists. In the case that n is square, there is no such D even with
+/// -1, or an Err if no such D exists. In the case that n is square, there is no such D even with
 /// max_iter infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a
 /// low value to max_iter to avoid wasting too much time. Note that the average number of iterations
 /// required for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.

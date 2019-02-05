@@ -60,6 +60,7 @@ where
     let modulus = Self::rep();
     let val = int(t) % modulus;
     if val > *HALF_MODULUS {
+      // REVIEW (Benedikt): just do from(modulus - val)
       RSA2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(&modulus)).1)
     } else {
       RSA2048Elem(val)
