@@ -99,7 +99,7 @@ impl ClassElem {
   }
 
   fn discriminant(&self) -> Integer {
-    &self.b * &self.b - Integer::from(4) * &self.a * &self.c
+    Integer::from(self.b.square_ref()) - Integer::from(4) * &self.a * &self.c
   }
 
   fn validate(&self) -> bool {
