@@ -2,10 +2,10 @@
 #[macro_use]
 extern crate criterion;
 
+use accumulator::group::{ElemFrom, Rsa2048};
+use accumulator::proof::Pokcr;
+use accumulator::util::int;
 use criterion::Criterion;
-use crypto::group::{ElemFrom, Rsa2048};
-use crypto::proof::Pokcr;
-use crypto::util::int;
 
 fn bench_pokcr_rsa() {
   let witnesses = [Rsa2048::elem(2), Rsa2048::elem(3)];

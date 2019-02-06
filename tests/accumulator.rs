@@ -1,6 +1,6 @@
-use crypto::accumulator::Accumulator;
-use crypto::group::Rsa2048;
-use crypto::hash::hash_to_prime;
+use accumulator::group::Rsa2048;
+use accumulator::hash::hash_to_prime;
+use accumulator::Accumulator;
 use rand::Rng;
 
 /// Adds 10,000 random primes to accumulator (unverified), then tests 100 more random additions

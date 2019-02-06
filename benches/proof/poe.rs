@@ -3,9 +3,9 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::{ElemFrom, Rsa2048, UnknownOrderGroup};
-use crypto::proof::Poe;
-use crypto::util::int;
+use accumulator::group::{ElemFrom, Rsa2048, UnknownOrderGroup};
+use accumulator::proof::Poe;
+use accumulator::util::int;
 
 fn bench_poe_rsa() {
   let base = Rsa2048::unknown_order_elem();
