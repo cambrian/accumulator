@@ -14,7 +14,7 @@ pub enum AccError {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
-pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
+pub struct Accumulator<G: UnknownOrderGroup>(pub G::Elem);
 
 pub struct MembershipProof<G: UnknownOrderGroup> {
   pub witness: Accumulator<G>,
