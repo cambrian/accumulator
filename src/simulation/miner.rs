@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::state::{Block, Transaction};
 use crate::accumulator::Accumulator;
 use crate::group::UnknownOrderGroup;
@@ -13,6 +11,7 @@ struct Miner<G: UnknownOrderGroup> {
 }
 
 impl<G: UnknownOrderGroup> Miner<G> {
+  #[allow(dead_code)]
   pub fn setup(acc: Accumulator<G>, block_height: u64) -> Self {
     Miner {
       acc,
@@ -21,6 +20,7 @@ impl<G: UnknownOrderGroup> Miner<G> {
     }
   }
 
+  #[allow(dead_code)]
   pub fn add_transaction(&mut self, transaction: Transaction<G>) {
     self.pending_transactions.push(transaction);
   }
@@ -41,6 +41,7 @@ impl<G: UnknownOrderGroup> Miner<G> {
     (elems_added, elems_deleted)
   }
 
+  #[allow(dead_code)]
   pub fn forge_block(&self) -> Block<G> {
     let (elems_added, elems_deleted) = self.elems_from_transactions();
     let (witness_deleted, proof_deleted) = self.acc.clone().delete(&elems_deleted).unwrap();
@@ -54,6 +55,7 @@ impl<G: UnknownOrderGroup> Miner<G> {
     }
   }
 
+  #[allow(dead_code)]
   pub fn validate_block(&mut self, block: Block<G>) {
     let (elems_added, elem_witnesses_deleted) = self.elems_from_transactions();
     let elems_deleted: Vec<Integer> = elem_witnesses_deleted
