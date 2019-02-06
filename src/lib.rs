@@ -5,7 +5,7 @@
 extern crate lazy_static;
 
 mod accumulator;
-pub use accumulator::*;
+pub use crate::accumulator::*;
 pub mod group;
 pub mod hash;
 pub mod proof;

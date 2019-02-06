@@ -1,6 +1,6 @@
 /// User executable for simulation.
-extern crate crypto;
-use crypto::simulation::user::User;
+extern crate accumulator;
+use accumulator::simulation::user::User;
 use std::collections::HashSet;
 
 pub fn main() {

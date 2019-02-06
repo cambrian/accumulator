@@ -18,10 +18,7 @@ blake2-rfc = "0.2.18"
 curve25519-dalek = "1.0.3"
 lazy_static = "1.2.0"
 rug = "1.3.0"
-<<<<<<< HEAD
 uuid = "0.7.2"
-=======
->>>>>>> master
 
 [dev-dependencies]
 criterion = "0.2.9"
