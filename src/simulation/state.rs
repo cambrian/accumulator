@@ -2,7 +2,7 @@ use crate::accumulator::{Accumulator, MembershipProof};
 use crate::group::UnknownOrderGroup;
 use uuid::Uuid;
 
-#[derive(Clone, Hash)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub struct Utxo {
   id: Uuid,
 }
