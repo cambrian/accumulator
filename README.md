@@ -1,6 +1,6 @@
 # crypto
-Cryptographic accumulators in Rust over a generic group interface. Batteries (RSA and Ristretto
-group implementations) included!
+Cryptographic accumulators in Rust, implemented over a generic group interface. Batteries (RSA and
+Ristretto group implementations) included!
 
 ## Setup
 1. Clone this repo.
