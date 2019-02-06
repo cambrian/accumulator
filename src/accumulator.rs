@@ -160,6 +160,24 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let x = elems.iter().product();
     Poke2::verify(&self.0, v, poke2_proof) && Poe::verify(d, &x, gv_inv, poe_proof)
   }
+
+  #[allow(non_snake_case)]
+  pub fn root_factor(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
+    if elems.len() == 1 {
+      return vec![self.clone()];
+    }
+    let half_n = elems.len() / 2;
+    let g_l = elems[..half_n]
+      .iter()
+      .fold(self.clone(), |sum, x| Accumulator(G::exp(&sum.0, x)));
+    let g_r = elems[half_n..]
+      .iter()
+      .fold(self.clone(), |sum, x| Accumulator(G::exp(&sum.0, x)));
+    let mut L = g_r.root_factor(&Vec::from(&elems[..half_n]));
+    let mut R = g_l.root_factor(&Vec::from(&elems[half_n..]));
+    L.append(&mut R);
+    L
+  }
 }
 
 // TODO: Add test for `prove_membership`.
@@ -261,5 +279,25 @@ mod tests {
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(41), int(7), int(11)];
     acc.prove_nonmembership(&acc_set, &elems).unwrap();
+  }
+
+  #[test]
+  fn test_root() {
+    let acc = Accumulator::<Rsa2048>::new();
+    let (acc, _) = acc.add(&[int(41), int(67), int(89)]);
+    let additions = [int(97), int(101), int(103), int(107), int(109)];
+    let factors = acc.root_factor(&additions);
+    let mut i = 0;
+    for factor in factors.clone() {
+      let mut expected = acc.clone();
+      for other in &additions {
+        if additions[i] == *other {
+          continue;
+        }
+        expected = expected.add(&[other.clone()]).0;
+      }
+      assert_eq!(factor, expected);
+      i += 1;
+    }
   }
 }
