@@ -34,6 +34,11 @@ path = "benches/group/comparison.rs"
 harness = false
 
 [[bench]]
+name = "class"
+path = "benches/group/class.rs"
+harness = false
+
+[[bench]]
 name = "hashes"
 path = "benches/hash/hashes.rs"
 harness = false
