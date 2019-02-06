@@ -9,7 +9,6 @@ pub use crate::accumulator::*;
 pub mod group;
 pub mod hash;
 pub mod proof;
-pub mod simulation;
 pub mod util;
 mod vector_commitment;
 pub use vector_commitment::*;
