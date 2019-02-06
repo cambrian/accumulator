@@ -24,9 +24,9 @@ uuid = "0.7.2"
 criterion = "0.2.9"
 rand = "0.6.5"
 
-# [[bin]]
-# name = "simulation-miner"
-# path = "src/bin/simulation/miner.rs"
+[[bin]]
+name = "simulation-miner"
+path = "src/bin/simulation/miner.rs"
 
 [[bench]]
 name = "accumulator"

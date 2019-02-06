@@ -4,7 +4,7 @@ use crate::accumulator::Accumulator;
 use crate::group::UnknownOrderGroup;
 use rug::Integer;
 
-struct Miner<G: UnknownOrderGroup> {
+pub struct Miner<G: UnknownOrderGroup> {
   pub is_leader: bool,
   acc: Accumulator<G>,
   block_height: u64,

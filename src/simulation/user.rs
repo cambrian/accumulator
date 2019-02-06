@@ -1,7 +1,7 @@
 use super::state::Utxo;
 use std::collections::HashSet;
 
-struct User(HashSet<Utxo>);
+pub struct User(HashSet<Utxo>);
 
 #[allow(dead_code)]
 impl User {

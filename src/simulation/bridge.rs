@@ -9,7 +9,7 @@ use std::clone::Clone;
 
 #[allow(dead_code)]
 #[derive(Clone)]
-struct Bridge<G: UnknownOrderGroup> {
+pub struct Bridge<G: UnknownOrderGroup> {
   utxo_set_product: Integer,
   utxo_set_witness: Accumulator<G>,
   block_height: u64,
