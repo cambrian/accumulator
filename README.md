@@ -1,5 +1,5 @@
-# crypto
-Crypto primitives in Rust.
+# accumulator
+Accumulator implementation in Rust, over a generic group interface. Batteries (RSA and Ristretto group implementations) included!
 
 ## Setup
 1. Clone this repo.
