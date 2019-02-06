@@ -30,7 +30,7 @@ harness = false
 
 [[bench]]
 name = "comparison"
-path = "benches/group/comparison.rs"
+path = "benches/group/rsa.rs"
 harness = false
 
 [[bench]]
