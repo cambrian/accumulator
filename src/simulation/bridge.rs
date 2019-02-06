@@ -5,8 +5,10 @@ use crate::group::UnknownOrderGroup;
 use crate::hash::hash_to_prime;
 use crate::util::int;
 use rug::Integer;
+use std::clone::Clone;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 struct Bridge<G: UnknownOrderGroup> {
   utxo_set_product: Integer,
   utxo_set_witness: Accumulator<G>,
@@ -52,5 +54,14 @@ impl<G: UnknownOrderGroup> Bridge<G> {
     let subproduct: Integer = utxos.iter().map(|u| hash_to_prime(u)).product();
     let update_exponent = self.utxo_set_product / subproduct;
     Accumulator(G::exp(&self.utxo_set_witness.0, &update_exponent))
+  }
+
+  /// Slow n^2 algorithm for creating individual membership witnesses for several UTXOs.
+  /// TODO: Implement RootFactor algorithm from BBF V3 p. 18
+  pub fn create_membership_witnesses(self, utxos: Vec<Utxo>) -> Vec<Accumulator<G>> {
+    utxos
+      .iter()
+      .map(|u| Self::create_aggregate_membership_witness(self.clone(), vec![u.clone()]))
+      .collect()
   }
 }
