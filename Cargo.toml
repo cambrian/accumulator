@@ -25,8 +25,16 @@ criterion = "0.2.9"
 rand = "0.6.5"
 
 [[bin]]
+name = "simulation-bridge"
+path = "src/bin/simulation/bridge.rs"
+
+[[bin]]
 name = "simulation-miner"
 path = "src/bin/simulation/miner.rs"
+
+[[bin]]
+name = "simulation-user"
+path = "src/bin/simulation/user.rs"
 
 [[bench]]
 name = "accumulator"
