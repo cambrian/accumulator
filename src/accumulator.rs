@@ -10,11 +10,12 @@ use rug::Integer;
 #[derive(Debug)]
 pub enum AccError {
   BadWitness,
+  FailedDivision,
   InputsNotCoprime,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
-pub struct Accumulator<G: UnknownOrderGroup>(pub G::Elem);
+pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
 pub struct MembershipProof<G: UnknownOrderGroup> {
   pub witness: Accumulator<G>,
@@ -35,6 +36,21 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Accumulator(G::unknown_order_elem())
   }
 
+  // Computes `self ^ (numerator / denominator)`.
+  pub fn exp_quotient(self, numerator: Integer, denominator: Integer) -> Result<Self, AccError> {
+    if denominator == int(0) {
+      return Err(AccError::FailedDivision);
+    }
+
+    let (quotient, remainder) = numerator.div_rem(denominator);
+
+    if remainder != int(0) {
+      return Err(AccError::FailedDivision);
+    }
+
+    Ok(Accumulator(G::exp(&self.0, &quotient)))
+  }
+
   // The conciseness of accumulator.add() and low probability of confusion with implementations of
   // the Add trait probably justify this...
   #[allow(clippy::should_implement_trait)]
@@ -42,10 +58,10 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
     let x = elems.iter().product();
-    let new_acc = G::exp(&self.0, &x);
-    let poe_proof = Poe::<G>::prove(&self.0, &x, &new_acc);
+    let acc_new = G::exp(&self.0, &x);
+    let poe_proof = Poe::<G>::prove(&self.0, &x, &acc_new);
     (
-      Accumulator(new_acc),
+      Accumulator(acc_new),
       MembershipProof {
         witness: self,
         proof: poe_proof,
@@ -158,13 +174,40 @@ mod tests {
   }
 
   #[test]
+  fn test_exp_quotient() {
+    let empty_acc = Accumulator::<Rsa2048>::new();
+    let exp_quotient_result = empty_acc
+      .exp_quotient(int(17 * 41 * 67 * 89), int(17 * 89))
+      .unwrap();
+    let exp_quotient_expected =
+      Accumulator(Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(41 * 67)));
+    assert!(exp_quotient_result == exp_quotient_expected);
+  }
+
+  #[test]
+  #[should_panic(expected = "FailedDivision")]
+  fn test_exp_quotient_zero() {
+    Accumulator::<Rsa2048>::new()
+      .exp_quotient(int(17 * 41 * 67 * 89), int(0))
+      .unwrap();
+  }
+
+  #[test]
+  #[should_panic(expected = "FailedDivision")]
+  fn test_exp_quotient_remainder() {
+    Accumulator::<Rsa2048>::new()
+      .exp_quotient(int(17 * 41 * 67 * 89), int(5))
+      .unwrap();
+  }
+
+  #[test]
   fn test_add() {
     let acc = init_acc::<Rsa2048>();
     let new_elems = [int(5), int(7), int(11)];
-    let (new_acc, proof) = acc.add(&new_elems);
-    let expected_acc = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(94_125_955));
-    assert!(new_acc.0 == expected_acc);
-    assert!(new_acc.verify_membership(&new_elems, &proof));
+    let (acc_new, proof) = acc.add(&new_elems);
+    let acc_expected = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(94_125_955));
+    assert!(acc_new.0 == acc_expected);
+    assert!(acc_new.verify_membership(&new_elems, &proof));
   }
 
   #[test]
@@ -172,20 +215,20 @@ mod tests {
     let acc = init_acc::<Rsa2048>();
     let y_witness = Accumulator::<Rsa2048>::new().add(&[int(3649)]).0;
     let z_witness = Accumulator::<Rsa2048>::new().add(&[int(2747)]).0;
-    let (new_acc, proof) = acc
+    let (acc_new, proof) = acc
       .clone()
       .delete(&[(int(67), y_witness), (int(89), z_witness)])
       .expect("valid delete expected");
-    let expected_acc = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(41));
-    assert!(new_acc.0 == expected_acc);
+    let acc_expected = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(41));
+    assert!(acc_new.0 == acc_expected);
     assert!(acc.verify_membership(&[int(67), int(89)], &proof));
   }
 
   #[test]
   fn test_delete_empty() {
     let acc = init_acc::<Rsa2048>();
-    let (new_acc, proof) = acc.clone().delete(&[]).expect("valid delete expected");
-    assert!(new_acc == acc);
+    let (acc_new, proof) = acc.clone().delete(&[]).expect("valid delete expected");
+    assert!(acc_new == acc);
     assert!(acc.verify_membership(&[], &proof));
   }
 
