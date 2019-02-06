@@ -2,12 +2,12 @@ use crate::accumulator::{Accumulator, MembershipProof};
 use crate::group::UnknownOrderGroup;
 use uuid::Uuid;
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Utxo {
   id: Uuid,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 // TODO: Maybe don't use pub(super) everywhere.
 pub struct Transaction<G: UnknownOrderGroup> {
   pub(super) utxos_added: Vec<Utxo>,

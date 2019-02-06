@@ -13,12 +13,12 @@ pub use rsa::{Rsa2048, Rsa2048Elem};
 ///
 /// Clone is only required here because Rust can't figure out how to clone an Accumulator<G> even
 /// though it's just a wrapped G::Elem. If possible we'd remove it.
-pub trait Group: PartialEq + TypeRep + Clone {
+pub trait Group: Clone + PartialEq + TypeRep {
   /// In theory the association Group::Elem is bijective, such that it makes sense to write
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
   /// type and avoid using prefix notation for all of our group operations.
   /// But afaik bijective associated types are not supported by Rust.
-  type Elem: Eq + Clone + Sized + Hash + Debug;
+  type Elem: Clone + Debug + PartialEq + Eq + Hash + Sized;
 
   fn id_(rep: &Self::Rep) -> Self::Elem;
 

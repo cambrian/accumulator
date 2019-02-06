@@ -23,7 +23,11 @@ impl<G: UnknownOrderGroup> Miner<G> {
   }
 
   pub fn add_transaction(&mut self, transaction: Transaction<G>) {
-    self.pending_transactions.push(transaction);
+    // This contains check could incur overhead; ideally we'd use a set but Rust HashSet is kind of
+    // a pain to use here.
+    if !self.pending_transactions.contains(&transaction) {
+      self.pending_transactions.push(transaction);
+    }
   }
 
   pub fn forge_block(&self) -> Block<G> {

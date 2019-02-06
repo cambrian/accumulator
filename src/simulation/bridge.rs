@@ -49,15 +49,14 @@ impl<G: UnknownOrderGroup> Bridge<G> {
     self.block_height = block.height;
   }
 
-  // TODO: naming
   fn create_aggregate_membership_witness(self, utxos: Vec<Utxo>) -> Accumulator<G> {
     let subproduct: Integer = utxos.iter().map(|u| hash_to_prime(u)).product();
     let update_exponent = self.utxo_set_product / subproduct;
     Accumulator(G::exp(&self.utxo_set_witness.0, &update_exponent))
   }
 
-  /// Slow n^2 algorithm for creating individual membership witnesses for several UTXOs.
-  /// TODO: Implement RootFactor algorithm from BBF V3 p. 18
+  /// Slow O(N^2) algorithm for creating individual membership witnesses for several UTXOs.
+  /// TODO: Implement O(N log N) RootFactor algorithm from BBF V3 p. 18.
   pub fn create_membership_witnesses(self, utxos: Vec<Utxo>) -> Vec<Accumulator<G>> {
     utxos
       .iter()

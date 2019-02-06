@@ -1,17 +1,16 @@
-#![allow(dead_code)]
-
 use super::state::Utxo;
 use std::collections::HashSet;
 
 struct User(HashSet<Utxo>);
 
+#[allow(dead_code)]
 impl User {
   pub fn setup(utxo_set: HashSet<Utxo>) -> Self {
     User(utxo_set)
   }
 
-  // TODO: Maybe support more inputs than one
-  // Expects bridge or coordination to call `update` to remove this utxo when it is confirmed
+  // TODO: Maybe support more inputs than one.
+  // Expects executable to call `update` to remove this UTXO when it is confirmed.
   pub fn get_input_for_transaction(&mut self) -> Utxo {
     self.0.iter().next().unwrap().clone()
   }
