@@ -1,6 +1,6 @@
 [package]
-name = "crypto"
-version = "0.1.0"
+name = "accumulator"
+version = "0.1.1"
 edition = "2018"
 authors = [
   "Pablo Aldape <pablo@vest.io>",
@@ -8,16 +8,16 @@ authors = [
   "Sanjay Kannan <sanjay@vest.io>",
   "Eddie Wang <eddie@vest.io>"
 ]
-description = "Accumulators and associated cryptographic primitives in Rust."
+description = "Cryptographic accumulators in Rust."
 keywords = ["cryptography", "crypto", "accumulator", "rsa", "vector", "commitment"]
 readme = "README.md"
-repository = "https://github.com/1protocol/crypto"
+repository = "https://github.com/1protocol/accumulator"
 
 [dependencies]
 blake2-rfc = "0.2.18"
+curve25519-dalek = "1.0.3"
 lazy_static = "1.2.0"
 rug = "1.3.0"
-curve25519-dalek = "1.0.3"
 
 [dev-dependencies]
 criterion = "0.2.9"
