@@ -2,10 +2,10 @@
 #[macro_use]
 extern crate criterion;
 
+use accumulator::group::{Rsa2048, UnknownOrderGroup};
+use accumulator::hash::hash_to_prime;
+use accumulator::{Accumulator, MembershipProof};
 use criterion::Criterion;
-use crypto::accumulator::{Accumulator, MembershipProof};
-use crypto::group::{Rsa2048, UnknownOrderGroup};
-use crypto::hash::hash_to_prime;
 use rand::Rng;
 use rug::Integer;
 

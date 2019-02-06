@@ -1,4 +1,4 @@
-# crypto
+# accumulator
 Cryptographic accumulators in Rust, implemented over a generic group interface. Batteries (RSA and
 Ristretto group implementations) included!
 
