@@ -1,5 +1,5 @@
 use super::state::{Block, Transaction};
-use super::util::elems_from_transactions;
+use super::util;
 use crate::accumulator::Accumulator;
 use crate::group::UnknownOrderGroup;
 use rug::Integer;
@@ -25,7 +25,7 @@ impl<G: UnknownOrderGroup> Miner<G> {
   }
 
   pub fn forge_block(&self) -> Block<G> {
-    let (elems_added, elems_deleted) = elems_from_transactions(&self.pending_transactions);
+    let (elems_added, elems_deleted) = util::elems_from_transactions(&self.pending_transactions);
     let (witness_deleted, proof_deleted) = self.acc.clone().delete(&elems_deleted).unwrap();
     let (new_acc, proof_added) = witness_deleted.clone().add(&elems_added);
     Block {
@@ -38,7 +38,7 @@ impl<G: UnknownOrderGroup> Miner<G> {
   }
 
   pub fn validate_block(&mut self, block: Block<G>) {
-    let (elems_added, elem_witnesses_deleted) = elems_from_transactions(&block.transactions);
+    let (elems_added, elem_witnesses_deleted) = util::elems_from_transactions(&block.transactions);
     let elems_deleted: Vec<Integer> = elem_witnesses_deleted
       .iter()
       .map(|(u, _wit)| u.clone())
