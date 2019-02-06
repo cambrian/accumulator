@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::{ElemFrom, Group, Rsa2048};
+use accumulator::group::{ElemFrom, Group, Rsa2048};
 use rug::Integer;
 use std::str::FromStr;
 

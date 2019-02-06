@@ -2,11 +2,11 @@
 #[macro_use]
 extern crate criterion;
 
+use accumulator::group::Rsa2048;
+use accumulator::group::{ElemFrom, UnknownOrderGroup};
+use accumulator::proof::Poke2;
+use accumulator::util::int;
 use criterion::Criterion;
-use crypto::group::Rsa2048;
-use crypto::group::{ElemFrom, UnknownOrderGroup};
-use crypto::proof::Poke2;
-use crypto::util::int;
 
 fn bench_poke2_rsa() {
   let base = Rsa2048::unknown_order_elem();

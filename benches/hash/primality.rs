@@ -2,8 +2,8 @@
 #[macro_use]
 extern crate criterion;
 
+use accumulator::hash::primality::passes_miller_rabin_base_2;
 use criterion::Criterion;
-use crypto::hash::primality::passes_miller_rabin_base_2;
 use rand::Rng;
 use rug::integer::Order;
 use rug::Integer;
