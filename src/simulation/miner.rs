@@ -5,6 +5,7 @@ use crate::group::UnknownOrderGroup;
 use rug::Integer;
 
 struct Miner<G: UnknownOrderGroup> {
+  pub is_leader: bool,
   acc: Accumulator<G>,
   block_height: u64,
   pending_transactions: Vec<Transaction<G>>,
@@ -12,8 +13,9 @@ struct Miner<G: UnknownOrderGroup> {
 
 #[allow(dead_code)]
 impl<G: UnknownOrderGroup> Miner<G> {
-  pub fn setup(acc: Accumulator<G>, block_height: u64) -> Self {
+  pub fn setup(is_leader: bool, acc: Accumulator<G>, block_height: u64) -> Self {
     Miner {
+      is_leader,
       acc,
       block_height,
       pending_transactions: Vec::new(),
@@ -38,6 +40,11 @@ impl<G: UnknownOrderGroup> Miner<G> {
   }
 
   pub fn validate_block(&mut self, block: Block<G>) {
+    // Preserves idempotency if multiple miners are leaders.
+    if block.height != self.block_height + 1 {
+      return;
+    }
+
     let (elems_added, elem_witnesses_deleted) = util::elems_from_transactions(&block.transactions);
     let elems_deleted: Vec<Integer> = elem_witnesses_deleted
       .iter()

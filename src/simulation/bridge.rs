@@ -1,7 +1,6 @@
 use super::state::{Block, Utxo};
 use super::util;
 use crate::accumulator::Accumulator;
-use crate::group::Group;
 use crate::group::UnknownOrderGroup;
 use crate::hash::hash_to_prime;
 use crate::util::int;
@@ -11,18 +10,25 @@ use rug::Integer;
 struct Bridge<G: UnknownOrderGroup> {
   utxo_set_product: Integer,
   utxo_set_witness: Accumulator<G>,
+  block_height: u64,
 }
 
+#[allow(dead_code)]
 impl<G: UnknownOrderGroup> Bridge<G> {
-  #[allow(dead_code)]
-  pub fn setup(acc: Accumulator<G>) -> Self {
+  pub fn setup(acc: Accumulator<G>, block_height: u64) -> Self {
     Bridge {
       utxo_set_product: int(1),
       utxo_set_witness: acc,
+      block_height,
     }
   }
 
   pub fn update(&mut self, block: Block<G>) {
+    // Preserves idempotency if multiple miners are leaders.
+    if block.height != self.block_height + 1 {
+      return;
+    }
+
     let (elems_added, elems_deleted) = util::elems_from_transactions(&block.transactions);
     let elems_added_product: Integer = elems_added.iter().product();
     let elems_deleted_product: Integer = elems_deleted.iter().map(|(u, _wit)| u).product();
@@ -38,6 +44,7 @@ impl<G: UnknownOrderGroup> Bridge<G> {
       .unwrap()
       .0;
     self.utxo_set_witness = self.utxo_set_witness.clone().add(&elems_added).0;
+    self.block_height = block.height;
   }
 
   // TODO: naming
