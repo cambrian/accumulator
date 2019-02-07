@@ -3,16 +3,16 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::{ElemFrom, UnknownOrderGroup, RSA2048};
-use crypto::proof::PoE;
-use crypto::util::int;
+use accumulator::group::{ElemFrom, Rsa2048, UnknownOrderGroup};
+use accumulator::proof::Poe;
+use accumulator::util::int;
 
 fn bench_poe_rsa() {
-  let base = RSA2048::unknown_order_elem();
+  let base = Rsa2048::unknown_order_elem();
   let exp = int(20);
-  let result = RSA2048::elem(1_048_576);
-  let proof = PoE::<RSA2048>::prove(&base, &exp, &result);
-  PoE::<RSA2048>::verify(&base, &exp, &result, &proof);
+  let result = Rsa2048::elem(1_048_576);
+  let proof = Poe::<Rsa2048>::prove(&base, &exp, &result);
+  Poe::<Rsa2048>::verify(&base, &exp, &result, &proof);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

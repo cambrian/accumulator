@@ -2,17 +2,17 @@
 #[macro_use]
 extern crate criterion;
 
+use accumulator::group::{ElemFrom, Rsa2048};
+use accumulator::proof::Pokcr;
+use accumulator::util::int;
 use criterion::Criterion;
-use crypto::group::{ElemFrom, RSA2048};
-use crypto::proof::PoKCR;
-use crypto::util::int;
 
 fn bench_pokcr_rsa() {
-  let witnesses = [RSA2048::elem(2), RSA2048::elem(3)];
+  let witnesses = [Rsa2048::elem(2), Rsa2048::elem(3)];
   let x = [int(2), int(2)];
-  let alphas = [RSA2048::elem(4), RSA2048::elem(9)];
-  let proof = PoKCR::<RSA2048>::prove(&witnesses);
-  PoKCR::verify(&alphas, &x, &proof);
+  let alphas = [Rsa2048::elem(4), Rsa2048::elem(9)];
+  let proof = Pokcr::<Rsa2048>::prove(&witnesses);
+  Pokcr::verify(&alphas, &x, &proof);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

@@ -3,13 +3,14 @@
 //! Operations that "mutate" the accumulator (add, delete) use moves instead of references so that
 //! you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
-use crate::proof::{PoE, PoKE2};
+use crate::proof::{Poe, Poke2};
 use crate::util::{int, shamir_trick};
 use rug::Integer;
 
 #[derive(Debug)]
 pub enum AccError {
   BadWitness,
+  FailedDivision,
   InputsNotCoprime,
 }
 
@@ -17,22 +18,37 @@ pub enum AccError {
 pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
 pub struct MembershipProof<G: UnknownOrderGroup> {
-  witness: Accumulator<G>,
-  proof: PoE<G>,
+  pub witness: Accumulator<G>,
+  proof: Poe<G>,
 }
 
 pub struct NonmembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,
   gv_inv: G::Elem,
-  poke2_proof: PoKE2<G>,
-  poe_proof: PoE<G>,
+  poke2_proof: Poke2<G>,
+  poe_proof: Poe<G>,
 }
 
 impl<G: UnknownOrderGroup> Accumulator<G> {
   /// Initializes the accumulator to a group element.
   pub fn new() -> Self {
     Accumulator(G::unknown_order_elem())
+  }
+
+  // Computes `self ^ (numerator / denominator)`.
+  pub fn exp_quotient(self, numerator: Integer, denominator: Integer) -> Result<Self, AccError> {
+    if denominator == int(0) {
+      return Err(AccError::FailedDivision);
+    }
+
+    let (quotient, remainder) = numerator.div_rem(denominator);
+
+    if remainder != int(0) {
+      return Err(AccError::FailedDivision);
+    }
+
+    Ok(Accumulator(G::exp(&self.0, &quotient)))
   }
 
   // The conciseness of accumulator.add() and low probability of confusion with implementations of
@@ -42,10 +58,10 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
     let x = elems.iter().product();
-    let new_acc = G::exp(&self.0, &x);
-    let poe_proof = PoE::<G>::prove(&self.0, &x, &new_acc);
+    let acc_new = G::exp(&self.0, &x);
+    let poe_proof = Poe::<G>::prove(&self.0, &x, &acc_new);
     (
-      Accumulator(new_acc),
+      Accumulator(acc_new),
       MembershipProof {
         witness: self,
         proof: poe_proof,
@@ -71,7 +87,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
       elem_aggregate *= elem;
     }
 
-    let poe_proof = PoE::<G>::prove(&acc_next, &elem_aggregate, &self.0);
+    let poe_proof = Poe::<G>::prove(&acc_next, &elem_aggregate, &self.0);
     Ok((
       Accumulator(acc_next.clone()),
       MembershipProof {
@@ -96,7 +112,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     MembershipProof { witness, proof }: &MembershipProof<G>,
   ) -> bool {
     let exp = elems.iter().product();
-    PoE::verify(&witness.0, &exp, &self.0, proof)
+    Poe::verify(&witness.0, &exp, &self.0, proof)
   }
 
   /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
@@ -118,8 +134,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let v = G::exp(&self.0, &b);
     let gv_inv = G::op(&g, &G::inv(&v));
 
-    let poke2_proof = PoKE2::prove(&self.0, &b, &v);
-    let poe_proof = PoE::prove(&d, &x, &gv_inv);
+    let poke2_proof = Poke2::prove(&self.0, &b, &v);
+    let poe_proof = Poe::prove(&d, &x, &gv_inv);
     Ok(NonmembershipProof {
       d,
       v,
@@ -142,7 +158,27 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     }: &NonmembershipProof<G>,
   ) -> bool {
     let x = elems.iter().product();
-    PoKE2::verify(&self.0, v, poke2_proof) && PoE::verify(d, &x, gv_inv, poe_proof)
+    Poke2::verify(&self.0, v, poke2_proof) && Poe::verify(d, &x, gv_inv, poe_proof)
+  }
+
+  #[allow(non_snake_case)]
+  /// For accumulator `g` and elements `[a, b, c, ...]` computes witnesses of `g^(abc...)` with
+  /// respect to each of the elements.
+  pub fn root_factor(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
+    if elems.len() == 1 {
+      return vec![self.clone()];
+    }
+    let half_n = elems.len() / 2;
+    let g_l = elems[..half_n]
+      .iter()
+      .fold(self.clone(), |sum, x| Accumulator(G::exp(&sum.0, x)));
+    let g_r = elems[half_n..]
+      .iter()
+      .fold(self.clone(), |sum, x| Accumulator(G::exp(&sum.0, x)));
+    let mut L = g_r.root_factor(&Vec::from(&elems[..half_n]));
+    let mut R = g_l.root_factor(&Vec::from(&elems[half_n..]));
+    L.append(&mut R);
+    L
   }
 }
 
@@ -150,7 +186,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{Group, RSA2048};
+  use crate::group::{Group, Rsa2048};
   use crate::util::int;
 
   fn init_acc<G: UnknownOrderGroup>() -> Accumulator<G> {
@@ -158,43 +194,70 @@ mod tests {
   }
 
   #[test]
+  fn test_exp_quotient() {
+    let empty_acc = Accumulator::<Rsa2048>::new();
+    let exp_quotient_result = empty_acc
+      .exp_quotient(int(17 * 41 * 67 * 89), int(17 * 89))
+      .unwrap();
+    let exp_quotient_expected =
+      Accumulator(Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(41 * 67)));
+    assert!(exp_quotient_result == exp_quotient_expected);
+  }
+
+  #[test]
+  #[should_panic(expected = "FailedDivision")]
+  fn test_exp_quotient_zero() {
+    Accumulator::<Rsa2048>::new()
+      .exp_quotient(int(17 * 41 * 67 * 89), int(0))
+      .unwrap();
+  }
+
+  #[test]
+  #[should_panic(expected = "FailedDivision")]
+  fn test_exp_quotient_remainder() {
+    Accumulator::<Rsa2048>::new()
+      .exp_quotient(int(17 * 41 * 67 * 89), int(5))
+      .unwrap();
+  }
+
+  #[test]
   fn test_add() {
-    let acc = init_acc::<RSA2048>();
+    let acc = init_acc::<Rsa2048>();
     let new_elems = [int(5), int(7), int(11)];
-    let (new_acc, proof) = acc.add(&new_elems);
-    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(94_125_955));
-    assert!(new_acc.0 == expected_acc);
-    assert!(new_acc.verify_membership(&new_elems, &proof));
+    let (acc_new, proof) = acc.add(&new_elems);
+    let acc_expected = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(94_125_955));
+    assert!(acc_new.0 == acc_expected);
+    assert!(acc_new.verify_membership(&new_elems, &proof));
   }
 
   #[test]
   fn test_delete() {
-    let acc = init_acc::<RSA2048>();
-    let y_witness = Accumulator::<RSA2048>::new().add(&[int(3649)]).0;
-    let z_witness = Accumulator::<RSA2048>::new().add(&[int(2747)]).0;
-    let (new_acc, proof) = acc
+    let acc = init_acc::<Rsa2048>();
+    let y_witness = Accumulator::<Rsa2048>::new().add(&[int(3649)]).0;
+    let z_witness = Accumulator::<Rsa2048>::new().add(&[int(2747)]).0;
+    let (acc_new, proof) = acc
       .clone()
       .delete(&[(int(67), y_witness), (int(89), z_witness)])
       .expect("valid delete expected");
-    let expected_acc = RSA2048::exp(&RSA2048::unknown_order_elem(), &int(41));
-    assert!(new_acc.0 == expected_acc);
+    let acc_expected = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(41));
+    assert!(acc_new.0 == acc_expected);
     assert!(acc.verify_membership(&[int(67), int(89)], &proof));
   }
 
   #[test]
   fn test_delete_empty() {
-    let acc = init_acc::<RSA2048>();
-    let (new_acc, proof) = acc.clone().delete(&[]).expect("valid delete expected");
-    assert!(new_acc == acc);
+    let acc = init_acc::<Rsa2048>();
+    let (acc_new, proof) = acc.clone().delete(&[]).expect("valid delete expected");
+    assert!(acc_new == acc);
     assert!(acc.verify_membership(&[], &proof));
   }
 
   #[should_panic(expected = "BadWitness")]
   #[test]
   fn test_delete_bad_witness() {
-    let acc = init_acc::<RSA2048>();
-    let y_witness = Accumulator::<RSA2048>::new().add(&[int(3648)]).0;
-    let z_witness = Accumulator::<RSA2048>::new().add(&[int(2746)]).0;
+    let acc = init_acc::<Rsa2048>();
+    let y_witness = Accumulator::<Rsa2048>::new().add(&[int(3648)]).0;
+    let z_witness = Accumulator::<Rsa2048>::new().add(&[int(2746)]).0;
     acc
       .delete(&[(int(67), y_witness), (int(89), z_witness)])
       .unwrap();
@@ -202,7 +265,7 @@ mod tests {
 
   #[test]
   fn test_prove_nonmembership() {
-    let acc = init_acc::<RSA2048>();
+    let acc = init_acc::<Rsa2048>();
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(5), int(7), int(11)];
     let proof = acc
@@ -214,9 +277,22 @@ mod tests {
   #[should_panic(expected = "InputsNotCoprime")]
   #[test]
   fn test_prove_nonmembership_failure() {
-    let acc = init_acc::<RSA2048>();
+    let acc = init_acc::<Rsa2048>();
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(41), int(7), int(11)];
     acc.prove_nonmembership(&acc_set, &elems).unwrap();
+  }
+
+  #[test]
+  fn test_root() {
+    let acc = Accumulator::<Rsa2048>::new();
+    let (acc, _) = acc.add(&[int(41), int(67), int(89)]);
+    let factors = [int(97), int(101), int(103), int(107), int(109)];
+    let witnesses = acc.root_factor(&factors);
+    for (i, witness) in witnesses.iter().enumerate() {
+      let partial_product = factors.iter().product::<Integer>() / factors[i].clone();
+      let expected = acc.clone().add(&[partial_product]).0;
+      assert_eq!(*witness, expected);
+    }
   }
 }

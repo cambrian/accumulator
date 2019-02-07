@@ -2,18 +2,18 @@
 #[macro_use]
 extern crate criterion;
 
+use accumulator::group::Rsa2048;
+use accumulator::group::{ElemFrom, UnknownOrderGroup};
+use accumulator::proof::Poke2;
+use accumulator::util::int;
 use criterion::Criterion;
-use crypto::group::RSA2048;
-use crypto::group::{ElemFrom, UnknownOrderGroup};
-use crypto::proof::PoKE2;
-use crypto::util::int;
 
 fn bench_poke2_rsa() {
-  let base = RSA2048::unknown_order_elem();
+  let base = Rsa2048::unknown_order_elem();
   let exp = int(20);
-  let result = RSA2048::elem(1_048_576);
-  let proof = PoKE2::<RSA2048>::prove(&base, &exp, &result);
-  PoKE2::verify(&base, &result, &proof);
+  let result = Rsa2048::elem(1_048_576);
+  let proof = Poke2::<Rsa2048>::prove(&base, &exp, &result);
+  Poke2::verify(&base, &result, &proof);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

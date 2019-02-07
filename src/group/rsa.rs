@@ -4,8 +4,8 @@ use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum RSA2048 {}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Rsa2048 {}
 
 /// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048.
 const RSA2048_MODULUS_DECIMAL: &str = "25195908475657893494027183240048398571429282126204032027777\
@@ -25,52 +25,51 @@ lazy_static! {
   pub static ref HALF_MODULUS: Integer = RSA2048_MODULUS.clone() / 2;
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct RSA2048Elem(Integer);
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Rsa2048Elem(Integer);
 
-impl TypeRep for RSA2048 {
+impl TypeRep for Rsa2048 {
   type Rep = Integer;
   fn rep() -> &'static Self::Rep {
     &RSA2048_MODULUS
   }
 }
 
-impl Group for RSA2048 {
-  type Elem = RSA2048Elem;
-  fn op_(modulus: &Integer, a: &RSA2048Elem, b: &RSA2048Elem) -> RSA2048Elem {
-    RSA2048::elem(int(&a.0 * &b.0) % modulus)
+impl Group for Rsa2048 {
+  type Elem = Rsa2048Elem;
+  fn op_(modulus: &Integer, a: &Rsa2048Elem, b: &Rsa2048Elem) -> Rsa2048Elem {
+    Rsa2048::elem(int(&a.0 * &b.0) % modulus)
   }
-  fn id_(_: &Integer) -> RSA2048Elem {
-    RSA2048::elem(1)
+  fn id_(_: &Integer) -> Rsa2048Elem {
+    Rsa2048::elem(1)
   }
-  fn inv_(modulus: &Integer, x: &RSA2048Elem) -> RSA2048Elem {
-    RSA2048::elem(x.0.invert_ref(modulus).unwrap())
+  fn inv_(modulus: &Integer, x: &Rsa2048Elem) -> Rsa2048Elem {
+    Rsa2048::elem(x.0.invert_ref(modulus).unwrap())
   }
-  fn exp_(modulus: &Integer, x: &RSA2048Elem, n: &Integer) -> RSA2048Elem {
+  fn exp_(modulus: &Integer, x: &Rsa2048Elem, n: &Integer) -> Rsa2048Elem {
     // A side-channel resistant impl is 40% slower; we'll consider it in the future if we need to.
-    RSA2048::elem(x.0.pow_mod_ref(n, modulus).unwrap())
+    Rsa2048::elem(x.0.pow_mod_ref(n, modulus).unwrap())
   }
 }
 
-impl<T> ElemFrom<T> for RSA2048
+impl<T> ElemFrom<T> for Rsa2048
 where
   Integer: From<T>,
 {
-  fn elem(t: T) -> RSA2048Elem {
+  fn elem(t: T) -> Rsa2048Elem {
     let modulus = Self::rep();
     let val = int(t) % modulus;
     if val > *HALF_MODULUS {
-      // REVIEW (Benedikt): just do from(modulus - val)
-      RSA2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(&modulus)).1)
+      Rsa2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(&modulus)).1)
     } else {
-      RSA2048Elem(val)
+      Rsa2048Elem(val)
     }
   }
 }
 
-impl UnknownOrderGroup for RSA2048 {
-  fn unknown_order_elem_(_: &Integer) -> RSA2048Elem {
-    RSA2048::elem(2)
+impl UnknownOrderGroup for Rsa2048 {
+  fn unknown_order_elem_(_: &Integer) -> Rsa2048Elem {
+    Rsa2048::elem(2)
   }
 }
 
@@ -80,31 +79,31 @@ mod tests {
 
   #[test]
   fn test_init() {
-    let _x = &RSA2048::rep();
+    let _x = &Rsa2048::rep();
   }
 
   #[test]
   fn test_op() {
-    let a = RSA2048::op(&RSA2048::elem(2), &RSA2048::elem(3));
-    assert!(a == RSA2048::elem(6));
-    let b = RSA2048::op(&RSA2048::elem(-2), &RSA2048::elem(-3));
-    assert!(b == RSA2048::elem(6));
+    let a = Rsa2048::op(&Rsa2048::elem(2), &Rsa2048::elem(3));
+    assert!(a == Rsa2048::elem(6));
+    let b = Rsa2048::op(&Rsa2048::elem(-2), &Rsa2048::elem(-3));
+    assert!(b == Rsa2048::elem(6));
   }
 
   /// Tests that -x and x are treated as the same element.
   #[test]
   fn test_cosets() {
-    assert!(RSA2048::elem(3) == RSA2048::elem(RSA2048_MODULUS.clone() - 3));
+    assert!(Rsa2048::elem(3) == Rsa2048::elem(RSA2048_MODULUS.clone() - 3));
     // TODO: Add a trickier coset test involving `op`.
   }
 
   #[test]
   fn test_exp() {
-    let a = RSA2048::exp(&RSA2048::elem(2), &int(3));
-    assert!(a == RSA2048::elem(8));
-    let b = RSA2048::exp(&RSA2048::elem(2), &int(4096));
+    let a = Rsa2048::exp(&Rsa2048::elem(2), &int(3));
+    assert!(a == Rsa2048::elem(8));
+    let b = Rsa2048::exp(&Rsa2048::elem(2), &int(4096));
     assert!(
-      b == RSA2048::elem(
+      b == Rsa2048::elem(
         Integer::parse(
           "217207389955395428589369158781869218697519159898401521658993038615824872408108784926597\
            517496727372037176277380476487000099770530440575029170919732871116716934260655466121508\
@@ -118,16 +117,16 @@ mod tests {
         .unwrap()
       )
     );
-    let c = RSA2048::exp(&RSA2048::elem(2), &RSA2048_MODULUS);
+    let c = Rsa2048::exp(&Rsa2048::elem(2), &RSA2048_MODULUS);
     dbg!(c);
-    let d = RSA2048::exp(&RSA2048::elem(2), &(RSA2048_MODULUS.clone() * int(2)));
+    let d = Rsa2048::exp(&Rsa2048::elem(2), &(RSA2048_MODULUS.clone() * int(2)));
     dbg!(d);
   }
 
   #[test]
   fn test_inv() {
-    let x = RSA2048::elem(2);
-    let inv = RSA2048::inv(&x);
-    assert!(RSA2048::op(&x, &inv) == RSA2048::id());
+    let x = Rsa2048::elem(2);
+    let inv = Rsa2048::inv(&x);
+    assert!(Rsa2048::op(&x, &inv) == Rsa2048::id());
   }
 }

@@ -8,7 +8,7 @@ use rug::ops::Pow;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Ed25519 {}
 
 lazy_static! {

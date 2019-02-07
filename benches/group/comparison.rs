@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::group::{ElemFrom, Group, RSA2048};
+use accumulator::group::{ElemFrom, Group, Rsa2048};
 use rug::Integer;
 use std::str::FromStr;
 
@@ -67,10 +67,10 @@ fn bench_inv<G: Group + ElemFrom<u8>>() {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("rsa_op", |b| b.iter(bench_op::<RSA2048>));
-  c.bench_function("rsa_op_large", |b| b.iter(bench_op_large::<RSA2048>));
-  c.bench_function("rsa_exp", |b| b.iter(bench_exp::<RSA2048>));
-  c.bench_function("rsa_inv", |b| b.iter(bench_inv::<RSA2048>));
+  c.bench_function("rsa_op", |b| b.iter(bench_op::<Rsa2048>));
+  c.bench_function("rsa_op_large", |b| b.iter(bench_op_large::<Rsa2048>));
+  c.bench_function("rsa_exp", |b| b.iter(bench_exp::<Rsa2048>));
+  c.bench_function("rsa_inv", |b| b.iter(bench_inv::<Rsa2048>));
 }
 
 criterion_group!(benches, criterion_benchmark);

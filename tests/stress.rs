@@ -1,15 +1,16 @@
-use crypto::accumulator::Accumulator;
-use crypto::group::RSA2048;
-use crypto::hash::hash_to_prime;
+use accumulator::group::Rsa2048;
+use accumulator::hash::hash_to_prime;
+use accumulator::Accumulator;
 use rand::Rng;
 
 /// Adds 10,000 random primes to accumulator (unverified), then tests 100 more random additions
 /// (with verification) and 100 random elements are verified to be nonmembers.
-/// Takes about 5 minutes. (TODO: Disable by default since it takes so long?)
+/// Takes about 5 minutes.
 #[test]
+#[ignore]
 fn stress_test() {
   let mut acc_set = Vec::new();
-  let mut acc = Accumulator::<RSA2048>::new();
+  let mut acc = Accumulator::<Rsa2048>::new();
   for _ in 0..100 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
     let prime = hash_to_prime(&random_bytes);
@@ -37,7 +38,7 @@ fn stress_test() {
     for _ in 0..100 {
       let random_bytes_2 = rand::thread_rng().gen::<[u8; 32]>();
       let random_exp = hash_to_prime(&random_bytes_2);
-      let false_witness = Accumulator::<RSA2048>::new().add(&[random_exp]).0;
+      let false_witness = Accumulator::<Rsa2048>::new().add(&[random_exp]).0;
       assert!(acc
         .prove_membership(&[(prime.clone(), false_witness)])
         .is_err());

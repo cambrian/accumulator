@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use crypto::hash::{blake2b, hash_to_prime};
+use accumulator::hash::{blake2b, hash_to_prime};
 use rand::Rng;
 
 fn bench_blake2() {
