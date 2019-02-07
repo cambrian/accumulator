@@ -4,7 +4,7 @@ use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Rsa2048 {}
 
 /// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048.
@@ -25,7 +25,7 @@ lazy_static! {
   pub static ref HALF_MODULUS: Integer = RSA2048_MODULUS.clone() / 2;
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Rsa2048Elem(Integer);
 
 impl TypeRep for Rsa2048 {
