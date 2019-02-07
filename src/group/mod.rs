@@ -18,7 +18,7 @@ pub trait Group: TypeRep + Clone {
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
   /// type and avoid using prefix notation for all of our group operations.
   /// But afaik bijective associated types are not supported by Rust.
-  type Elem: Eq + Clone + Sized + Hash + Debug;
+  type Elem: Eq + Clone + Sized + Hash + Debug + Send + Sync;
 
   fn id_(rep: &Self::Rep) -> Self::Elem;
 
