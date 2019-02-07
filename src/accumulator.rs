@@ -13,14 +13,16 @@ pub enum AccError {
   InputsNotCoprime,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Debug, Default, Hash)]
 pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct MembershipProof<G: UnknownOrderGroup> {
   witness: Accumulator<G>,
   proof: Poe<G>,
 }
 
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct NonmembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,

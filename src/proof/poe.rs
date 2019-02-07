@@ -4,7 +4,7 @@ use crate::util::int;
 use rug::Integer;
 
 #[allow(non_snake_case)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Poe<G: Group> {
   Q: G::Elem,
 }

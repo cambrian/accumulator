@@ -2,7 +2,7 @@ use crate::group::{multi_exp, Group};
 use rug::Integer;
 
 #[allow(non_snake_case)]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Pokcr<G: Group> {
   w: G::Elem,
 }

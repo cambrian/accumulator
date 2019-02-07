@@ -3,7 +3,7 @@ use crate::hash::{blake2b, hash_to_prime};
 use rug::Integer;
 
 #[allow(non_snake_case)]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Poke2<G: UnknownOrderGroup> {
   z: G::Elem,
   Q: G::Elem,
