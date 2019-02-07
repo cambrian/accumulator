@@ -78,6 +78,7 @@ impl ClassElem {
 
   #[allow(non_snake_case)]
   fn square(&mut self) {
+    dbg!(&self);
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
     //
     let (mu, _) = util::solve_linear_congruence(&self.b, &self.c, &self.a).unwrap();
