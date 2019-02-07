@@ -285,19 +285,12 @@ mod tests {
   fn test_root() {
     let acc = Accumulator::<Rsa2048>::new();
     let (acc, _) = acc.add(&[int(41), int(67), int(89)]);
-    let additions = [int(97), int(101), int(103), int(107), int(109)];
-    let factors = acc.root_factor(&additions);
-    let mut i = 0;
-    for factor in factors.clone() {
-      let mut expected = acc.clone();
-      for other in &additions {
-        if additions[i] == *other {
-          continue;
-        }
-        expected = expected.add(&[other.clone()]).0;
-      }
-      assert_eq!(factor, expected);
-      i += 1;
+    let factors = [int(97), int(101), int(103), int(107), int(109)];
+    let witnesses = acc.root_factor(&factors);
+    for (i, witness) in witnesses.iter().enumerate() {
+      let partial_product = factors.iter().product::<Integer>() / factors[i].clone();
+      let expected = acc.clone().add(&[partial_product]).0;
+      assert_eq!(*witness, expected);
     }
   }
 }
