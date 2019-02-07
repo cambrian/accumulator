@@ -3,7 +3,7 @@ use rug::Integer;
 
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
-pub trait TypeRep {
+pub trait TypeRep: 'static {
   type Rep: 'static;
   fn rep() -> &'static Self::Rep;
 }
