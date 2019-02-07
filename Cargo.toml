@@ -76,3 +76,7 @@ debug = true
 # Flamegraph debug symbols
 [profile.release]
 debug = true
+
+[features]
+
+benchmark = []
