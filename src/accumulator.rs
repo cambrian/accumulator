@@ -162,8 +162,9 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   #[allow(non_snake_case)]
-  /// For accumulator `g` and elements `[a, b, c, ...]` computes witnesses of `g^(abc...)` with
-  /// respect to each of the elements.
+  /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
+  /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
+  /// log N) time.
   pub fn root_factor(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
     if elems.len() == 1 {
       return vec![self.clone()];
