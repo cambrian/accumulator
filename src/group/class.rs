@@ -519,7 +519,6 @@ mod tests {
   #[test]
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
-    dbg!(&g);
     assert_eq!(&g.discriminant(), ClassGroup::rep());
   }
 
