@@ -11,9 +11,10 @@ pub enum VCError {
   UnexpectedStateError,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct VectorCommitment<G: UnknownOrderGroup>(Accumulator<G>);
 
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct VectorProof<G: UnknownOrderGroup> {
   membership_proof: MembershipProof<G>,
   nonmembership_proof: NonmembershipProof<G>,
