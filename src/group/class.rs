@@ -98,18 +98,6 @@ impl ClassElem {
     self.reduce();
   }
 
-  pub fn bench_square(&mut self) {
-    self.square()
-  }
-
-  pub fn bench_normalize(&mut self) {
-    self.normalize()
-  }
-
-  pub fn bench_reduce(&mut self) {
-    self.reduce()
-  }
-
   fn discriminant(&self) -> Integer {
     Integer::from(self.b.square_ref()) - Integer::from(4) * &self.a * &self.c
   }
@@ -124,6 +112,24 @@ impl ClassElem {
 
   fn is_normalized(&self) -> bool {
     -Integer::from(&self.a) < self.b && self.b <= self.a
+  }
+
+  #[inline]
+  #[cfg(feature = "benchmark")]
+  pub fn bench_square(&mut self) {
+    self.square()
+  }
+
+  #[inline]
+  #[cfg(feature = "benchmark")]
+  pub fn bench_normalize(&mut self) {
+    self.normalize()
+  }
+
+  #[inline]
+  #[cfg(feature = "benchmark")]
+  pub fn bench_reduce(&mut self) {
+    self.reduce()
   }
 }
 
