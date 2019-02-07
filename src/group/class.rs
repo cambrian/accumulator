@@ -98,6 +98,18 @@ impl ClassElem {
     self.reduce();
   }
 
+  pub fn bench_square(&mut self) {
+    self.square()
+  }
+
+  pub fn bench_normalize(&mut self) {
+    self.normalize()
+  }
+
+  pub fn bench_reduce(&mut self) {
+    self.reduce()
+  }
+
   fn discriminant(&self) -> Integer {
     Integer::from(self.b.square_ref()) - Integer::from(4) * &self.a * &self.c
   }
