@@ -162,6 +162,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   #[allow(non_snake_case)]
+  /// For accumulator g and elems [a, b, c, ...] computes witnesses w.r.t. g^(abc...) and each elem.
   pub fn root_factor(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
     if elems.len() == 1 {
       return vec![self.clone()];
