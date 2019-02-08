@@ -1,12 +1,12 @@
 //! Class Group implementation
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
-use crate::util::{int, Singleton};
+use crate::util::{int, TypeRep};
 use rug::{Assign, Integer};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClassGroup {}
 
 // REVIEW: It appears that this group implementation always expects its elements to be reduced.
@@ -140,7 +140,7 @@ impl ClassElem {
   }
 }
 
-impl Singleton for ClassGroup {
+impl TypeRep for ClassGroup {
   type Rep = Integer;
   fn rep() -> &'static Self::Rep {
     &CLASS_GROUP_DISCRIMINANT
