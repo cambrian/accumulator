@@ -2,8 +2,8 @@
 #[macro_use]
 extern crate criterion;
 
+use accumulator::group::{ClassGroup, ElemFrom, Group, UnknownOrderGroup};
 use criterion::Criterion;
-use crypto::group::{ClassGroup, ElemFrom, Group, UnknownOrderGroup};
 use rug::Integer;
 use std::str::FromStr;
 
@@ -44,7 +44,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   let g_inv = base.clone();
   let mut g_norm = base.clone();
   let mut g_red = ClassGroup::unknown_order_elem();
-  let mut g_sq = ClassGroup::unknown_order_elem();
+  let g_sq = ClassGroup::unknown_order_elem();
   let aa = Integer::from_str("16").unwrap();
   let bb = Integer::from_str("105").unwrap();
   let cc = Integer::from_str(
