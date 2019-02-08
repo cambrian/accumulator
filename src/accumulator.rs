@@ -14,14 +14,16 @@ pub enum AccError {
   InputsNotCoprime,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Debug, Default, Hash)]
 pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct MembershipProof<G: UnknownOrderGroup> {
   pub witness: Accumulator<G>,
   proof: Poe<G>,
 }
 
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct NonmembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,
@@ -162,6 +164,9 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   #[allow(non_snake_case)]
+  /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
+  /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
+  /// log N) time.
   pub fn root_factor(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
     if elems.len() == 1 {
       return vec![self.clone()];
