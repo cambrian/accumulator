@@ -78,7 +78,6 @@ impl ClassElem {
 
   #[allow(non_snake_case)]
   fn square(&mut self) {
-    dbg!(&self);
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
     //
     let (mu, _) = util::solve_linear_congruence(&self.b, &self.c, &self.a).unwrap();
@@ -131,6 +130,13 @@ impl ClassElem {
   #[cfg(feature = "benchmark")]
   pub fn bench_reduce(&mut self) {
     self.reduce()
+  }
+
+  #[cfg(feature = "benchmark")]
+  pub fn assign(&mut self, a: &Integer, b: &Integer, c: &Integer) {
+    self.a = a.clone();
+    self.b = b.clone();
+    self.c = c.clone();
   }
 }
 
