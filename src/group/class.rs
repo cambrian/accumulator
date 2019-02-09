@@ -4,10 +4,11 @@ use crate::util;
 use crate::util::{int, TypeRep};
 use gmp_mpfr_sys::gmp::{
   mpz_add, mpz_cmp, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext, mpz_init, mpz_mod,
-  mpz_mul, mpz_set, mpz_set_ui, mpz_sub, mpz_t,
+  mpz_mul, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub, mpz_t,
 };
 use rug::{Assign, Integer};
 use std::cell::RefCell;
+use std::ffi::CString;
 use std::hash::{Hash, Hasher};
 use std::mem::uninitialized;
 use std::str::FromStr;
@@ -37,7 +38,14 @@ const DISCRIMINANT2048_DECIMAL: &str =
   3966286152805654229445219531956098223";
 
 //lazy_static! {
-static CLASS_GROUP_DISCRIMINANT: Integer = Integer::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
+static CLASS_GROUP_DISCRIMINANT: mpz_t = {
+  let d = new_mpz();
+  let d_str = CString::new(DISCRIMINANT2048_DECIMAL).unwrap();
+  unsafe {
+    mpz_set_str(&mut d, d_str.as_ptr(), 10);
+  }
+  d
+};
 //}
 static CTX: RefCell<Ctx> = Default::default();
 
@@ -46,6 +54,16 @@ pub struct ClassElem {
   a: mpz_t,
   b: mpz_t,
   c: mpz_t,
+}
+
+impl Default for ClassElem {
+  fn default() -> Self {
+    ClassElem {
+      a: new_mpz(),
+      b: new_mpz(),
+      c: new_mpz(),
+    }
+  }
 }
 
 fn new_mpz() -> mpz_t {
@@ -240,7 +258,7 @@ impl ClassElem {
 }
 
 pub struct ClassRep {
-  discriminant: Integer,
+  discriminant: mpz_t,
   ctx: RefCell<Ctx>,
 }
 impl TypeRep for ClassGroup {
@@ -327,11 +345,7 @@ impl Group for ClassGroup {
     mpz_mul(&mut ctx.a, &ctx.s, &ctx.t);
     mpz_fdiv_q(&mut ctx.m, &ctx.m, &ctx.a);
 
-    let ret = ClassElem {
-      a: new_mpz(),
-      b: new_mpz(),
-      c: new_mpz(),
-    };
+    let ret = ClassElem::default();
     // A = st - ru
     mpz_mul(&mut ret.a, &ctx.s, &ctx.t);
     mpz_mul(&mut ctx.a, &ctx.r, &ctx.u);
@@ -355,21 +369,24 @@ impl Group for ClassGroup {
     ret
   }
 
-  fn id_(d: &Integer) -> ClassElem {
-    let a = Integer::from(1);
-    let b = Integer::from(1);
-
+  fn id_(rep: &ClassRep) -> ClassElem {
+    let ctx = rep.ctx.borrow_mut();
+    let d = rep.discriminant;
+    let ret = ClassElem::default();
+    mpz_set_ui(&mut ret.a, 1);
+    mpz_set_ui(&mut ret.b, 1);
     // c = (b * b - d) / 4a
-    let (c, _) = Integer::from(1 - d).div_rem_floor(Integer::from(4));
-    ClassElem { a, b, c }
+    mpz_sub(&mut ctx.a, &ret.b, &d); // b == b*b
+    mpz_fdiv_q_ui(&mut ret.c, &ctx.a, 4);
+    ret
   }
 
-  fn inv_(_: &Integer, x: &ClassElem) -> ClassElem {
-    ClassElem {
-      a: Integer::from(&x.a),
-      b: Integer::from(-(&x.b)),
-      c: Integer::from(&x.c),
-    }
+  fn inv_(_: &ClassRep, x: &ClassElem) -> ClassElem {
+    let ret = ClassElem::default();
+    mpz_set(&mut ret.a, &x.a);
+    mpz_neg(&mut ret.b, &x.b);
+    mpz_set(&mut ret.c, &x.c);
+    ret
   }
 
   fn exp_(_: &Integer, a: &ClassElem, n: &Integer) -> ClassElem {
