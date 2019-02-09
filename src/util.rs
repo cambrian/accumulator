@@ -1,4 +1,5 @@
 use crate::group::Group;
+use gmp_mpfr_sys::gmp::{mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_qr, mpz_gcdext, mpz_mod, mpz_mul, mpz_t};
 use rug::Integer;
 
 /// Poor man's type-level programming.

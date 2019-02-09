@@ -2,8 +2,14 @@
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{int, TypeRep};
+use gmp_mpfr_sys::gmp::{
+  mpz_add, mpz_cmp, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext, mpz_init, mpz_mod,
+  mpz_mul, mpz_set, mpz_set_ui, mpz_sub, mpz_t,
+};
 use rug::{Assign, Integer};
+use std::cell::RefCell;
 use std::hash::{Hash, Hasher};
+use std::mem::uninitialized;
 use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,16 +36,109 @@ const DISCRIMINANT2048_DECIMAL: &str =
   9453371727344087286361426404588335160385998280988603297435639020911295652025967761702701701471162\
   3966286152805654229445219531956098223";
 
-lazy_static! {
-  pub static ref CLASS_GROUP_DISCRIMINANT: Integer =
-    Integer::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
+//lazy_static! {
+static CLASS_GROUP_DISCRIMINANT: Integer = Integer::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
+//}
+static CTX: RefCell<Ctx> = Default::default();
+
+//#[derive(Clone, Debug, Eq)]
+pub struct ClassElem {
+  a: mpz_t,
+  b: mpz_t,
+  c: mpz_t,
 }
 
-#[derive(Clone, Debug, Eq)]
-pub struct ClassElem {
-  a: Integer,
-  b: Integer,
-  c: Integer,
+fn new_mpz() -> mpz_t {
+  unsafe {
+    let ret = uninitialized();
+    mpz_init(&mut ret);
+    ret
+  }
+}
+
+pub struct Ctx {
+  negative_a: mpz_t,
+  r: mpz_t,
+  denom: mpz_t,
+  old_b: mpz_t,
+  ra: mpz_t,
+  s: mpz_t,
+  x: mpz_t,
+  old_a: mpz_t,
+  g: mpz_t,
+  d: mpz_t,
+  e: mpz_t,
+  q: mpz_t,
+  w: mpz_t,
+  u: mpz_t,
+  a: mpz_t,
+  b: mpz_t,
+  m: mpz_t,
+  k: mpz_t,
+  mu: mpz_t,
+  v: mpz_t,
+  sigma: mpz_t,
+  lambda: mpz_t,
+  h: mpz_t,
+  t: mpz_t,
+  l: mpz_t,
+  j: mpz_t,
+}
+
+impl Default for Ctx {
+  fn default() -> Self {
+    Ctx {
+      negative_a: new_mpz(),
+      r: new_mpz(),
+      denom: new_mpz(),
+      old_b: new_mpz(),
+      ra: new_mpz(),
+      s: new_mpz(),
+      x: new_mpz(),
+      old_a: new_mpz(),
+      g: new_mpz(),
+      d: new_mpz(),
+      e: new_mpz(),
+      q: new_mpz(),
+      w: new_mpz(),
+      u: new_mpz(),
+      a: new_mpz(),
+      b: new_mpz(),
+      m: new_mpz(),
+      k: new_mpz(),
+      mu: new_mpz(),
+      v: new_mpz(),
+      sigma: new_mpz(),
+      lambda: new_mpz(),
+      h: new_mpz(),
+      t: new_mpz(),
+      l: new_mpz(),
+      j: new_mpz(),
+    }
+  }
+}
+
+// TODO: Use seperate context object for linear congruences and move into util.rs
+// TODO: Check for solution
+pub fn solve_linear_congruence_mpz(
+  ctx: RefCell<Ctx>,
+  mu: &mut mpz_t,
+  v: &mut mpz_t,
+  a: &mpz_t,
+  b: &mpz_t,
+  m: &mpz_t,
+) {
+  let ctx = ctx.borrow_mut();
+  // g = gcd(a, m) => da + em = g
+  mpz_gcdext(&mut ctx.g, &mut ctx.d, &mut ctx.e, a, m);
+  // q = floor_div(b, g)
+  // r = b % g
+  mpz_fdiv_qr(&mut ctx.q, &mut ctx.r, b, &ctx.g);
+  // mu = (q * d) % m
+  mpz_mul(mu, &ctx.q, &ctx.d);
+  mpz_mod(mu, mu, m);
+  // v = m / g
+  mpz_fdiv_q(v, m, &ctx.g);
 }
 
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
@@ -140,10 +239,17 @@ impl ClassElem {
   }
 }
 
+pub struct ClassRep {
+  discriminant: Integer,
+  ctx: RefCell<Ctx>,
+}
 impl TypeRep for ClassGroup {
-  type Rep = Integer;
+  type Rep = ClassRep;
   fn rep() -> &'static Self::Rep {
-    &CLASS_GROUP_DISCRIMINANT
+    &ClassRep {
+      discriminant: CLASS_GROUP_DISCRIMINANT,
+      ctx: CTX,
+    }
   }
 }
 
@@ -151,57 +257,99 @@ impl Group for ClassGroup {
   type Elem = ClassElem;
 
   #[allow(non_snake_case)]
-  fn op_(_: &Integer, x: &ClassElem, y: &ClassElem) -> ClassElem {
+  fn op_(rep: &ClassRep, x: &ClassElem, y: &ClassElem) -> ClassElem {
+    // TODO: Assert discriminants equal
+    let ctx = rep.ctx.borrow_mut();
+
     // g = (b1 + b2) / 2
+    mpz_add(&mut ctx.g, &x.b, &y.b);
+    mpz_fdiv_q_ui(&mut ctx.g, &ctx.g, 2);
     // h = (b2 - b1) / 2
+    mpz_sub(&mut ctx.h, &y.b, &x.b);
     // w = gcd(a1, a2, g)
-    let (g, _) = (Integer::from(&x.b) + &y.b).div_rem_floor(Integer::from(2));
-    let (h, _) = (&y.b - Integer::from(&x.b)).div_rem_floor(Integer::from(2));
-    let w = Integer::from(x.a.gcd_ref(&y.a)).gcd(&g);
+    mpz_gcd(&mut ctx.w, &x.a, &y.a);
+    mpz_gcd(&mut ctx.w, &ctx.w, &ctx.g);
 
     // j = w
-    // s = a1 / w
-    // t = a2 / w
-    // u = g / ww
+    mpz_set(&mut ctx.j, &ctx.w);
     // r = 0
-    let j = Integer::from(&w);
-    let (s, _) = <(Integer, Integer)>::from(x.a.div_rem_floor_ref(&w));
-    let (t, _) = <(Integer, Integer)>::from(y.a.div_rem_floor_ref(&w));
-    let (u, _) = g.div_rem_floor(w);
+    mpz_set_ui(&mut ctx.r, 0);
+    // s = a1 / w
+    mpz_fdiv_q(&mut ctx.s, &x.a, &ctx.w);
+    // t = a2 / w
+    mpz_fdiv_q(&mut ctx.t, &y.a, &ctx.w);
+    // u = g / w
+    mpz_fdiv_q(&mut ctx.u, &ctx.g, &ctx.w);
 
     // a = tu
+    mpz_mul(&mut ctx.a, &ctx.t, &ctx.u);
+
     // b = hu + sc
+    mpz_mul(&mut ctx.b, &ctx.h, &ctx.u);
+    mpz_mul(&mut ctx.m, &ctx.s, &x.c);
+    mpz_add(&mut ctx.b, &ctx.b, &ctx.m);
     // m = st
+    mpz_mul(&mut ctx.m, &ctx.s, &ctx.t);
     // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
-    let a = Integer::from(&t * &u);
-    let b = Integer::from(&h * &u) + (&s * &x.c);
-    let mut m = Integer::from(&s * &t);
-    let (mu, v) = util::solve_linear_congruence(&a, &b, &m).unwrap();
+    solve_linear_congruence_mpz(rep.ctx, &mut ctx.mu, &mut ctx.v, &ctx.a, &ctx.b, &ctx.m);
 
     // a = tv
+    mpz_mul(&mut ctx.m, &ctx.t, &ctx.v);
     // b = h - t * mu
+    mpz_mul(&mut ctx.m, &ctx.t, &ctx.mu);
+    mpz_sub(&mut ctx.b, &ctx.h, &ctx.m);
     // m = s
+    mpz_set(&mut ctx.m, &ctx.s);
     // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
-    let a = Integer::from(&t * &v);
-    let b = &h - Integer::from(&t * &mu);
-    m.assign(&s);
-    let (lambda, _) = util::solve_linear_congruence(&a, &b, &m).unwrap();
+    solve_linear_congruence_mpz(
+      rep.ctx,
+      &mut ctx.lambda,
+      &mut ctx.sigma,
+      &ctx.a,
+      &ctx.b,
+      &ctx.m,
+    );
 
     // k = mu + v * lambda
+    mpz_mul(&mut ctx.a, &ctx.v, &ctx.lambda);
+    mpz_add(&mut ctx.k, &ctx.mu, &ctx.a);
     // l = (k * t - h) / s
+    mpz_mul(&mut ctx.l, &ctx.k, &ctx.t);
+    mpz_sub(&mut ctx.l, &ctx.l, &ctx.h);
+    mpz_fdiv_q(&mut ctx.l, &ctx.l, &ctx.s);
     // m = (tuk - hu - cs) / st
-    let k = &mu + Integer::from(&v * &lambda);
-    let (l, _) = <(Integer, Integer)>::from((Integer::from(&k * &t) - &h).div_rem_floor_ref(&s));
-    let (m, _) =
-      (Integer::from(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(Integer::from(&s * &t));
+    mpz_mul(&mut ctx.m, &ctx.t, &ctx.u);
+    mpz_mul(&mut ctx.m, &ctx.m, &ctx.k);
+    mpz_mul(&mut ctx.a, &ctx.h, &ctx.u);
+    mpz_sub(&mut ctx.m, &ctx.m, &ctx.a);
+    mpz_mul(&mut ctx.a, &x.c, &ctx.s);
+    mpz_sub(&mut ctx.m, &ctx.m, &ctx.a);
+    mpz_mul(&mut ctx.a, &ctx.s, &ctx.t);
+    mpz_fdiv_q(&mut ctx.m, &ctx.m, &ctx.a);
 
-    // A = st
+    let ret = ClassElem {
+      a: new_mpz(),
+      b: new_mpz(),
+      c: new_mpz(),
+    };
+    // A = st - ru
+    mpz_mul(&mut ret.a, &ctx.s, &ctx.t);
+    mpz_mul(&mut ctx.a, &ctx.r, &ctx.u);
+    mpz_sub(&mut ret.a, &ret.a, &ctx.a);
+
     // B = ju - kt + ls
+    mpz_mul(&mut ret.b, &ctx.j, &ctx.u);
+    mpz_mul(&mut ret.a, &ctx.m, &ctx.r);
+    mpz_add(&mut ret.b, &ret.b, &ctx.a);
+    mpz_mul(&mut ctx.a, &ctx.k, &ctx.t);
+    mpz_sub(&mut ret.b, &ret.b, &ctx.a);
+    mpz_mul(&mut ctx.a, &ctx.l, &ctx.s);
+    mpz_sub(&mut ret.b, &ret.b, &ctx.a);
+
     // C = kl - jm
-    let A = Integer::from(&s * &t);
-    let B = Integer::from(&j * &u) - (Integer::from(&k * &t) + Integer::from(&l * &s));
-    let C = Integer::from(&k * &l) - Integer::from(&j * &m);
-    let mut ret = ClassElem { a: A, b: B, c: C };
+    mpz_mul(&mut ret.c, &ctx.k, &ctx.l);
+    mpz_mul(&mut ctx.a, &ctx.j, &ctx.m);
+    mpz_sub(&mut ret.c, &ret.c, &ctx.a);
 
     ret.reduce();
     ret
