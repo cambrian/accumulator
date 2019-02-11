@@ -49,7 +49,7 @@ static CLASS_GROUP_DISCRIMINANT: mpz_t = {
 //}
 static CTX: RefCell<Ctx> = Default::default();
 
-//#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug)]
 pub struct ClassElem {
   a: mpz_t,
   b: mpz_t,
@@ -65,6 +65,23 @@ impl Default for ClassElem {
     }
   }
 }
+
+impl PartialEq for ClassElem {
+  fn eq(&self, other: &ClassElem) -> bool {
+    let r_self = self.clone();
+    let r_other = other.clone();
+    r_self.reduce();
+    r_other.reduce();
+    mpz_cmp(&r_self.a, &r_other.a) == 0
+      && mpz_cmp(&r_self.b, &r_other.b) == 0
+      && mpz_cmp(&r_self.c, &r_other.c) == 0
+  }
+}
+
+impl Eq for ClassElem {}
+
+unsafe impl Send for ClassElem {}
+unsafe impl Sync for ClassElem {}
 
 fn new_mpz() -> mpz_t {
   unsafe {
@@ -392,7 +409,10 @@ impl Group for ClassGroup {
   fn exp_(_: &Integer, a: &ClassElem, n: &Integer) -> ClassElem {
     let (mut val, mut a, mut n) = {
       if *n < int(0) {
-        (Self::id(), Self::inv(a), int(-n))
+        let val = Self::id();
+        let a = Self::inv(a);
+        let n = int(-n);
+        (val, a, n)
       } else {
         (Self::id(), a.clone(), n.clone())
       }
