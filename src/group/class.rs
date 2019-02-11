@@ -3,8 +3,9 @@ use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{int, TypeRep};
 use gmp_mpfr_sys::gmp::{
-  mpz_add, mpz_cmp, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext, mpz_init, mpz_mod,
-  mpz_mul, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub, mpz_t,
+  mpz_add, mpz_cmp, mpz_cmp_si, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext,
+  mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub,
+  mpz_t,
 };
 use rug::{Assign, Integer};
 use std::cell::RefCell;
@@ -37,7 +38,7 @@ const DISCRIMINANT2048_DECIMAL: &str =
   9453371727344087286361426404588335160385998280988603297435639020911295652025967761702701701471162\
   3966286152805654229445219531956098223";
 
-//lazy_static! {
+// TODO: Make evaluation lazy?
 static CLASS_GROUP_DISCRIMINANT: mpz_t = {
   let d = new_mpz();
   let d_str = CString::new(DISCRIMINANT2048_DECIMAL).unwrap();
@@ -46,7 +47,6 @@ static CLASS_GROUP_DISCRIMINANT: mpz_t = {
   }
   d
 };
-//}
 static CTX: RefCell<Ctx> = Default::default();
 
 #[derive(Clone, Debug)]
@@ -70,8 +70,6 @@ impl PartialEq for ClassElem {
   fn eq(&self, other: &ClassElem) -> bool {
     let r_self = self.clone();
     let r_other = other.clone();
-    r_self.reduce();
-    r_other.reduce();
     mpz_cmp(&r_self.a, &r_other.a) == 0
       && mpz_cmp(&r_self.b, &r_other.b) == 0
       && mpz_cmp(&r_self.c, &r_other.c) == 0
@@ -80,6 +78,8 @@ impl PartialEq for ClassElem {
 
 impl Eq for ClassElem {}
 
+// TODO: Is this okay? Same solution used in Rug library for Integer:
+// https://gitlab.com/tspiteri/rug/blob/master/src/integer/traits.rs
 unsafe impl Send for ClassElem {}
 unsafe impl Sync for ClassElem {}
 
@@ -179,73 +179,112 @@ pub fn solve_linear_congruence_mpz(
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
+// TODO: Change RefCell<Ctx> args to ClassRep args
 impl ClassElem {
-  fn normalize(&mut self) {
+  fn normalize(&mut self, ctx: RefCell<Ctx>) {
     if self.is_normalized() {
       return;
     }
+    let ctx = ctx.borrow_mut();
     // r = floor_div((a - b), 2a)
     // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
-    let (r, _) = Integer::from(&self.a - &self.b).div_rem_floor(Integer::from(2 * &self.a));
-    let new_b = &self.b + 2 * Integer::from(&r * &self.a);
-    let new_c = &self.c + Integer::from(&self.b * &r) + &self.a * r.square();
-    self.b = new_b;
-    self.c = new_c;
+    mpz_sub(&mut ctx.r, &self.a, &self.b);
+    mpz_mul_ui(&mut ctx.denom, &self.a, 2);
+
+    mpz_fdiv_q(&mut ctx.r, &ctx.r, &ctx.denom);
+
+    mpz_set(&mut ctx.old_b, &self.b);
+
+    mpz_mul(&mut ctx.ra, &ctx.r, &self.a);
+    mpz_add(&mut self.b, &self.b, &ctx.ra);
+    mpz_add(&mut self.b, &self.b, &ctx.ra);
+
+    mpz_mul(&mut ctx.ra, &ctx.ra, &ctx.r);
+    mpz_add(&mut self.c, &self.c, &ctx.ra);
+
+    mpz_set(&mut ctx.ra, &ctx.r);
+    mpz_mul(&mut ctx.ra, &ctx.ra, &ctx.old_b);
+    mpz_add(&mut self.c, &self.c, &ctx.ra);
   }
 
-  fn reduce(&mut self) {
-    self.normalize();
+  // TODO: Ensure elements only valid if reduced
+  fn reduce(&mut self, ctx_ptr: RefCell<Ctx>) {
+    let ctx = ctx_ptr.borrow_mut();
+    self.normalize(ctx_ptr);
     while !self.is_reduced() {
       // s = floor_div(c + b, 2c)
-      let (s, _) = Integer::from(&self.c + &self.b).div_rem_floor(Integer::from(2 * &self.c));
-
-      // (a, b, c) = (c, −b + 2sc, cs^2 − bs + a)
-      let new_a = self.c.clone();
-      let new_b = Integer::from(-&self.b) + 2 * Integer::from(&s * &new_a);
-      let new_c = -Integer::from(&self.b * &s) + &self.a + &self.c * s.square();
-      self.a = new_a;
-      self.b = new_b;
-      self.c = new_c;
+      mpz_add(&mut ctx.s, &self.c, &self.b);
+      // x = 2c
+      mpz_mul_ui(&mut ctx.x, &self.c, 2);
+      mpz_fdiv_q(&mut ctx.s, &ctx.s, &ctx.x);
+      mpz_set(&mut ctx.old_a, &self.a);
+      mpz_set(&mut ctx.old_b, &self.b);
+      // b = -b
+      mpz_set(&mut self.a, &self.c);
+      mpz_neg(&mut self.b, &self.b);
+      // x = 2sc
+      mpz_mul(&mut ctx.x, &ctx.s, &self.c);
+      mpz_mul_ui(&mut ctx.x, &ctx.x, 2);
+      // b += 2sc
+      mpz_add(&mut self.b, &self.b, &ctx.x);
+      // c = cs^2
+      mpz_mul(&mut self.c, &self.c, &ctx.s);
+      mpz_mul(&mut self.c, &self.c, &self.s);
+      // x = bs
+      mpz_mul(&mut ctx.x, &ctx.old_b, &ctx.s);
+      // c -= bs
+      mpz_sub(&mut self.c, &self.c, &ctx.x);
+      // c += a
+      mpz_add(&mut self.c, &self.c, &ctx.old_a);
     }
-    self.normalize();
+    self.normalize(ctx_ptr);
   }
 
   #[allow(non_snake_case)]
-  fn square(&mut self) {
+  fn square(&mut self, ctx_ptr: RefCell<Ctx>) {
+    let ctx = ctx_ptr.borrow_mut();
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
-    //
-    let (mu, _) = util::solve_linear_congruence(&self.b, &self.c, &self.a).unwrap();
+    solve_linear_congruence_mpz(ctx_ptr, &mut ctx.mu, &mut ctx.v, &ctx.a, &ctx.b, &ctx.m);
+
+    // tmp = (b * mu) / a
+    mpz_mul(&mut ctx.m, &self.b, &ctx.mu);
+    mpz_sub(&mut ctx.m, &ctx.m, &self.c);
+    mpz_fdiv_q(&mut ctx.m, &ctx.m, &self.a);
 
     // A = a^2
+    mpz_set(&mut ctx.old_a, &self.a);
+    mpz_mul(&mut self.a, &self.a, &self.a);
+
     // B = b - 2a * mu
-    // tmp = (b * mu) / a
+    mpz_mul(&mut ctx.a, &ctx.mu, &ctx.old_a);
+    mpz_mul_ui(&mut ctx.a, &ctx.a, 2);
+    mpz_sub(&mut self.b, &self.b, &ctx.a);
+
     // C = mu^2 - tmp
-    let A = Integer::from(self.a.square_ref());
-    let B = &self.b - Integer::from(2 * &self.a) * &mu;
-    let (tmp, _) = <(Integer, Integer)>::from(
-      Integer::from((&self.b * &mu) - &self.c).div_rem_floor_ref(&self.a),
-    );
-    let C = mu.square() - tmp;
-    self.a = A;
-    self.b = B;
-    self.c = C;
-    self.reduce();
+    mpz_mul(&mut self.c, &ctx.mu, &ctx.mu);
+    mpz_sub(&mut self.c, &self.c, &ctx.m);
+
+    self.reduce(ctx_ptr);
   }
 
-  fn discriminant(&self) -> Integer {
+  fn discriminant(&self) -> mpz_t {
     Integer::from(self.b.square_ref()) - Integer::from(4) * &self.a * &self.c
   }
 
   fn validate(&self) -> bool {
-    &self.discriminant() == ClassGroup::rep()
+    mpz_cmp(&self.discriminant(), &ClassGroup::rep().discriminant) == 0
   }
 
+  // expects normalized element
   fn is_reduced(&self) -> bool {
-    self.is_normalized() && (self.a <= self.c && !(self.a == self.c && self.b < 0))
+    (mpz_cmp(&self.a, &self.c) > 0)
+      || (mpz_cmp(&self.a, &self.c) == 0 && mpz_cmp_si(&self.b, 0) < 0)
   }
 
-  fn is_normalized(&self) -> bool {
-    -Integer::from(&self.a) < self.b && self.b <= self.a
+  fn is_normalized(&self, ctx_ptr: RefCell<Ctx>) -> bool {
+    let ctx = ctx_ptr.borrow_mut();
+    mpz_neg(&mut ctx.negative_a, &self.a);
+    mpz_cmp(&self.b, &ctx.negative_a) > 0 && mpz_cmp(&self.b, &self.a) <= 0
   }
 
   #[inline]
@@ -406,13 +445,10 @@ impl Group for ClassGroup {
     ret
   }
 
-  fn exp_(_: &Integer, a: &ClassElem, n: &Integer) -> ClassElem {
+  fn exp_(_: &ClassRep, a: &ClassElem, n: &Integer) -> ClassElem {
     let (mut val, mut a, mut n) = {
       if *n < int(0) {
-        let val = Self::id();
-        let a = Self::inv(a);
-        let n = int(-n);
-        (val, a, n)
+        (Self::id(), Self::inv(a), int(-n))
       } else {
         (Self::id(), a.clone(), n.clone())
       }
@@ -446,23 +482,10 @@ impl UnknownOrderGroup for ClassGroup {
 
 impl Hash for ClassElem {
   fn hash<H: Hasher>(&self, state: &mut H) {
-    let mut self_reduced = self.clone();
-    self_reduced.reduce();
-    self_reduced.a.hash(state);
-    self_reduced.b.hash(state);
-    self_reduced.c.hash(state);
-  }
-}
-
-impl PartialEq for ClassElem {
-  fn eq(&self, other: &ClassElem) -> bool {
-    let mut self_reduced = self.clone();
-    self_reduced.reduce();
-    let mut other_reduced = other.clone();
-    other_reduced.reduce();
-    self_reduced.a == other_reduced.a
-      && self_reduced.b == other_reduced.b
-      && self_reduced.c == other_reduced.c
+    //  self.reduce();
+    self.a.hash(state);
+    self.b.hash(state);
+    self.c.hash(state);
   }
 }
 
@@ -499,11 +522,20 @@ mod tests {
 
   // Makes a class elem tuple but does not reduce.
   fn construct_raw_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
-    ClassElem {
-      a: Integer::from_str(a).unwrap(),
-      b: Integer::from_str(b).unwrap(),
-      c: Integer::from_str(c).unwrap(),
-    }
+    let ret = ClassElem {
+      a: new_mpz(),
+      b: new_mpz(),
+      c: new_mpz(),
+    };
+
+    let a_str = CString::new(t.0).unwrap();
+    let b_str = CString::new(t.1).unwrap();
+    let c_str = CString::new(t.2).unwrap();
+    mpz_set_str(&mut ret.a, a_str.as_ptr(), 10);
+    mpz_set_str(&mut ret.b, b_str.as_ptr(), 10);
+    mpz_set_str(&mut ret.c, c_str.as_ptr(), 10);
+
+    ret
   }
 
   #[should_panic]
