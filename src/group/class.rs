@@ -7,7 +7,7 @@ use gmp_mpfr_sys::gmp::{
   mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub,
   mpz_t,
 };
-use rug::{Assign, Integer};
+use rug::Integer;
 use std::cell::RefCell;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
@@ -39,15 +39,32 @@ const DISCRIMINANT2048_DECIMAL: &str =
   9453371727344087286361426404588335160385998280988603297435639020911295652025967761702701701471162\
   3966286152805654229445219531956098223";
 
-// TODO: Make evaluation lazy?
-static CLASS_GROUP_DISCRIMINANT: mpz_t = {
-  let mut d = new_mpz();
-  let d_str = CString::new(DISCRIMINANT2048_DECIMAL).unwrap();
-  unsafe {
-    mpz_set_str(&mut d, d_str.as_ptr(), 10);
+// need wrapper to make mpz_t thread-safe
+#[cfg_attr(repr_transparent, repr(transparent))]
+pub struct Discriminant {
+  inner: mpz_t,
+}
+
+unsafe impl Send for Discriminant {}
+unsafe impl Sync for Discriminant {}
+
+impl Default for Discriminant {
+  fn default() -> Self {
+    Discriminant { inner: new_mpz() }
   }
-  d
-};
+}
+
+// TODO: Make evaluation lazy?
+lazy_static! {
+  pub static ref CLASS_GROUP_DISCRIMINANT: Discriminant = {
+    let mut d = Discriminant::default();
+    let d_str = CString::new(DISCRIMINANT2048_DECIMAL).unwrap();
+    unsafe {
+      mpz_set_str(&mut d.inner, d_str.as_ptr(), 10);
+    }
+    d
+  };
+}
 
 thread_local! {
   static CTX: RefCell<Ctx> = Default::default();
@@ -307,7 +324,7 @@ impl ClassElem {
     let mut d = new_mpz();
     unsafe {
       &self.discriminant(&mut d);
-      mpz_cmp(&d, ClassGroup::rep()) == 0
+      mpz_cmp(&d, &ClassGroup::rep().inner) == 0
     }
   }
 
@@ -353,7 +370,7 @@ impl ClassElem {
 }
 
 impl TypeRep for ClassGroup {
-  type Rep = mpz_t;
+  type Rep = Discriminant;
   fn rep() -> &'static Self::Rep {
     &CLASS_GROUP_DISCRIMINANT
   }
@@ -362,7 +379,7 @@ impl TypeRep for ClassGroup {
 impl Group for ClassGroup {
   type Elem = ClassElem;
 
-  fn op_(_: &mpz_t, x: &ClassElem, y: &ClassElem) -> ClassElem {
+  fn op_(_: &Discriminant, x: &ClassElem, y: &ClassElem) -> ClassElem {
     with_context(|ctx| {
       unsafe {
         // TODO: Assert discriminants equal
@@ -451,21 +468,21 @@ impl Group for ClassGroup {
     })
   }
 
-  fn id_(d: &mpz_t) -> ClassElem {
+  fn id_(d: &Discriminant) -> ClassElem {
     with_context(|ctx| {
       let mut ret = ClassElem::default();
       unsafe {
         mpz_set_ui(&mut ret.a, 1);
         mpz_set_ui(&mut ret.b, 1);
         // c = (b * b - d) / 4a
-        mpz_sub(&mut ctx.a, &ret.b, d); // b == b*b
+        mpz_sub(&mut ctx.a, &ret.b, &d.inner); // b == b*b
         mpz_fdiv_q_ui(&mut ret.c, &ctx.a, 4);
       }
       ret
     })
   }
 
-  fn inv_(_: &mpz_t, x: &ClassElem) -> ClassElem {
+  fn inv_(_: &Discriminant, x: &ClassElem) -> ClassElem {
     let mut ret = ClassElem::default();
     unsafe {
       mpz_set(&mut ret.a, &x.a);
@@ -475,7 +492,7 @@ impl Group for ClassGroup {
     ret
   }
 
-  fn exp_(_: &mpz_t, a: &ClassElem, n: &Integer) -> ClassElem {
+  fn exp_(_: &Discriminant, a: &ClassElem, n: &Integer) -> ClassElem {
     with_context(|ctx| {
       let (mut val, mut a, mut n) = {
         if *n < int(0) {
@@ -499,7 +516,7 @@ impl Group for ClassGroup {
 }
 
 impl UnknownOrderGroup for ClassGroup {
-  fn unknown_order_elem_(d: &mpz_t) -> ClassElem {
+  fn unknown_order_elem_(d: &Discriminant) -> ClassElem {
     // a = 2
     // b = 1
     // c = (b * b - d) / 4a
@@ -513,7 +530,7 @@ impl UnknownOrderGroup for ClassGroup {
       mpz_set_ui(&mut ret.b, 1);
 
       mpz_set_ui(&mut ret.c, 1);
-      mpz_sub(&mut ret.c, &ret.c, d);
+      mpz_sub(&mut ret.c, &ret.c, &d.inner);
       mpz_fdiv_q_ui(&mut ret.c, &ret.c, 8);
     }
 
@@ -567,7 +584,7 @@ mod tests {
 
   // Makes a class elem tuple but does not reduce.
   fn construct_raw_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
-    let ret = ClassElem {
+    let mut ret = ClassElem {
       a: new_mpz(),
       b: new_mpz(),
       c: new_mpz(),
@@ -576,9 +593,11 @@ mod tests {
     let a_str = CString::new(a).unwrap();
     let b_str = CString::new(b).unwrap();
     let c_str = CString::new(c).unwrap();
-    mpz_set_str(&mut ret.a, a_str.as_ptr(), 10);
-    mpz_set_str(&mut ret.b, b_str.as_ptr(), 10);
-    mpz_set_str(&mut ret.c, c_str.as_ptr(), 10);
+    unsafe {
+      mpz_set_str(&mut ret.a, a_str.as_ptr(), 10);
+      mpz_set_str(&mut ret.b, b_str.as_ptr(), 10);
+      mpz_set_str(&mut ret.c, c_str.as_ptr(), 10);
+    }
 
     ret
   }
@@ -788,8 +807,8 @@ mod tests {
   #[test]
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
-    let d = new_mpz();
-    assert!(mpz_cmp(&g.discriminant(&mut d), &ClassGroup::rep().discriminant) == 0)
+    let mut d = new_mpz();
+    assert!(unsafe { mpz_cmp(&g.discriminant(&mut d), &ClassGroup::rep().inner) == 0 })
   }
 
   #[test]
