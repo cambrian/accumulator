@@ -54,7 +54,6 @@ impl Default for Discriminant {
   }
 }
 
-// TODO: Make evaluation lazy?
 lazy_static! {
   pub static ref CLASS_GROUP_DISCRIMINANT: Discriminant = {
     let mut d = Discriminant::default();
@@ -124,8 +123,6 @@ impl PartialEq for ClassElem {
 
 impl Eq for ClassElem {}
 
-// TODO: Is this okay? Same solution used in Rug library for Integer:
-// https://gitlab.com/tspiteri/rug/blob/master/src/integer/traits.rs
 unsafe impl Send for ClassElem {}
 unsafe impl Sync for ClassElem {}
 
@@ -219,7 +216,6 @@ pub fn solve_linear_congruence_mpz(ctx: &mut Ctx) {
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
-// TODO: Change RefCell<Ctx> args to ClassRep args
 impl ClassElem {
   fn normalize(&mut self) {
     with_context(|x| self.normalize_ctx(x))
