@@ -300,10 +300,9 @@ mod tests {
       .0;
     let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
     let witness_new = witness
-      .update_membership_witness(acc_new, &[int(3), int(7)], &[int(17)], &[int(13)])
+      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(17)], &[int(13)])
       .unwrap();
-    let witness_expected = Accumulator::<Rsa2048>::new().add(&[int(11), int(17)]).0;
-    assert!(witness_new == witness_expected);
+    assert!(witness_new.add(&[int(3), int(7)]).0 == acc_new);
   }
 
   #[test]
