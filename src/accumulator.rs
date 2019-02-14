@@ -186,8 +186,6 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 }
 
 // TODO: Add test for `prove_membership`.
-// TODO: Need a better alternative to testing both RSA and Class groups than writing
-//  the same pattern over and over. We can get a Macro to do the work for us here.
 #[cfg(test)]
 mod tests {
   use super::*;
