@@ -52,7 +52,7 @@ mod tests {
     let result = Rsa2048::elem(1_048_576);
     let proof = Poke2::<Rsa2048>::prove(&base, &exp, &result);
     assert!(Poke2::verify(&base, &result, &proof));
-    // Must compare entire structs since elements z, Q, and r are private.
+    // Must compare entire structs since elements `z`, `Q`, and `r` are private.
     assert!(
       proof
         == Poke2 {

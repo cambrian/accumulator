@@ -1,7 +1,7 @@
 //! Accumulator library, built on a generic group interface.
 //!
-//! Operations that "mutate" the accumulator (add, delete) use moves instead of references so that
-//! you don't accidentally use the old accumulator state.
+//! Operations that "mutate" the accumulator (`add`, `delete`) use moves instead of references so
+//! that you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
 use crate::proof::{Poe, Poke2};
 use crate::util::{int, shamir_trick};
@@ -55,8 +55,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Ok(Accumulator(G::exp(&self.0, &quotient)))
   }
 
-  // The conciseness of accumulator.add() and low probability of confusion with implementations of
-  // the Add trait probably justify this...
+  // The conciseness of `accumulator.add()` and low probability of confusion with implementations of
+  // the `Add` trait probably justify this...
   #[allow(clippy::should_implement_trait)]
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are coprime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.

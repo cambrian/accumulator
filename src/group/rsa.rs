@@ -92,7 +92,7 @@ mod tests {
     assert!(b == Rsa2048::elem(6));
   }
 
-  /// Tests that -x and x are treated as the same element.
+  /// Tests that `-x` and `x` are treated as the same element.
   #[test]
   fn test_cosets() {
     assert!(Rsa2048::elem(3) == Rsa2048::elem(RSA2048_MODULUS.clone() - 3));
