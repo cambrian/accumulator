@@ -6,7 +6,7 @@ use rug::{Assign, Integer};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ClassGroup {}
 
 // REVIEW: It appears that this group implementation always expects its elements to be reduced.
@@ -46,34 +46,39 @@ pub struct ClassElem {
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
 impl ClassElem {
-  fn normalize(&mut self) {
-    if self.is_normalized() {
-      return;
+  fn normalize(a: Integer, b: Integer, c: Integer) -> ClassElem {
+    if ClassElem::is_normal(&a, &b, &c) {
+      return ClassElem { a, b, c };
     }
     // r = floor_div((a - b), 2a)
     // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
-    let (r, _) = Integer::from(&self.a - &self.b).div_rem_floor(Integer::from(2 * &self.a));
-    let new_b = &self.b + 2 * Integer::from(&r * &self.a);
-    let new_c = &self.c + Integer::from(&self.b * &r) + &self.a * r.square();
-    self.b = new_b;
-    self.c = new_c;
+    let (r, _) = Integer::from(&a - &b).div_rem_floor(Integer::from(2 * &a));
+    let new_b = &b + 2 * Integer::from(&r * &a);
+    let new_c = c + Integer::from(b * &r) + &a * r.square();
+    ClassElem {
+      a: a,
+      b: new_b,
+      c: new_c,
+    }
   }
 
-  fn reduce(&mut self) {
-    self.normalize();
-    while !self.is_reduced() {
+  fn reduce(a: Integer, b: Integer, c: Integer) -> ClassElem {
+    let mut elem = ClassElem::normalize(a, b, c);
+    while !ClassElem::is_reduced(&elem.a, &elem.b, &elem.c) {
       // s = floor_div(c + b, 2c)
-      let (s, _) = Integer::from(&self.c + &self.b).div_rem_floor(Integer::from(2 * &self.c));
+      let (s, _) = Integer::from(&elem.c + &elem.b).div_rem_floor(Integer::from(2 * &elem.c));
 
       // (a, b, c) = (c, −b + 2sc, cs^2 − bs + a)
-      let new_a = self.c.clone();
-      let new_b = Integer::from(-&self.b) + 2 * Integer::from(&s * &new_a);
-      let new_c = -Integer::from(&self.b * &s) + &self.a + &self.c * s.square();
-      self.a = new_a;
-      self.b = new_b;
-      self.c = new_c;
+      let new_a = elem.c.clone();
+      let new_b = Integer::from(-&elem.b) + 2 * Integer::from(&s * &new_a);
+      let new_c = -Integer::from(elem.b * &s) + elem.a + elem.c * s.square();
+      elem = ClassElem {
+        a: new_a,
+        b: new_b,
+        c: new_c,
+      }
     }
-    self.normalize();
+    ClassElem::normalize(elem.a, elem.b, elem.c)
   }
 
   #[allow(non_snake_case)]
@@ -92,10 +97,11 @@ impl ClassElem {
       Integer::from((&self.b * &mu) - &self.c).div_rem_floor_ref(&self.a),
     );
     let C = mu.square() - tmp;
+
+    let ClassElem { a: A, b: B, c: C } = ClassElem::reduce(A, B, C);
     self.a = A;
     self.b = B;
     self.c = C;
-    self.reduce();
   }
 
   fn discriminant(&self) -> Integer {
@@ -106,37 +112,50 @@ impl ClassElem {
     &self.discriminant() == ClassGroup::rep()
   }
 
-  fn is_reduced(&self) -> bool {
-    self.is_normalized() && (self.a <= self.c && !(self.a == self.c && self.b < 0))
+  fn is_reduced(a: &Integer, b: &Integer, c: &Integer) -> bool {
+    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && b < &Integer::from(0)))
   }
 
-  fn is_normalized(&self) -> bool {
-    -Integer::from(&self.a) < self.b && self.b <= self.a
+  fn is_normal(a: &Integer, b: &Integer, _c: &Integer) -> bool {
+    -Integer::from(a) < Integer::from(b) && b <= a
   }
+
+  // Dev methods below, for testing and benchmarking.
 
   #[inline]
-  #[cfg(feature = "benchmark")]
-  pub fn bench_square(&mut self) {
+  #[cfg(feature = "dev")]
+  pub fn square_pub(&mut self) {
     self.square()
   }
 
   #[inline]
-  #[cfg(feature = "benchmark")]
-  pub fn bench_normalize(&mut self) {
-    self.normalize()
+  #[cfg(feature = "dev")]
+  #[allow(non_snake_case)]
+  pub fn normalize_pub(&mut self) {
+    // Clones are necessary here, and only used for benchmarks/tests.
+    let ClassElem { a: A, b: B, c: C } =
+      ClassElem::normalize(self.a.clone(), self.b.clone(), self.c.clone());
+    self.a = A;
+    self.b = B;
+    self.c = C;
   }
 
   #[inline]
-  #[cfg(feature = "benchmark")]
-  pub fn bench_reduce(&mut self) {
-    self.reduce()
+  #[cfg(feature = "dev")]
+  #[allow(non_snake_case)]
+  pub fn reduce_pub(&mut self) {
+    // Clones are necessary here, and only used for benchmarks/tests.
+    let ClassElem { a: A, b: B, c: C } =
+      ClassElem::reduce(self.a.clone(), self.b.clone(), self.c.clone());
+    self.a = A;
+    self.b = B;
+    self.c = C;
   }
 
-  #[cfg(feature = "benchmark")]
-  pub fn assign(&mut self, a: &Integer, b: &Integer, c: &Integer) {
-    self.a = a.clone();
-    self.b = b.clone();
-    self.c = c.clone();
+  #[inline]
+  #[cfg(feature = "dev")]
+  pub fn new_raw(a: Integer, b: Integer, c: Integer) -> ClassElem {
+    ClassElem { a, b, c }
   }
 }
 
@@ -201,10 +220,7 @@ impl Group for ClassGroup {
     let A = Integer::from(&s * &t);
     let B = Integer::from(&j * &u) - (Integer::from(&k * &t) + Integer::from(&l * &s));
     let C = Integer::from(&k * &l) - Integer::from(&j * &m);
-    let mut ret = ClassElem { a: A, b: B, c: C };
-
-    ret.reduce();
-    ret
+    ClassElem::reduce(A, B, C)
   }
 
   fn id_(d: &Integer) -> ClassElem {
@@ -253,31 +269,22 @@ impl UnknownOrderGroup for ClassGroup {
     let a = Integer::from(2);
     let b = Integer::from(1);
     let c = Integer::from(1 - d) / Integer::from(8);
-    let mut ret = ClassElem { a, b, c };
-    ret.reduce();
-    ret
+    ClassElem::reduce(a, b, c)
   }
 }
 
 impl Hash for ClassElem {
+  // Assumes ClassElem
   fn hash<H: Hasher>(&self, state: &mut H) {
-    let mut self_reduced = self.clone();
-    self_reduced.reduce();
-    self_reduced.a.hash(state);
-    self_reduced.b.hash(state);
-    self_reduced.c.hash(state);
+    self.a.hash(state);
+    self.b.hash(state);
+    self.c.hash(state);
   }
 }
 
 impl PartialEq for ClassElem {
   fn eq(&self, other: &ClassElem) -> bool {
-    let mut self_reduced = self.clone();
-    self_reduced.reduce();
-    let mut other_reduced = other.clone();
-    other_reduced.reduce();
-    self_reduced.a == other_reduced.a
-      && self_reduced.b == other_reduced.b
-      && self_reduced.c == other_reduced.c
+    self.a == other.a && self.b == other.b && self.c == other.c
   }
 }
 
@@ -286,11 +293,7 @@ where
   Integer: From<T>,
 {
   fn elem(t: (T, T, T)) -> ClassElem {
-    let mut class_elem = ClassElem {
-      a: Integer::from(t.0),
-      b: Integer::from(t.1),
-      c: Integer::from(t.2),
-    };
+    let class_elem = ClassElem::reduce(Integer::from(t.0), Integer::from(t.1), Integer::from(t.2));
 
     // Ideally, this should return an error and the
     // return type of ElemFrom should be Result<Self::Elem, Self:err>,
@@ -299,7 +302,6 @@ where
     // elements, so an invalid ElemFrom here should signal a severe internal error.
     assert!(class_elem.validate());
 
-    class_elem.reduce();
     class_elem
   }
 }
@@ -362,7 +364,7 @@ mod tests {
 
   #[test]
   fn test_equality() {
-    let not_reduced = construct_raw_elem_from_strings(
+    let mut not_reduced = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -398,16 +400,19 @@ mod tests {
       16229851064188563419476497892884550353389340326220747256139"
     );
 
-    assert!(not_reduced == reduced_ground_truth);
+    assert!(not_reduced != reduced_ground_truth);
     assert!(not_reduced == not_reduced.clone());
     assert!(reduced_ground_truth == reduced_ground_truth.clone());
     assert!(not_reduced != diff_elem);
     assert!(reduced_ground_truth != diff_elem);
+
+    not_reduced.reduce_pub();
+    assert!(not_reduced == reduced_ground_truth);
   }
 
   #[test]
   fn test_hash() {
-    let not_reduced = construct_raw_elem_from_strings(
+    let mut not_reduced = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -447,9 +452,17 @@ mod tests {
     let mut hasher_rh = DefaultHasher::new();
     not_reduced.hash(&mut hasher_lh);
     reduced_ground_truth.hash(&mut hasher_rh);
-    assert!(hasher_lh.finish() == hasher_rh.finish());
+
+    assert!(hasher_lh.finish() != hasher_rh.finish());
     assert!(hasher_lh.finish() == hasher_lh.finish());
     assert!(hasher_rh.finish() == hasher_rh.finish());
+
+    hasher_lh = DefaultHasher::new();
+    hasher_rh = DefaultHasher::new();
+    not_reduced.reduce_pub();
+    not_reduced.hash(&mut hasher_lh);
+    reduced_ground_truth.hash(&mut hasher_rh);
+    assert!(hasher_lh.finish() == hasher_rh.finish());
 
     hasher_lh = DefaultHasher::new();
     hasher_rh = DefaultHasher::new();
@@ -484,11 +497,11 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814036"
     );
 
-    to_reduce.reduce();
+    to_reduce.reduce_pub();
     assert_eq!(to_reduce, reduced_ground_truth);
 
     let mut already_reduced = reduced_ground_truth.clone();
-    already_reduced.reduce();
+    already_reduced.reduce_pub();
     assert_eq!(already_reduced, reduced_ground_truth);
   }
 
@@ -519,7 +532,7 @@ mod tests {
        9945629057462766047140854869124473221137588347335081555186814036",
     );
 
-    unnormalized.normalize();
+    unnormalized.normalize_pub();
     assert_eq!(normalized_ground_truth, unnormalized);
   }
 

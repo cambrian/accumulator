@@ -42,9 +42,8 @@ fn criterion_benchmark(c: &mut Criterion) {
   ));
   let exp = Integer::from_str("65315").unwrap();
   let g_inv = base.clone();
-  let mut g_norm = base.clone();
-  let mut g_red = ClassGroup::unknown_order_elem();
   let g_sq = ClassGroup::unknown_order_elem();
+
   let aa = Integer::from_str("16").unwrap();
   let bb = Integer::from_str("105").unwrap();
   let cc = Integer::from_str(
@@ -57,9 +56,10 @@ fn criterion_benchmark(c: &mut Criterion) {
      9057462766047140854869124473221137588347335081555186814207",
   )
   .unwrap();
+
   // element which requires one iteration to reduce
-  g_red.assign(&cc, &bb, &aa);
-  g_norm.assign(&aa, &bb, &cc);
+  let g_red = <ClassGroup as Group>::Elem::new_raw(cc.clone(), bb.clone(), aa.clone());
+  let g_norm = <ClassGroup as Group>::Elem::new_raw(aa.clone(), bb.clone(), cc.clone());
 
   c.bench_function("group_class_op", move |b| {
     b.iter(|| ClassGroup::op(&left, &right))
@@ -71,13 +71,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     b.iter(|| ClassGroup::inv(&g_inv))
   });
   c.bench_function("group_class_normalize", move |b| {
-    b.iter_with_setup(|| g_norm.clone(), |mut g| g.bench_normalize())
+    b.iter_with_setup(|| g_norm.clone(), |mut g| g.normalize_pub())
   });
   c.bench_function("group_class_reduce", move |b| {
-    b.iter_with_setup(|| g_red.clone(), |mut g| g.bench_reduce())
+    b.iter_with_setup(|| g_red.clone(), |mut g| g.reduce_pub())
   });
   c.bench_function("group_class_square", move |b| {
-    b.iter_with_setup(|| g_sq.clone(), |mut g| g.bench_square())
+    b.iter_with_setup(|| g_sq.clone(), |mut g| g.square_pub())
   });
 }
 
