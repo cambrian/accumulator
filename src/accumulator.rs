@@ -119,6 +119,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   /// Updates a membership witness for some set. See Section 4.2 in the Li, Li, Xue paper.
+  /// TODO: Test failure?
   pub fn update_membership_witness(
     self,
     acc_new: Self,
