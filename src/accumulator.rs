@@ -12,7 +12,7 @@ pub enum AccError {
   BadWitness,
   BadWitnessUpdate,
   DivisionByZero,
-  DivisionWithRemainder,
+  InexactDivision,
   InputsNotCoprime,
 }
 
@@ -49,7 +49,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let (quotient, remainder) = numerator.div_rem(denominator);
 
     if remainder != int(0) {
-      return Err(AccError::DivisionWithRemainder);
+      return Err(AccError::InexactDivision);
     }
 
     Ok(Accumulator(G::exp(&self.0, &quotient)))
@@ -200,13 +200,13 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   {
     elems
       .iter()
-      .zip(self.root_factor_helper(hashes).iter())
+      .zip(self.root_factor_(hashes).iter())
       .map(|(x, y)| (x.clone(), y.clone()))
       .collect()
   }
 
   #[allow(non_snake_case)]
-  fn root_factor_helper(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
+  fn root_factor_(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
     if elems.len() == 1 {
       return vec![self.clone()];
     }
@@ -217,8 +217,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let g_r = elems[half_n..]
       .iter()
       .fold(self.clone(), |sum, x| Accumulator(G::exp(&sum.0, x)));
-    let mut L = g_r.root_factor_helper(&Vec::from(&elems[..half_n]));
-    let mut R = g_l.root_factor_helper(&Vec::from(&elems[half_n..]));
+    let mut L = g_r.root_factor_(&Vec::from(&elems[..half_n]));
+    let mut R = g_l.root_factor_(&Vec::from(&elems[half_n..]));
     L.append(&mut R);
     L
   }
@@ -255,8 +255,8 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "DivisionWithRemainder")]
-  fn test_exp_quotient_remainder() {
+  #[should_panic(expected = "InexactDivision")]
+  fn test_exp_quotient_inexact() {
     Accumulator::<Rsa2048>::new()
       .exp_quotient(int(17 * 41 * 67 * 89), int(5))
       .unwrap();
