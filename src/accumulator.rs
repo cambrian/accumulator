@@ -189,7 +189,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ClassGroup, Group, Rsa2048};
+  use crate::group::{ClassGroup, Rsa2048};
   use crate::util::int;
 
   fn init_acc<G: UnknownOrderGroup>() -> Accumulator<G> {
