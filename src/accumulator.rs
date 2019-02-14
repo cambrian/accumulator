@@ -10,6 +10,7 @@ use rug::Integer;
 #[derive(Debug)]
 pub enum AccError {
   BadWitness,
+  BadWitnessUpdate,
   DivisionByZero,
   DivisionWithRemainder,
   InputsNotCoprime,
@@ -119,7 +120,6 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   /// Updates a membership witness for some set. See Section 4.2 in the Li, Li, Xue paper.
-  /// TODO: Test failure?
   pub fn update_membership_witness(
     self,
     acc_new: Self,
@@ -130,11 +130,14 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let x: Integer = witness_set.iter().product();
     let x_hat: Integer = untracked_deletions.iter().product();
 
-    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&x_hat));
-
-    if gcd != int(1) {
-      return Err(AccError::InputsNotCoprime);
+    for witness_elem in witness_set {
+      if untracked_additions.contains(witness_elem) || untracked_deletions.contains(witness_elem) {
+        return Err(AccError::BadWitnessUpdate);
+      }
     }
+
+    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&x_hat));
+    assert!(gcd == int(1));
 
     let w = self.add(untracked_additions).0;
     let w_to_b = G::exp(&w.0, &b);
@@ -315,6 +318,18 @@ mod tests {
       .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(17)], &[int(13)])
       .unwrap();
     assert!(witness_new.add(&[int(3), int(7)]).0 == acc_new);
+  }
+
+  #[should_panic(expected = "BadWitnessUpdate")]
+  #[test]
+  fn test_update_membership_witness_failure() {
+    let acc_new = Accumulator::<Rsa2048>::new()
+      .add(&[int(3), int(7), int(11), int(17)])
+      .0;
+    let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
+    witness
+      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(3)], &[int(13)])
+      .unwrap();
   }
 
   #[test]
