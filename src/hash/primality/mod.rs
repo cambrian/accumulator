@@ -71,7 +71,6 @@ fn passes_lucas(n: &Integer) -> bool {
 #[derive(Debug)]
 struct IsPerfectSquare();
 
-#[allow(clippy::doc_markdown)]
 /// Finds and returns first `D` in `[5, -7, 9, ..., 5 + 2 * max_iter]` for which Jacobi symbol
 /// `(D/n) = -1`, or None if no such `D` exists. In the case that `n` is square, there is no such
 /// `D` even with `max_iter` infinite. Hence if you are not precisely sure that `n` is nonsquare,
@@ -95,7 +94,6 @@ fn choose_d(n: &Integer) -> Result<Integer, IsPerfectSquare> {
   panic!("n is not square but we still couldn't find a d value!")
 }
 
-#[allow(clippy::doc_markdown)]
 /// Computes the Lucas sequences `{u_i(p, q)}` and `{v_i(p, q)}` up to a specified index `k_target`
 /// in O(log(`k_target`)) time by recursively calculating only the `(2i)`th and `(2i+1)`th elements
 /// in an order determined by the binary expansion of `k`. Also returns `q^{k/2} (mod n)`, which is
