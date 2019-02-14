@@ -10,7 +10,9 @@ use rug::Integer;
 #[derive(Debug)]
 pub enum AccError {
   BadWitness,
-  FailedDivision,
+  BadWitnessUpdate,
+  DivisionByZero,
+  InexactDivision,
   InputsNotCoprime,
 }
 
@@ -41,13 +43,13 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   // Computes `self ^ (numerator / denominator)`.
   pub fn exp_quotient(self, numerator: Integer, denominator: Integer) -> Result<Self, AccError> {
     if denominator == int(0) {
-      return Err(AccError::FailedDivision);
+      return Err(AccError::DivisionByZero);
     }
 
     let (quotient, remainder) = numerator.div_rem(denominator);
 
     if remainder != int(0) {
-      return Err(AccError::FailedDivision);
+      return Err(AccError::InexactDivision);
     }
 
     Ok(Accumulator(G::exp(&self.0, &quotient)))
@@ -117,6 +119,32 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Poe::verify(&witness.0, &exp, &self.0, proof)
   }
 
+  /// Updates a membership witness for some set. See Section 4.2 in the Li, Li, Xue paper.
+  pub fn update_membership_witness(
+    self,
+    acc_new: Self,
+    witness_set: &[Integer],
+    untracked_additions: &[Integer],
+    untracked_deletions: &[Integer],
+  ) -> Result<Self, AccError> {
+    let x: Integer = witness_set.iter().product();
+    let x_hat: Integer = untracked_deletions.iter().product();
+
+    for witness_elem in witness_set {
+      if untracked_additions.contains(witness_elem) || untracked_deletions.contains(witness_elem) {
+        return Err(AccError::BadWitnessUpdate);
+      }
+    }
+
+    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&x_hat));
+    assert!(gcd == int(1));
+
+    let w = self.add(untracked_additions).0;
+    let w_to_b = G::exp(&w.0, &b);
+    let acc_new_to_a = G::exp(&acc_new.0, &a);
+    Ok(Accumulator(G::op(&w_to_b, &acc_new_to_a)))
+  }
+
   /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
   pub fn prove_nonmembership(
     &self,
@@ -163,11 +191,22 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Poke2::verify(&self.0, v, poke2_proof) && Poe::verify(d, &x, gv_inv, poe_proof)
   }
 
-  #[allow(non_snake_case)]
   /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
   /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
   /// log N) time.
-  pub fn root_factor(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
+  pub fn root_factor<T>(&self, hashes: &[Integer], elems: &[T]) -> Vec<(T, Accumulator<G>)>
+  where
+    T: Clone,
+  {
+    elems
+      .iter()
+      .zip(self.root_factor_(hashes).iter())
+      .map(|(x, y)| (x.clone(), y.clone()))
+      .collect()
+  }
+
+  #[allow(non_snake_case)]
+  fn root_factor_(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
     if elems.len() == 1 {
       return vec![self.clone()];
     }
@@ -178,18 +217,18 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let g_r = elems[half_n..]
       .iter()
       .fold(self.clone(), |sum, x| Accumulator(G::exp(&sum.0, x)));
-    let mut L = g_r.root_factor(&Vec::from(&elems[..half_n]));
-    let mut R = g_l.root_factor(&Vec::from(&elems[half_n..]));
+    let mut L = g_r.root_factor_(&Vec::from(&elems[..half_n]));
+    let mut R = g_l.root_factor_(&Vec::from(&elems[half_n..]));
     L.append(&mut R);
     L
   }
 }
 
-// TODO: Add test for `prove_membership`.
 #[cfg(test)]
 mod tests {
   use super::*;
   use crate::group::{Group, Rsa2048};
+  use crate::hash;
   use crate::util::int;
 
   fn init_acc<G: UnknownOrderGroup>() -> Accumulator<G> {
@@ -208,7 +247,7 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "FailedDivision")]
+  #[should_panic(expected = "DivisionByZero")]
   fn test_exp_quotient_zero() {
     Accumulator::<Rsa2048>::new()
       .exp_quotient(int(17 * 41 * 67 * 89), int(0))
@@ -216,8 +255,8 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "FailedDivision")]
-  fn test_exp_quotient_remainder() {
+  #[should_panic(expected = "InexactDivision")]
+  fn test_exp_quotient_inexact() {
     Accumulator::<Rsa2048>::new()
       .exp_quotient(int(17 * 41 * 67 * 89), int(5))
       .unwrap();
@@ -267,6 +306,32 @@ mod tests {
   }
 
   #[test]
+  fn test_update_membership_witness() {
+    // Original accumulator has [3, 5, 11, 13].
+    // Witness is tracking elements [3, 5] and eventually [7].
+    let acc_new = Accumulator::<Rsa2048>::new()
+      .add(&[int(3), int(7), int(11), int(17)])
+      .0;
+    let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
+    let witness_new = witness
+      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(17)], &[int(13)])
+      .unwrap();
+    assert!(witness_new.add(&[int(3), int(7)]).0 == acc_new);
+  }
+
+  #[should_panic(expected = "BadWitnessUpdate")]
+  #[test]
+  fn test_update_membership_witness_failure() {
+    let acc_new = Accumulator::<Rsa2048>::new()
+      .add(&[int(3), int(7), int(11), int(17)])
+      .0;
+    let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
+    witness
+      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(3)], &[int(13)])
+      .unwrap();
+  }
+
+  #[test]
   fn test_prove_nonmembership() {
     let acc = init_acc::<Rsa2048>();
     let acc_set = [int(41), int(67), int(89)];
@@ -287,12 +352,18 @@ mod tests {
   }
 
   #[test]
-  fn test_root() {
-    let acc = Accumulator::<Rsa2048>::new();
-    let (acc, _) = acc.add(&[int(41), int(67), int(89)]);
-    let factors = [int(97), int(101), int(103), int(107), int(109)];
-    let witnesses = acc.root_factor(&factors);
-    for (i, witness) in witnesses.iter().enumerate() {
+  fn test_root_factor() {
+    let acc = init_acc::<Rsa2048>();
+    let orig = [
+      97 as usize,
+      101 as usize,
+      103 as usize,
+      107 as usize,
+      109 as usize,
+    ];
+    let factors: Vec<Integer> = orig.iter().map(|x| hash::hash_to_prime(x)).collect();
+    let witnesses = acc.root_factor(&factors, &orig);
+    for (i, (_, witness)) in witnesses.iter().enumerate() {
       let partial_product = factors.iter().product::<Integer>() / factors[i].clone();
       let expected = acc.clone().add(&[partial_product]).0;
       assert_eq!(*witness, expected);
