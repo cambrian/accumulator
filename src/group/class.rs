@@ -3,9 +3,9 @@ use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{int, TypeRep};
 use gmp_mpfr_sys::gmp::{
-  mpz_add, mpz_cmp, mpz_cmp_si, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext,
-  mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub,
-  mpz_t,
+  mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
+  mpz_gcdext, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui,
+  mpz_sub, mpz_t,
 };
 use rug::Integer;
 use std::cell::RefCell;
@@ -457,7 +457,7 @@ impl Group for ClassGroup {
 
         // B = ju - kt + ls
         mpz_mul(&mut ret.b, &ctx.j, &ctx.u);
-        mpz_mul(&mut ret.a, &ctx.m, &ctx.r);
+        mpz_mul(&mut ctx.a, &ctx.m, &ctx.r);
         mpz_add(&mut ret.b, &ret.b, &ctx.a);
         mpz_mul(&mut ctx.a, &ctx.k, &ctx.t);
         mpz_sub(&mut ret.b, &ret.b, &ctx.a);
@@ -468,7 +468,6 @@ impl Group for ClassGroup {
         mpz_mul(&mut ret.c, &ctx.k, &ctx.l);
         mpz_mul(&mut ctx.a, &ctx.j, &ctx.m);
         mpz_sub(&mut ret.c, &ret.c, &ctx.a);
-
         ret.reduce_ctx(ctx);
         ret
       }
@@ -600,9 +599,6 @@ mod tests {
     let a_str = CString::new(a).unwrap();
     let b_str = CString::new(b).unwrap();
     let c_str = CString::new(c).unwrap();
-    println!("{:?}", a_str);
-    println!("{:?}", b_str);
-    println!("{:?}", c_str);
     unsafe {
       mpz_set_str(&mut ret.a, a_str.as_ptr(), 10);
       mpz_set_str(&mut ret.b, b_str.as_ptr(), 10);
@@ -833,14 +829,14 @@ mod tests {
     let id = ClassGroup::id();
     let g1 = ClassGroup::unknown_order_elem();
     let g2 = ClassGroup::op(&g1, &g1);
-    //   let g3 = ClassGroup::op(&id, &g2);
-    //  let g3_inv = ClassGroup::inv(&g3);
+    let g3 = ClassGroup::op(&id, &g2);
+    let g3_inv = ClassGroup::inv(&g3);
 
     assert!(id.validate());
     assert!(g1.validate());
     assert!(g2.validate());
-    //  assert!(g3.validate());
-    //  assert!(g3_inv.validate());
+    assert!(g3.validate());
+    assert!(g3_inv.validate());
   }
 
   #[test]
@@ -881,7 +877,9 @@ mod tests {
       07264365691511785213717281118305284397086833770388796703509"
     );
 
-    assert_eq!(ClassGroup::op(&a, &b), ground_truth);
+    let x = ClassGroup::op(&a, &b);
+
+    assert_eq!(x, ground_truth);
   }
 
   #[test]
