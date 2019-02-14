@@ -71,10 +71,16 @@ fn criterion_benchmark(c: &mut Criterion) {
     b.iter(|| ClassGroup::inv(&g_inv))
   });
   c.bench_function("group_class_normalize", move |b| {
-    b.iter_with_setup(|| g_norm.clone(), |mut g| g.normalize_pub())
+    b.iter_with_setup(
+      || g_norm.clone(),
+      |g| <ClassGroup as Group>::Elem::normalize_pub(g),
+    )
   });
   c.bench_function("group_class_reduce", move |b| {
-    b.iter_with_setup(|| g_red.clone(), |mut g| g.reduce_pub())
+    b.iter_with_setup(
+      || g_red.clone(),
+      |g| <ClassGroup as Group>::Elem::reduce_pub(g),
+    )
   });
   c.bench_function("group_class_square", move |b| {
     b.iter_with_setup(|| g_sq.clone(), |mut g| g.square_pub())
