@@ -117,6 +117,31 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Poe::verify(&witness.0, &exp, &self.0, proof)
   }
 
+  /// Updates a membership witness for some set. See Section 4.2 in the Li, Li, Xue paper.
+  pub fn update_membership_witness(
+    self,
+    acc_new: Self,
+    witness_set: &[Integer],
+    untracked_additions: &[Integer],
+    untracked_deletions: &[Integer],
+  ) -> Result<Self, AccError> {
+    let witness_set_product: Integer = witness_set.iter().product();
+    let untracked_delete_product: Integer = untracked_deletions.iter().product();
+
+    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(
+      witness_set_product.gcd_cofactors_ref(&untracked_delete_product),
+    );
+
+    if gcd != int(1) {
+      return Err(AccError::InputsNotCoprime);
+    }
+
+    let witness_post_add = self.add(untracked_additions);
+    let w_to_b = G::exp(&(witness_post_add.0).0, &b);
+    let acc_new_to_a = G::exp(&acc_new.0, &a);
+    Ok(Accumulator(G::op(&w_to_b, &acc_new_to_a)))
+  }
+
   /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
   pub fn prove_nonmembership(
     &self,
@@ -264,6 +289,21 @@ mod tests {
     acc
       .delete(&[(int(67), y_witness), (int(89), z_witness)])
       .unwrap();
+  }
+
+  #[test]
+  fn test_update_membership_witness() {
+    // Original accumulator has [3, 5, 11, 13].
+    // Witness is tracking elements [3, 5] and eventually [7].
+    let acc_new = Accumulator::<Rsa2048>::new()
+      .add(&[int(3), int(7), int(11), int(17)])
+      .0;
+    let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
+    let witness_new = witness
+      .update_membership_witness(acc_new, &[int(3), int(7)], &[int(17)], &[int(13)])
+      .unwrap();
+    let witness_expected = Accumulator::<Rsa2048>::new().add(&[int(11), int(17)]).0;
+    assert!(witness_new == witness_expected);
   }
 
   #[test]
