@@ -5,7 +5,9 @@ edition = "2018"
 authors = [
   "Pablo Aldape <pablo@vest.io>",
   "Lucas Ege <lucas@vest.io>",
+  "Alan Flores-Lopez <alan@vest.io>",
   "Sanjay Kannan <sanjay@vest.io>",
+  "Michael Straka <michael.s@vest.io>",
   "Eddie Wang <eddie@vest.io>"
 ]
 description = "Cryptographic accumulators in Rust."
@@ -73,4 +75,4 @@ debug = true
 
 [features]
 
-benchmark = []
+dev = []
