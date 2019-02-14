@@ -125,19 +125,17 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     untracked_additions: &[Integer],
     untracked_deletions: &[Integer],
   ) -> Result<Self, AccError> {
-    let witness_set_product: Integer = witness_set.iter().product();
-    let untracked_delete_product: Integer = untracked_deletions.iter().product();
+    let x: Integer = witness_set.iter().product();
+    let x_hat: Integer = untracked_deletions.iter().product();
 
-    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(
-      witness_set_product.gcd_cofactors_ref(&untracked_delete_product),
-    );
+    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&x_hat));
 
     if gcd != int(1) {
       return Err(AccError::InputsNotCoprime);
     }
 
-    let witness_post_add = self.add(untracked_additions);
-    let w_to_b = G::exp(&(witness_post_add.0).0, &b);
+    let w = self.add(untracked_additions).0;
+    let w_to_b = G::exp(&w.0, &b);
     let acc_new_to_a = G::exp(&acc_new.0, &a);
     Ok(Accumulator(G::op(&w_to_b, &acc_new_to_a)))
   }
