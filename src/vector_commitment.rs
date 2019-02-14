@@ -6,9 +6,9 @@ use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum VCError {
-  ConflictingIndicesError,
-  InvalidOpenError,
-  UnexpectedStateError,
+  ConflictingIndices,
+  InvalidOpen,
+  UnexpectedState,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
@@ -26,7 +26,7 @@ fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Int
   let mut seen_indices = HashSet::new();
   for (bit, i) in bits {
     if !seen_indices.insert(i) {
-      return Err(VCError::ConflictingIndicesError);
+      return Err(VCError::ConflictingIndices);
     }
     if *bit {
       elems_with_one.push(hash_to_prime(&i));
@@ -52,7 +52,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     let (new_acc, membership_proof) = vc.0.add(&elems_with_one);
     let nonmembership_proof = new_acc
       .prove_nonmembership(vc_acc_set, &elems_with_zero)
-      .map_err(|_| VCError::UnexpectedStateError)?;
+      .map_err(|_| VCError::UnexpectedState)?;
     Ok((
       VectorCommitment(new_acc),
       VectorProof {
@@ -76,11 +76,11 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     let membership_proof = vc
       .0
       .prove_membership(&elem_witnesses_with_one)
-      .map_err(|_| VCError::InvalidOpenError)?;
+      .map_err(|_| VCError::InvalidOpen)?;
     let nonmembership_proof = vc
       .0
       .prove_nonmembership(vc_acc_set, &elems_with_zero)
-      .map_err(|_| VCError::InvalidOpenError)?;
+      .map_err(|_| VCError::InvalidOpen)?;
     Ok(VectorProof {
       membership_proof,
       nonmembership_proof,

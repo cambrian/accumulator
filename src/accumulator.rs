@@ -1,7 +1,7 @@
 //! Accumulator library, built on a generic group interface.
 //!
-//! Operations that "mutate" the accumulator (add, delete) use moves instead of references so that
-//! you don't accidentally use the old accumulator state.
+//! Operations that "mutate" the accumulator (`add`, `delete`) use moves instead of references so
+//! that you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
 use crate::proof::{Poe, Poke2};
 use crate::util::{int, shamir_trick};
@@ -55,8 +55,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Ok(Accumulator(G::exp(&self.0, &quotient)))
   }
 
-  // The conciseness of accumulator.add() and low probability of confusion with implementations of
-  // the Add trait probably justify this...
+  // The conciseness of `accumulator.add()` and low probability of confusion with implementations of
+  // the `Add` trait probably justify this...
   #[allow(clippy::should_implement_trait)]
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are coprime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
@@ -122,7 +122,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// Updates a membership witness for some set. See Section 4.2 in the Li, Li, Xue paper.
   pub fn update_membership_witness(
     self,
-    acc_new: Self,
+    acc_new: &Self,
     witness_set: &[Integer],
     untracked_additions: &[Integer],
     untracked_deletions: &[Integer],
@@ -194,7 +194,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
   /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
   /// log N) time.
-  pub fn root_factor<T>(&self, hashes: &[Integer], elems: &[T]) -> Vec<(T, Accumulator<G>)>
+  pub fn root_factor<T>(&self, hashes: &[Integer], elems: &[T]) -> Vec<(T, Self)>
   where
     T: Clone,
   {
@@ -206,7 +206,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   #[allow(non_snake_case)]
-  fn root_factor_(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
+  fn root_factor_(&self, elems: &[Integer]) -> Vec<Self> {
     if elems.len() == 1 {
       return vec![self.clone()];
     }
@@ -314,7 +314,7 @@ mod tests {
       .0;
     let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
     let witness_new = witness
-      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(17)], &[int(13)])
+      .update_membership_witness(&acc_new, &[int(3), int(7)], &[int(17)], &[int(13)])
       .unwrap();
     assert!(witness_new.add(&[int(3), int(7)]).0 == acc_new);
   }
@@ -327,7 +327,7 @@ mod tests {
       .0;
     let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
     witness
-      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(3)], &[int(13)])
+      .update_membership_witness(&acc_new, &[int(3), int(7)], &[int(3)], &[int(13)])
       .unwrap();
   }
 
