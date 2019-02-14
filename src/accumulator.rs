@@ -224,7 +224,6 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 }
 
-// TODO: Add test for `prove_membership`.
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -353,9 +352,8 @@ mod tests {
   }
 
   #[test]
-  fn test_root() {
-    let acc = Accumulator::<Rsa2048>::new();
-    let (acc, _) = acc.add(&[int(41), int(67), int(89)]);
+  fn test_root_factor() {
+    let acc = init_acc::<Rsa2048>();
     let orig = [
       97 as usize,
       101 as usize,
