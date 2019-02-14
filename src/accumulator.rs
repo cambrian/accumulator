@@ -186,11 +186,22 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Poke2::verify(&self.0, v, poke2_proof) && Poe::verify(d, &x, gv_inv, poe_proof)
   }
 
-  #[allow(non_snake_case)]
   /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
   /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
   /// log N) time.
-  pub fn root_factor(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
+  pub fn root_factor<T>(&self, hashes: &[Integer], elems: &[T]) -> Vec<(T, Accumulator<G>)>
+  where
+    T: Clone,
+  {
+    elems
+      .iter()
+      .zip(self.root_factor_helper(hashes).iter())
+      .map(|(x, y)| (x.clone(), y.clone()))
+      .collect()
+  }
+
+  #[allow(non_snake_case)]
+  fn root_factor_helper(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
     if elems.len() == 1 {
       return vec![self.clone()];
     }
@@ -201,8 +212,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let g_r = elems[half_n..]
       .iter()
       .fold(self.clone(), |sum, x| Accumulator(G::exp(&sum.0, x)));
-    let mut L = g_r.root_factor(&Vec::from(&elems[..half_n]));
-    let mut R = g_l.root_factor(&Vec::from(&elems[half_n..]));
+    let mut L = g_r.root_factor_helper(&Vec::from(&elems[..half_n]));
+    let mut R = g_l.root_factor_helper(&Vec::from(&elems[half_n..]));
     L.append(&mut R);
     L
   }
@@ -213,6 +224,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 mod tests {
   use super::*;
   use crate::group::{Group, Rsa2048};
+  use crate::hash;
   use crate::util::int;
 
   fn init_acc<G: UnknownOrderGroup>() -> Accumulator<G> {
@@ -327,9 +339,16 @@ mod tests {
   fn test_root() {
     let acc = Accumulator::<Rsa2048>::new();
     let (acc, _) = acc.add(&[int(41), int(67), int(89)]);
-    let factors = [int(97), int(101), int(103), int(107), int(109)];
-    let witnesses = acc.root_factor(&factors);
-    for (i, witness) in witnesses.iter().enumerate() {
+    let orig = [
+      97 as usize,
+      101 as usize,
+      103 as usize,
+      107 as usize,
+      109 as usize,
+    ];
+    let factors: Vec<Integer> = orig.iter().map(|x| hash::hash_to_prime(x)).collect();
+    let witnesses = acc.root_factor(&factors, &orig);
+    for (i, (_, witness)) in witnesses.iter().enumerate() {
       let partial_product = factors.iter().product::<Integer>() / factors[i].clone();
       let expected = acc.clone().add(&[partial_product]).0;
       assert_eq!(*witness, expected);
