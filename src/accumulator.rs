@@ -10,7 +10,8 @@ use rug::Integer;
 #[derive(Debug)]
 pub enum AccError {
   BadWitness,
-  FailedDivision,
+  DivisionByZero,
+  DivisionWithRemainder,
   InputsNotCoprime,
 }
 
@@ -41,13 +42,13 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   // Computes `self ^ (numerator / denominator)`.
   pub fn exp_quotient(self, numerator: Integer, denominator: Integer) -> Result<Self, AccError> {
     if denominator == int(0) {
-      return Err(AccError::FailedDivision);
+      return Err(AccError::DivisionByZero);
     }
 
     let (quotient, remainder) = numerator.div_rem(denominator);
 
     if remainder != int(0) {
-      return Err(AccError::FailedDivision);
+      return Err(AccError::DivisionWithRemainder);
     }
 
     Ok(Accumulator(G::exp(&self.0, &quotient)))
@@ -231,7 +232,7 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "FailedDivision")]
+  #[should_panic(expected = "DivisionByZero")]
   fn test_exp_quotient_zero() {
     Accumulator::<Rsa2048>::new()
       .exp_quotient(int(17 * 41 * 67 * 89), int(0))
@@ -239,7 +240,7 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "FailedDivision")]
+  #[should_panic(expected = "DivisionWithRemainder")]
   fn test_exp_quotient_remainder() {
     Accumulator::<Rsa2048>::new()
       .exp_quotient(int(17 * 41 * 67 * 89), int(5))
