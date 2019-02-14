@@ -11,16 +11,16 @@ pub struct Poe<G: Group> {
 
 impl<G: Group> Poe<G> {
   /// See page 16 of B&B.
-  pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Poe<G> {
+  pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let l = hash_to_prime(&(base, exp, result));
     let q = exp / l;
-    Poe {
+    Self {
       Q: G::exp(&base, &q),
     }
   }
 
   /// See page 16 of B&B.
-  pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &Poe<G>) -> bool {
+  pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &Self) -> bool {
     let l = hash_to_prime(&(base, exp, result));
     let r = int(exp % &l);
     // w = Q^l * u^r

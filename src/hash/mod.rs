@@ -6,7 +6,7 @@ mod blake2b;
 pub use blake2b::Blake2b;
 pub mod primality;
 
-/// Like std::hash::Hasher, but general over output type.
+/// Like `std::hash::Hasher`, but general over output type.
 pub trait GeneralHasher: Hasher {
   type Output;
   /// Similar to Hasher::finish, but consumes self.
@@ -34,11 +34,12 @@ pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
 }
 
 /// Hashes t with an incrementing counter until a prime is found.
+#[allow(clippy::stutter)]
 pub fn hash_to_prime_<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> Integer
 where
   Integer: From<H::Output>,
 {
-  let mut counter = 0u64;
+  let mut counter = 0_u64;
   loop {
     let mut candidate_prime = int(hash(new_hasher, &(t, counter)));
     // Make the candidate prime odd. This gives ~7% performance gain on a 2018 Macbook Pro.
@@ -50,7 +51,8 @@ where
   }
 }
 
-/// Calls hash_to_prime_ with Blake2b hasher.
+/// Calls `hash_to_prime_` with Blake2b hasher.
+#[allow(clippy::stutter)]
 pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
   hash_to_prime_(&Blake2b::default, t)
 }

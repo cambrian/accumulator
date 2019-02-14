@@ -9,10 +9,10 @@ mod ecc;
 mod rsa;
 pub use rsa::{Rsa2048, Rsa2048Elem};
 
-/// We avoid having to pass group objects around by using the TypeRep trait.
+/// We avoid having to pass group objects around by using the `TypeRep` trait.
 ///
 /// The other traits are only required here because Rust can't figure out how to do stuff with an
-/// Accumulator<G> even though it's just a wrapped G::Elem. If possible we'd remove them.
+/// Accumulator<G> even though it's just a wrapped `G::Elem`. If possible we'd remove them.
 pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
   /// In theory the association Group::Elem is bijective, such that it makes sense to write
   /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
@@ -72,6 +72,7 @@ pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
 
 /// We use this to mean a group containing elements of unknown order, not necessarily that the group
 /// itself has unknown order. E.g. RSA groups.
+#[allow(clippy::stutter)]
 pub trait UnknownOrderGroup: Group {
   /// E.g. 2, for RSA groups.
   fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;

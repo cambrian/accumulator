@@ -8,13 +8,13 @@ pub struct Pokcr<G: Group> {
 }
 
 impl<G: Group> Pokcr<G> {
-  pub fn prove(witnesses: &[G::Elem]) -> Pokcr<G> {
-    Pokcr {
+  pub fn prove(witnesses: &[G::Elem]) -> Self {
+    Self {
       w: witnesses.iter().fold(G::id(), |a, b| G::op(&a, b)),
     }
   }
 
-  pub fn verify(alphas: &[G::Elem], x: &[Integer], proof: &Pokcr<G>) -> bool {
+  pub fn verify(alphas: &[G::Elem], x: &[Integer], proof: &Self) -> bool {
     let y = multi_exp::<G>(alphas, x);
     let lhs = G::exp(&proof.w, &x.iter().product());
     lhs == y

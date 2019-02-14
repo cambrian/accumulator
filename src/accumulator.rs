@@ -122,7 +122,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// Updates a membership witness for some set. See Section 4.2 in the Li, Li, Xue paper.
   pub fn update_membership_witness(
     self,
-    acc_new: Self,
+    acc_new: &Self,
     witness_set: &[Integer],
     untracked_additions: &[Integer],
     untracked_deletions: &[Integer],
@@ -194,7 +194,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
   /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
   /// log N) time.
-  pub fn root_factor<T>(&self, hashes: &[Integer], elems: &[T]) -> Vec<(T, Accumulator<G>)>
+  pub fn root_factor<T>(&self, hashes: &[Integer], elems: &[T]) -> Vec<(T, Self)>
   where
     T: Clone,
   {
@@ -206,7 +206,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   #[allow(non_snake_case)]
-  fn root_factor_(&self, elems: &[Integer]) -> Vec<Accumulator<G>> {
+  fn root_factor_(&self, elems: &[Integer]) -> Vec<Self> {
     if elems.len() == 1 {
       return vec![self.clone()];
     }
@@ -314,7 +314,7 @@ mod tests {
       .0;
     let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
     let witness_new = witness
-      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(17)], &[int(13)])
+      .update_membership_witness(&acc_new, &[int(3), int(7)], &[int(17)], &[int(13)])
       .unwrap();
     assert!(witness_new.add(&[int(3), int(7)]).0 == acc_new);
   }
@@ -327,7 +327,7 @@ mod tests {
       .0;
     let witness = Accumulator::<Rsa2048>::new().add(&[int(11), int(13)]).0;
     witness
-      .update_membership_witness(acc_new.clone(), &[int(3), int(7)], &[int(3)], &[int(13)])
+      .update_membership_witness(&acc_new, &[int(3), int(7)], &[int(3)], &[int(13)])
       .unwrap();
   }
 
