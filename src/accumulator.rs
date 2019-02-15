@@ -89,29 +89,37 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     }
 
     let num_deletes = elems.len();
-    let mut group_step = 2_usize.pow(0);
-    let mut skip = 2_usize.pow(1);
+    let mut merge_step = 2_usize.pow(0);
+    let mut merge_skip = 2_usize.pow(1);
     loop {
-      for i in (0..num_deletes).step_by(skip) {
-        if i + group_step >= num_deletes {
+      for i in (0..num_deletes).step_by(merge_skip) {
+        if merge_skip == 2 && G::exp(&witnesses[i], &elems[i]) != self.0 {
+          return Err(AccError::BadWitness);
+        }
+
+        if i + merge_step >= num_deletes {
           break;
+        }
+
+        if merge_skip == 2 && G::exp(&witnesses[i + merge_step], &elems[i + merge_step]) != self.0 {
+          return Err(AccError::BadWitness);
         }
 
         // TODO: Bad witness check.
         witnesses[i] = shamir_trick::<G>(
           &witnesses[i],
-          &witnesses[i + group_step],
+          &witnesses[i + merge_step],
           &elems[i],
-          &elems[i + group_step],
+          &elems[i + merge_step],
         )
         .ok_or(AccError::InputsNotCoprime)?;
-        elems[i] = int(&elems[i] * &elems[i + group_step]);
+        elems[i] = int(&elems[i] * &elems[i + merge_step]);
       }
 
-      group_step *= 2;
-      skip *= 2;
+      merge_step *= 2;
+      merge_skip *= 2;
 
-      if skip >= num_deletes {
+      if merge_skip >= num_deletes {
         break;
       }
     }
@@ -254,6 +262,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 }
 
+// TODO: Clean up tests.
 #[cfg(test)]
 mod tests {
   use super::*;
