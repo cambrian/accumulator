@@ -40,7 +40,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Accumulator(G::unknown_order_elem())
   }
 
-  // Computes `self ^ (numerator / denominator)`.
+  /// Computes `self ^ (numerator / denominator)`.
   pub fn exp_quotient(self, numerator: Integer, denominator: Integer) -> Result<Self, AccError> {
     if denominator == int(0) {
       return Err(AccError::DivisionByZero);
