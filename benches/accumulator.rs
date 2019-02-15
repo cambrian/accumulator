@@ -39,7 +39,7 @@ fn bench_iterative_add(elems: &[Integer]) {
 
 fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<Integer>) {
   let mut elems = Vec::new();
-  for _ in 0..50 {
+  for _ in 0..100 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
     let prime = hash_to_prime(&random_bytes);
     elems.push(prime);
