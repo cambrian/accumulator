@@ -9,11 +9,6 @@ use criterion::Criterion;
 use rand::Rng;
 use rug::Integer;
 
-#[allow(dead_code)]
-fn bench_delete<G: UnknownOrderGroup>(acc: Accumulator<G>, witness: &[(Integer, Accumulator<G>)]) {
-  acc.delete(witness).expect("valid delete expected");
-}
-
 fn bench_add(elems: &[Integer]) {
   let acc = Accumulator::<Rsa2048>::new();
   acc.add(elems);
@@ -59,7 +54,6 @@ fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  // Test verification on lots of elements. Added in batches to not go crazy with exponent size.
   let (acc, proof, elems) = init_acc::<Rsa2048>();
   let elems_1 = elems.clone();
   let elems_2 = elems.clone();
