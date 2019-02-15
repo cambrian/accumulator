@@ -1,12 +1,12 @@
 //! RSA (2048) group using rug's GMP integers.
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::util::{int, TypeRep};
+use crate::util::{int, Never, TypeRep};
 use rug::Integer;
 use std::str::FromStr;
 
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Rsa2048 {}
+pub struct Rsa2048(Never);
 
 /// RSA-2048 modulus, taken from [Wikipedia](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
 const RSA2048_MODULUS_DECIMAL: &str = "25195908475657893494027183240048398571429282126204032027777\

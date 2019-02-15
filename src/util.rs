@@ -1,6 +1,9 @@
 use crate::group::Group;
 use rug::Integer;
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Never {}
+
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
 pub trait TypeRep: 'static {
@@ -13,6 +16,17 @@ where
   Integer: From<T>,
 {
   Integer::from(val)
+}
+
+/// Merge-based computation of Integer array products. Faster than  the iterative `iter.product()`
+/// for really large Integers.
+pub fn merge_product(xs: &mut [Integer]) -> Integer {
+  try_merge_reduce(
+    |a, b| -> Result<Integer, Never> { Ok(int(a * b)) },
+    int(1),
+    xs,
+  )
+  .unwrap()
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
@@ -35,6 +49,40 @@ pub fn shamir_trick<G: Group>(
   }
 
   Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
+}
+
+/// Folds over `xs` but in a fashion that repeatedly merges adjacent elements: Instead of
+/// `F(F(F(F(acc, a), b), c), d))` this computes `F(acc, F(F(a, b), F(c, d)))`.
+pub fn try_merge_reduce<F, T, E>(merge: F, acc: T, xs: &mut [T]) -> Result<T, E>
+where
+  F: Fn(&T, &T) -> Result<T, E>,
+{
+  // First iter is merge_skip == 2.
+  let mut merge_step = 2_usize.pow(0);
+  let mut merge_skip = 2_usize.pow(1);
+  let num_xs = xs.len();
+  loop {
+    for i in (0..num_xs).step_by(merge_skip) {
+      if i + merge_step >= num_xs {
+        break;
+      }
+
+      xs[i] = merge(&xs[i], &xs[i + merge_step])?;
+    }
+
+    merge_step *= 2;
+    merge_skip *= 2;
+
+    if merge_skip >= xs.len() {
+      break;
+    }
+  }
+
+  if num_xs == 0 {
+    Ok(acc)
+  } else {
+    Ok(merge(&acc, &xs[0])?)
+  }
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@
 //! that you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
 use crate::proof::{Poe, Poke2};
-use crate::util::{int, shamir_trick};
+use crate::util::{int, merge_product, shamir_trick, try_merge_reduce};
 use rug::Integer;
 
 #[derive(Debug)]
@@ -61,7 +61,12 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are coprime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
-    let x = elems.iter().product();
+    let mut elems_clone = Vec::new();
+    for elem in elems {
+      elems_clone.push(elem.clone());
+    }
+
+    let x = merge_product(&mut elems_clone);
     let acc_new = G::exp(&self.0, &x);
     let poe_proof = Poe::<G>::prove(&self.0, &x, &acc_new);
     (
@@ -80,55 +85,25 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     self,
     elem_witnesses: &[(Integer, Self)],
   ) -> Result<(Self, MembershipProof<G>), AccError> {
-    let mut elem_aggregate = int(1);
-    let mut acc_next = self.0.clone();
-
-    let mut elems = Vec::new();
-    let mut witnesses = Vec::new();
+    let init_elem_witness = (int(1), self.0.clone());
+    let mut elem_witnesses_clone = Vec::new();
     for (elem, witness) in elem_witnesses {
-      elems.push(elem.clone());
-      witnesses.push(witness.0.clone());
-    }
-
-    let num_deletes = elems.len();
-    let mut merge_step = 2_usize.pow(0);
-    let mut merge_skip = 2_usize.pow(1);
-    loop {
-      for i in (0..num_deletes).step_by(merge_skip) {
-        if merge_skip == 2 && G::exp(&witnesses[i], &elems[i]) != self.0 {
-          return Err(AccError::BadWitness);
-        }
-
-        if i + merge_step >= num_deletes {
-          break;
-        }
-
-        if merge_skip == 2 && G::exp(&witnesses[i + merge_step], &elems[i + merge_step]) != self.0 {
-          return Err(AccError::BadWitness);
-        }
-
-        witnesses[i] = shamir_trick::<G>(
-          &witnesses[i],
-          &witnesses[i + merge_step],
-          &elems[i],
-          &elems[i + merge_step],
-        )
-        .ok_or(AccError::InputsNotCoprime)?;
-        elems[i] = int(&elems[i] * &elems[i + merge_step]);
+      if G::exp(&witness.0, elem) != self.0 {
+        return Err(AccError::BadWitness);
       }
-
-      merge_step *= 2;
-      merge_skip *= 2;
-
-      if merge_skip >= num_deletes {
-        break;
-      }
+      elem_witnesses_clone.push((elem.clone(), witness.0.clone()));
     }
 
-    if num_deletes > 0 {
-      elem_aggregate = elems[0].clone();
-      acc_next = witnesses[0].clone();
-    }
+    let (elem_aggregate, acc_next) = try_merge_reduce(
+      |(e1, w1), (e2, w2)| {
+        Ok((
+          int(e1 * e2),
+          shamir_trick::<G>(w1, w2, e1, e2).ok_or(AccError::InputsNotCoprime)?,
+        ))
+      },
+      init_elem_witness,
+      &mut elem_witnesses_clone,
+    )?;
 
     let poe_proof = Poe::<G>::prove(&acc_next, &elem_aggregate, &self.0);
     Ok((
