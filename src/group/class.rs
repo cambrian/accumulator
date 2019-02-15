@@ -387,6 +387,107 @@ impl ClassElem {
     }
   }
 
+  fn op_ctx(&self, other: &ClassElem, ctx: &mut Ctx) -> ClassElem {
+    unsafe {
+      // TODO: Assert discriminants equal
+      // g = (b1 + b2) / 2
+      mpz_add(&mut ctx.g, &self.b, &other.b);
+      mpz_fdiv_q_ui(&mut ctx.g, &ctx.g, 2);
+      // h = (b2 - b1) / 2
+      mpz_sub(&mut ctx.h, &other.b, &self.b);
+      mpz_fdiv_q_ui(&mut ctx.h, &ctx.h, 2);
+      // w = gcd(a1, a2, g)
+      mpz_gcd(&mut ctx.w, &self.a, &other.a);
+      mpz_gcd(&mut ctx.w, &ctx.w, &ctx.g);
+
+      // j = w
+      mpz_set(&mut ctx.j, &ctx.w);
+      // r = 0
+      mpz_set_ui(&mut ctx.r, 0);
+      // s = a1 / w
+      mpz_fdiv_q(&mut ctx.s, &self.a, &ctx.w);
+      // t = a2 / w
+      mpz_fdiv_q(&mut ctx.t, &other.a, &ctx.w);
+      // u = g / w
+      mpz_fdiv_q(&mut ctx.u, &ctx.g, &ctx.w);
+
+      // a = tu
+      mpz_mul(&mut ctx.a, &ctx.t, &ctx.u);
+
+      // b = hu + sc
+      mpz_mul(&mut ctx.b, &ctx.h, &ctx.u);
+      mpz_mul(&mut ctx.m, &ctx.s, &self.c);
+      mpz_add(&mut ctx.b, &ctx.b, &ctx.m);
+      // m = st
+      mpz_mul(&mut ctx.m, &ctx.s, &ctx.t);
+      // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
+      solve_linear_congruence_mpz(
+        &mut ctx.sctx,
+        &mut ctx.mu,
+        &mut ctx.v,
+        &ctx.a,
+        &ctx.b,
+        &ctx.m,
+      );
+
+      // a = tv
+      mpz_mul(&mut ctx.m, &ctx.t, &ctx.v);
+      // b = h - t * mu
+      mpz_mul(&mut ctx.m, &ctx.t, &ctx.mu);
+      mpz_sub(&mut ctx.b, &ctx.h, &ctx.m);
+      // m = s
+      mpz_set(&mut ctx.m, &ctx.s);
+      // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
+      solve_linear_congruence_mpz(
+        &mut ctx.sctx,
+        &mut ctx.lambda,
+        &mut ctx.sigma,
+        &ctx.a,
+        &ctx.b,
+        &ctx.m,
+      );
+
+      // k = mu + v * lambda
+      mpz_mul(&mut ctx.a, &ctx.v, &ctx.lambda);
+      mpz_add(&mut ctx.k, &ctx.mu, &ctx.a);
+      // l = (k * t - h) / s
+      mpz_mul(&mut ctx.l, &ctx.k, &ctx.t);
+      mpz_sub(&mut ctx.l, &ctx.l, &ctx.h);
+      mpz_fdiv_q(&mut ctx.l, &ctx.l, &ctx.s);
+      // m = (tuk - hu - c1s) / st
+      mpz_mul(&mut ctx.m, &ctx.t, &ctx.u);
+      mpz_mul(&mut ctx.m, &ctx.m, &ctx.k);
+      mpz_mul(&mut ctx.a, &ctx.h, &ctx.u);
+      mpz_sub(&mut ctx.m, &ctx.m, &ctx.a);
+      mpz_mul(&mut ctx.a, &self.c, &ctx.s);
+      mpz_sub(&mut ctx.m, &ctx.m, &ctx.a);
+      mpz_mul(&mut ctx.a, &ctx.s, &ctx.t);
+      mpz_fdiv_q(&mut ctx.m, &ctx.m, &ctx.a);
+
+      let mut ret = ClassElem::default();
+      // A = st - ru
+      mpz_mul(&mut ret.a, &ctx.s, &ctx.t);
+      mpz_mul(&mut ctx.a, &ctx.r, &ctx.u);
+      mpz_sub(&mut ret.a, &ret.a, &ctx.a);
+
+      // B = ju - kt + ls
+      mpz_mul(&mut ret.b, &ctx.j, &ctx.u);
+      mpz_mul(&mut ctx.a, &ctx.m, &ctx.r);
+      mpz_add(&mut ret.b, &ret.b, &ctx.a);
+      mpz_mul(&mut ctx.a, &ctx.k, &ctx.t);
+      mpz_sub(&mut ret.b, &ret.b, &ctx.a);
+      mpz_mul(&mut ctx.a, &ctx.l, &ctx.s);
+      mpz_sub(&mut ret.b, &ret.b, &ctx.a);
+
+      // C = kl - jm
+      mpz_mul(&mut ret.c, &ctx.k, &ctx.l);
+      mpz_mul(&mut ctx.a, &ctx.j, &ctx.m);
+      mpz_sub(&mut ret.c, &ret.c, &ctx.a);
+      ret.reduce_ctx(ctx);
+      ret
+    }
+  }
+
   #[inline]
   #[cfg(feature = "benchmark")]
   pub fn bench_square(&mut self) {
@@ -413,6 +514,18 @@ impl ClassElem {
   }
 }
 
+fn id_ctx(d: &Discriminant, ctx: &mut Ctx) -> ClassElem {
+  let mut ret = ClassElem::default();
+  unsafe {
+    mpz_set_ui(&mut ret.a, 1);
+    mpz_set_ui(&mut ret.b, 1);
+    // c = (b * b - d) / 4a
+    mpz_sub(&mut ctx.a, &ret.b, &d.inner); // b == b*b
+    mpz_fdiv_q_ui(&mut ret.c, &ctx.a, 4);
+  }
+  ret
+}
+
 impl TypeRep for ClassGroup {
   type Rep = Discriminant;
   fn rep() -> &'static Self::Rep {
@@ -424,120 +537,11 @@ impl Group for ClassGroup {
   type Elem = ClassElem;
 
   fn op_(_: &Discriminant, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    with_context(|ctx| {
-      unsafe {
-        // TODO: Assert discriminants equal
-        // g = (b1 + b2) / 2
-        mpz_add(&mut ctx.g, &x.b, &y.b);
-        mpz_fdiv_q_ui(&mut ctx.g, &ctx.g, 2);
-        // h = (b2 - b1) / 2
-        mpz_sub(&mut ctx.h, &y.b, &x.b);
-        mpz_fdiv_q_ui(&mut ctx.h, &ctx.h, 2);
-        // w = gcd(a1, a2, g)
-        mpz_gcd(&mut ctx.w, &x.a, &y.a);
-        mpz_gcd(&mut ctx.w, &ctx.w, &ctx.g);
-
-        // j = w
-        mpz_set(&mut ctx.j, &ctx.w);
-        // r = 0
-        mpz_set_ui(&mut ctx.r, 0);
-        // s = a1 / w
-        mpz_fdiv_q(&mut ctx.s, &x.a, &ctx.w);
-        // t = a2 / w
-        mpz_fdiv_q(&mut ctx.t, &y.a, &ctx.w);
-        // u = g / w
-        mpz_fdiv_q(&mut ctx.u, &ctx.g, &ctx.w);
-
-        // a = tu
-        mpz_mul(&mut ctx.a, &ctx.t, &ctx.u);
-
-        // b = hu + sc
-        mpz_mul(&mut ctx.b, &ctx.h, &ctx.u);
-        mpz_mul(&mut ctx.m, &ctx.s, &x.c);
-        mpz_add(&mut ctx.b, &ctx.b, &ctx.m);
-        // m = st
-        mpz_mul(&mut ctx.m, &ctx.s, &ctx.t);
-        // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
-        solve_linear_congruence_mpz(
-          &mut ctx.sctx,
-          &mut ctx.mu,
-          &mut ctx.v,
-          &ctx.a,
-          &ctx.b,
-          &ctx.m,
-        );
-
-        // a = tv
-        mpz_mul(&mut ctx.m, &ctx.t, &ctx.v);
-        // b = h - t * mu
-        mpz_mul(&mut ctx.m, &ctx.t, &ctx.mu);
-        mpz_sub(&mut ctx.b, &ctx.h, &ctx.m);
-        // m = s
-        mpz_set(&mut ctx.m, &ctx.s);
-        // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
-        solve_linear_congruence_mpz(
-          &mut ctx.sctx,
-          &mut ctx.lambda,
-          &mut ctx.sigma,
-          &ctx.a,
-          &ctx.b,
-          &ctx.m,
-        );
-
-        // k = mu + v * lambda
-        mpz_mul(&mut ctx.a, &ctx.v, &ctx.lambda);
-        mpz_add(&mut ctx.k, &ctx.mu, &ctx.a);
-        // l = (k * t - h) / s
-        mpz_mul(&mut ctx.l, &ctx.k, &ctx.t);
-        mpz_sub(&mut ctx.l, &ctx.l, &ctx.h);
-        mpz_fdiv_q(&mut ctx.l, &ctx.l, &ctx.s);
-        // m = (tuk - hu - cs) / st
-        mpz_mul(&mut ctx.m, &ctx.t, &ctx.u);
-        mpz_mul(&mut ctx.m, &ctx.m, &ctx.k);
-        mpz_mul(&mut ctx.a, &ctx.h, &ctx.u);
-        mpz_sub(&mut ctx.m, &ctx.m, &ctx.a);
-        mpz_mul(&mut ctx.a, &x.c, &ctx.s);
-        mpz_sub(&mut ctx.m, &ctx.m, &ctx.a);
-        mpz_mul(&mut ctx.a, &ctx.s, &ctx.t);
-        mpz_fdiv_q(&mut ctx.m, &ctx.m, &ctx.a);
-
-        let mut ret = ClassElem::default();
-        // A = st - ru
-        mpz_mul(&mut ret.a, &ctx.s, &ctx.t);
-        mpz_mul(&mut ctx.a, &ctx.r, &ctx.u);
-        mpz_sub(&mut ret.a, &ret.a, &ctx.a);
-
-        // B = ju - kt + ls
-        mpz_mul(&mut ret.b, &ctx.j, &ctx.u);
-        mpz_mul(&mut ctx.a, &ctx.m, &ctx.r);
-        mpz_add(&mut ret.b, &ret.b, &ctx.a);
-        mpz_mul(&mut ctx.a, &ctx.k, &ctx.t);
-        mpz_sub(&mut ret.b, &ret.b, &ctx.a);
-        mpz_mul(&mut ctx.a, &ctx.l, &ctx.s);
-        mpz_sub(&mut ret.b, &ret.b, &ctx.a);
-
-        // C = kl - jm
-        mpz_mul(&mut ret.c, &ctx.k, &ctx.l);
-        mpz_mul(&mut ctx.a, &ctx.j, &ctx.m);
-        mpz_sub(&mut ret.c, &ret.c, &ctx.a);
-        ret.reduce_ctx(ctx);
-        ret
-      }
-    })
+    with_context(|ctx| x.op_ctx(y, ctx))
   }
 
   fn id_(d: &Discriminant) -> ClassElem {
-    with_context(|ctx| {
-      let mut ret = ClassElem::default();
-      unsafe {
-        mpz_set_ui(&mut ret.a, 1);
-        mpz_set_ui(&mut ret.b, 1);
-        // c = (b * b - d) / 4a
-        mpz_sub(&mut ctx.a, &ret.b, &d.inner); // b == b*b
-        mpz_fdiv_q_ui(&mut ret.c, &ctx.a, 4);
-      }
-      ret
-    })
+    with_context(|ctx| id_ctx(d, ctx))
   }
 
   fn inv_(_: &Discriminant, x: &ClassElem) -> ClassElem {
@@ -564,7 +568,7 @@ impl Group for ClassGroup {
           return val;
         }
         if n.is_odd() {
-          val = Self::op(&val, &a);
+          val = val.op_ctx(&a, ctx);
         }
         a.square_ctx(ctx);
         n >>= 1;
