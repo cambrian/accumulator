@@ -3,13 +3,11 @@ use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{int, new_mpz, TypeRep};
 use gmp_mpfr_sys::gmp::{
-  mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
-  mpz_gcdext, mpz_get_str, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str,
-  mpz_set_ui, mpz_sub, mpz_t,
+  mpz_add, mpz_cmp, mpz_cmp_si, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext,
+  mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub, mpz_t,
 };
 use rug::Integer;
 use std::cell::RefCell;
-use std::ffi::CStr;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
 use std::slice;

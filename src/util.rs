@@ -1,8 +1,15 @@
 use crate::group::Group;
+use gmp_mpfr_sys::gmp::{
+  mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
+  mpz_gcdext, mpz_get_str, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str,
+  mpz_set_ui, mpz_sub, mpz_t,
+};
 use gmp_mpfr_sys::gmp::{mpz_init, mpz_set_str, mpz_t};
 use rug::Integer;
 use std::ffi::CString;
 use std::mem::uninitialized;
+use std::num::ParseIntError;
+use std::str::FromStr;
 
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
@@ -23,11 +30,100 @@ where
   Integer::from(val)
 }
 
-pub fn new_mpz() -> mpz_t {
-  unsafe {
-    let mut ret = uninitialized();
-    mpz_init(&mut ret);
+#[cfg_attr(repr_transparent, repr(transparent))]
+pub struct Mpz {
+  inner: mpz_t,
+}
+
+impl Default for Mpz {
+  fn default() -> Self {
+    let inner = unsafe {
+      let mut ret = uninitialized();
+      mpz_init(&mut ret);
+      ret
+    };
+    Self { inner }
+  }
+}
+
+impl FromStr for Mpz {
+  type Err = ParseIntError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    let mut ret = Mpz::default();
+    let c_str = CString::new(s)?;
+    unsafe {
+      mpz_set_str(&mut ret, c_str.as_ptr(), 10);
+    }
     ret
+  }
+}
+
+/*use gmp_mpfr_sys::gmp::{
+  mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
+  mpz_gcdext, mpz_get_str, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str,
+  mpz_set_ui, mpz_sub, mpz_t,
+};*/
+
+// TODO: Make arithmetic functions inline?
+impl Mpz {
+  fn add(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe {
+      mpz_add(&mut self.inner, &x.inner, &y.inner);
+    }
+  }
+  // TODO: Make enum for cmp results?
+  fn cmp(&self, other: &Mpz) -> i32 {
+    unsafe { mpz_cmp(&self.inner, &other.inner) }
+  }
+  // TODO: Combine cmp into one funtion w/ match on type?
+  fn cmp_si(&self, val: i64) -> i32 {
+    unsafe { mpz_cmp_si(&self.inner, val) }
+  }
+  fn floor_div(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe {
+      mpz_fdiv_q(&mut self.inner, &x.inner, &y.inner);
+    }
+  }
+  fn floor_div_ui(&mut self, x: &Mpz, val: u64) {
+    unsafe {
+      mpz_fdiv_q_ui(&mut self.inner, &x.inner, val);
+    }
+  }
+  fn gcd(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { mpz_gcd(&mut self.inner, &x.inner, &y.inner) }
+  }
+  fn gcd_cofactors(&mut self, d: &mut Mpz, e: &mut Mpz, a: &Mpz, m: &Mpz) {
+    unsafe {
+      mpz_gcdext(
+        &mut self.inner,
+        &mut d.inner,
+        &mut e.inner,
+        &a.inner,
+        &m.inner,
+      )
+    }
+  }
+  fn modulo(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { mpz_mod(&mut self.inner, &x.inner, &y.inner) }
+  }
+  fn mul(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { mpz_mul(&mut self.inner, &x.inner, &y.inner) }
+  }
+  fn mul_ui(&mut self, x: &Mpz, y: u64) {
+    unsafe { mpz_mul_ui(&mut self.inner, &x.inner, y) }
+  }
+  fn neg(&mut self, x: &Mpz) {
+    unsafe { mpz_neg(&mut self.inner, &x.inner) }
+  }
+  fn set(&mut self, x: &Mpz) {
+    unsafe { mpz_set(&mut self.inner, &x.inner) }
+  }
+  fn set_ui(&mut self, val: u64) {
+    unsafe { mpz_set_ui(&mut self.inner, val) }
+  }
+  fn sub(&mut self, x: &Mpz) {
+    unsafe { mpz_sub(&mut self.inner, &x.inner) }
   }
 }
 
