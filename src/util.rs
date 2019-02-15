@@ -1,6 +1,8 @@
 use crate::group::Group;
-use gmp_mpfr_sys::gmp::{mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_qr, mpz_gcdext, mpz_mod, mpz_mul, mpz_t};
+use gmp_mpfr_sys::gmp::{mpz_init, mpz_set_str, mpz_t};
 use rug::Integer;
+use std::ffi::CString;
+use std::mem::uninitialized;
 
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
@@ -19,6 +21,25 @@ where
   Integer: From<T>,
 {
   Integer::from(val)
+}
+
+pub fn new_mpz() -> mpz_t {
+  unsafe {
+    let mut ret = uninitialized();
+    mpz_init(&mut ret);
+    ret
+  }
+}
+
+// TODO: Construct mpz from uint
+// TODO: Make Mpz wrapper struct w/ methods
+pub fn mpz_from_str(s: &str) -> mpz_t {
+  let mut ret = new_mpz();
+  let c_str = CString::new(s).unwrap();
+  unsafe {
+    mpz_set_str(&mut ret, c_str.as_ptr(), 10);
+  }
+  ret
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.

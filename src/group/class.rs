@@ -1,7 +1,7 @@
 //! Class Group implementation
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
-use crate::util::{int, TypeRep};
+use crate::util::{int, new_mpz, TypeRep};
 use gmp_mpfr_sys::gmp::{
   mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
   mpz_gcdext, mpz_get_str, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str,
@@ -12,7 +12,6 @@ use std::cell::RefCell;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
-use std::mem::uninitialized;
 use std::slice;
 use std::str::FromStr;
 
@@ -41,6 +40,7 @@ const DISCRIMINANT2048_DECIMAL: &str =
   3966286152805654229445219531956098223";
 
 // need wrapper to make mpz_t thread-safe
+// TODO: Just make Mpz wrapper struct for all mpz_t elements
 #[cfg_attr(repr_transparent, repr(transparent))]
 pub struct Discriminant {
   inner: mpz_t,
@@ -127,14 +127,6 @@ impl Eq for ClassElem {}
 unsafe impl Send for ClassElem {}
 unsafe impl Sync for ClassElem {}
 
-fn new_mpz() -> mpz_t {
-  unsafe {
-    let mut ret = uninitialized();
-    mpz_init(&mut ret);
-    ret
-  }
-}
-
 pub struct SubCtx {
   g: mpz_t,
   d: mpz_t,
@@ -165,9 +157,6 @@ pub struct Ctx {
   x: mpz_t,
   old_a: mpz_t,
   g: mpz_t,
-  d: mpz_t,
-  e: mpz_t,
-  q: mpz_t,
   w: mpz_t,
   u: mpz_t,
   a: mpz_t,
@@ -197,9 +186,6 @@ impl Default for Ctx {
       x: new_mpz(),
       old_a: new_mpz(),
       g: new_mpz(),
-      d: new_mpz(),
-      e: new_mpz(),
-      q: new_mpz(),
       w: new_mpz(),
       u: new_mpz(),
       a: new_mpz(),
@@ -507,10 +493,12 @@ impl ClassElem {
   }
 
   #[cfg(feature = "benchmark")]
-  pub fn assign(&mut self, a: &Integer, b: &Integer, c: &Integer) {
-    self.a = a.clone();
-    self.b = b.clone();
-    self.c = c.clone();
+  pub fn assign(&mut self, a: &mpz_t, b: &mpz_t, c: &mpz_t) {
+    unsafe {
+      mpz_set(&mut self.a, &a);
+      mpz_set(&mut self.b, &b);
+      mpz_set(&mut self.c, &c);
+    }
   }
 }
 
@@ -554,13 +542,13 @@ impl Group for ClassGroup {
     ret
   }
 
-  fn exp_(_: &Discriminant, a: &ClassElem, n: &Integer) -> ClassElem {
+  fn exp_(d: &Discriminant, a: &ClassElem, n: &Integer) -> ClassElem {
     with_context(|ctx| {
       let (mut val, mut a, mut n) = {
         if *n < int(0) {
-          (Self::id(), Self::inv(a), int(-n))
+          (id_ctx(d, ctx), Self::inv(a), int(-n))
         } else {
-          (Self::id(), a.clone(), n.clone())
+          (id_ctx(d, ctx), a.clone(), n.clone())
         }
       };
       loop {
@@ -803,29 +791,6 @@ mod tests {
 
   #[test]
   fn test_reduce_basic() {
-    /* let mut to_reduce = construct_raw_elem_from_strings(
-      "16",
-      "105",
-      "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
-      672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
-      531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
-      198871332313399489386997681827578317938792170918711794684859311697439726596656501594138449739\
-      494228617068329664776714484742276158090583495714649193839084110987149118615158361352488488402\
-      038894799695420483272708933239751363849397287571692736881031223140446926522431859701738994562\
-      9057462766047140854869124473221137588347335081555186814207"
-    );
-
-    let mut reduced_ground_truth = construct_raw_elem_from_strings(
-      "16",
-      "9",
-      "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
-      672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
-      531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
-      198871332313399489386997681827578317938792170918711794684859311697439726596656501594138449739\
-      494228617068329664776714484742276158090583495714649193839084110987149118615158361352488488402\
-      038894799695420483272708933239751363849397287571692736881031223140446926522431859701738994562\
-      9057462766047140854869124473221137588347335081555186814036"
-    );*/
     let mut to_reduce = construct_raw_elem_from_strings(
       "59162244921619725812008939143220718157267937427074598447911241410131470159247784852210767449\
       675610037288729551814191198624164179866076352187405442496568188988272422133088755036699145362\
@@ -858,21 +823,9 @@ mod tests {
       614456845205980227091403964285870107268917183244016635907926846271829374679124848388403486656\
       1564478239095738726823372184204"
     );
+    // Equality checking should be defined to reduce
     assert_eq!(to_reduce, reduced_ground_truth);
-
     let already_reduced = reduced_ground_truth.clone();
-
-    /*let mut already_reduced = construct_raw_elem_from_strings(
-      "16",
-      "9",
-      "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
-      672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
-      531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
-      198871332313399489386997681827578317938792170918711794684859311697439726596656501594138449739\
-      494228617068329664776714484742276158090583495714649193839084110987149118615158361352488488402\
-      038894799695420483272708933239751363849397287571692736881031223140446926522431859701738994562\
-      9057462766047140854869124473221137588347335081555186814036"
-    );*/
     assert_eq!(already_reduced, reduced_ground_truth);
   }
 
@@ -912,11 +865,6 @@ mod tests {
     let g = ClassGroup::unknown_order_elem();
     let mut d = new_mpz();
     &g.discriminant(&mut d);
-    println!("{:?}", d);
-    println!("{:?}", &ClassGroup::rep().inner);
-    //  let mut d_str = CString::default().as_ptr();
-    //  mpz_get_str(d_str, 10, &ClassGroup::rep().inner);
-    //println!("{}", d_str.to_str().unwrap());
     assert!(unsafe { mpz_cmp(&d, &ClassGroup::rep().inner) == 0 });
   }
 
@@ -1035,6 +983,7 @@ mod tests {
         gs.push(g.clone());
         gs_invs.push(ClassGroup::inv(&g));
         g_star = ClassGroup::op(&g, &g_star);
+        println!("{}", i);
         assert!(g_star.validate());
       }
     }
@@ -1115,8 +1064,6 @@ mod tests {
 
     // g^2
     let mut g2 = g.clone();
-    //let mut g2 = ClassGroup::op(&g, &g);
-
     // g^4
     g2.square();
     g2.square();
