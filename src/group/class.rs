@@ -256,11 +256,8 @@ impl ClassElem {
   // TODO: Ensure elements only valid if reduced
   fn reduce_ctx(&mut self, ctx: &mut Ctx) {
     self.normalize_ctx(ctx);
-    let mut count = 0;
     while !self.is_reduced() {
       unsafe {
-        println!("reduce count: {}", count);
-        count += 1;
         // s = floor_div(c + b, 2c)
         mpz_add(&mut ctx.s, &self.c, &self.b);
         // x = 2c
