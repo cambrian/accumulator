@@ -1,5 +1,5 @@
 use crate::group::Group;
-use rug::{Assign, Integer};
+use rug::Integer;
 
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
@@ -23,17 +23,14 @@ pub fn shamir_trick<G: Group>(
   yth_root: &G::Elem,
   x: &Integer,
   y: &Integer,
-  gcd: &mut Integer,
-  a: &mut Integer,
-  b: &mut Integer,
 ) -> Option<G::Elem> {
   if G::exp(xth_root, x) != G::exp(yth_root, y) {
     return None;
   }
 
-  (&mut *gcd, &mut *a, &mut *b).assign(x.gcd_cofactors_ref(&y));
+  let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&y));
 
-  if *gcd != int(1) {
+  if gcd != int(1) {
     return None;
   }
 
@@ -48,22 +45,18 @@ mod tests {
 
   #[test]
   fn test_shamir_trick() {
-    let (x, y, z) = (int(13), int(17), &int(19));
-    let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y.clone() * z));
-    let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x.clone() * z));
+    let (x, y, z) = (&int(13), &int(17), &int(19));
+    let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z));
+    let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z));
     let xyth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), z);
-    let (mut gcd, mut a, mut b) = (Integer::new(), Integer::new(), Integer::new());
-    assert!(
-      shamir_trick::<Rsa2048>(&xth_root, &yth_root, &x, &y, &mut gcd, &mut a, &mut b)
-        == Some(xyth_root)
-    );
+    assert!(shamir_trick::<Rsa2048>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
 
-  // #[test]
-  // fn test_shamir_trick_failure() {
-  //   let (x, y, z) = (&int(7), &int(14), &int(19)); // Inputs not coprime.
-  //   let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z));
-  //   let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z));
-  //   assert!(shamir_trick::<Rsa2048>(&xth_root, &yth_root, x, y) == None);
-  // }
+  #[test]
+  fn test_shamir_trick_failure() {
+    let (x, y, z) = (&int(7), &int(14), &int(19)); // Inputs not coprime.
+    let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z));
+    let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z));
+    assert!(shamir_trick::<Rsa2048>(&xth_root, &yth_root, x, y) == None);
+  }
 }

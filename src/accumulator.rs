@@ -80,23 +80,14 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   ) -> Result<(Self, MembershipProof<G>), AccError> {
     let mut elem_aggregate = int(1);
     let mut acc_next = self.0.clone();
-    let (mut gcd, mut a, mut b) = (Integer::new(), Integer::new(), Integer::new());
 
     for (elem, witness) in elem_witnesses {
       if G::exp(&witness.0, elem) != self.0 {
         return Err(AccError::BadWitness);
       }
 
-      acc_next = shamir_trick::<G>(
-        &acc_next,
-        &witness.0,
-        &elem_aggregate,
-        &elem,
-        &mut gcd,
-        &mut a,
-        &mut b,
-      )
-      .ok_or(AccError::InputsNotCoprime)?;
+      acc_next = shamir_trick::<G>(&acc_next, &witness.0, &elem_aggregate, elem)
+        .ok_or(AccError::InputsNotCoprime)?;
       elem_aggregate *= elem;
     }
 
