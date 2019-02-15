@@ -343,8 +343,8 @@ impl ClassElem {
   // expects normalized element
   fn is_reduced(&self) -> bool {
     unsafe {
-      (mpz_cmp(&self.a, &self.c) > 0)
-        || (mpz_cmp(&self.a, &self.c) == 0 && mpz_cmp_si(&self.b, 0) < 0)
+      !((mpz_cmp(&self.a, &self.c) > 0)
+        || (mpz_cmp(&self.a, &self.c) == 0 && mpz_cmp_si(&self.b, 0) < 0))
     }
   }
 
@@ -776,7 +776,7 @@ mod tests {
       038894799695420483272708933239751363849397287571692736881031223140446926522431859701738994562\
       9057462766047140854869124473221137588347335081555186814036"
     );*/
-    let to_reduce = construct_raw_elem_from_strings(
+    let mut to_reduce = construct_raw_elem_from_strings(
       "59162244921619725812008939143220718157267937427074598447911241410131470159247784852210767449\
       675610037288729551814191198624164179866076352187405442496568188988272422133088755036699145362\
       385840772236403043664778415471196678638241785773530531198720497580622741709880533724904220122\
@@ -808,7 +808,7 @@ mod tests {
       614456845205980227091403964285870107268917183244016635907926846271829374679124848388403486656\
       1564478239095738726823372184204"
     );
-    //  assert_eq!(to_reduce, reduced_ground_truth);
+    assert_eq!(to_reduce, reduced_ground_truth);
 
     let already_reduced = reduced_ground_truth.clone();
 
