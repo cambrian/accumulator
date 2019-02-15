@@ -1,3 +1,4 @@
+use crate::i256::{i256, MontgomeryReducer, I256};
 use crate::util::int;
 use rug::integer::Order;
 use rug::{Assign, Integer};
@@ -35,6 +36,24 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
       return false;
     }
     if x == int(n - 1) {
+      return true;
+    }
+  }
+  false
+}
+
+pub fn passes_miller_rabin_base_22(n: &I256) -> bool {
+  let (d, r) = (n - 1).remove_factor(i256(2));
+  let mut x = i256(2).pow_mod(d, *n);
+  if x == i256(1) || x == n - 1 {
+    return true;
+  }
+  for _ in 1..r {
+    x = x * x % *n;
+    if x == i256(1) {
+      return false;
+    }
+    if x == n - 1 {
       return true;
     }
   }
@@ -170,7 +189,20 @@ mod tests {
       assert!(passes_miller_rabin_base_2(&int(n)));
     }
   }
-
+  #[test]
+  fn test_miller_rabin2() {
+    assert!(passes_miller_rabin_base_22(&i256(13)));
+    assert!(!passes_miller_rabin_base_22(&i256(65)));
+    for &p in LARGE_PRIMES.iter() {
+      assert!(passes_miller_rabin_base_22(&i256(p)));
+      assert!(!passes_miller_rabin_base_22(
+        &(i256(p) * i256(106_957)).low_i256()
+      ));
+    }
+    for &n in STRONG_BASE_2_PSEUDOPRIMES.iter() {
+      assert!(passes_miller_rabin_base_22(&i256(u64::from(n))));
+    }
+  }
   #[test]
   fn test_jacobi() {
     assert_eq!(int(0).jacobi(&int(1)), 1);
