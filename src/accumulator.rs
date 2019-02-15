@@ -81,14 +81,44 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     let mut elem_aggregate = int(1);
     let mut acc_next = self.0.clone();
 
+    let mut elems = Vec::new();
+    let mut witnesses = Vec::new();
     for (elem, witness) in elem_witnesses {
-      if G::exp(&witness.0, elem) != self.0 {
-        return Err(AccError::BadWitness);
+      elems.push(elem.clone());
+      witnesses.push(witness.0.clone());
+    }
+
+    let num_deletes = elems.len();
+    let mut group_step = 2_usize.pow(0);
+    let mut skip = 2_usize.pow(1);
+    loop {
+      for i in (0..num_deletes).step_by(skip) {
+        if i + group_step >= num_deletes {
+          break;
+        }
+
+        // TODO: Bad witness check.
+        witnesses[i] = shamir_trick::<G>(
+          &witnesses[i],
+          &witnesses[i + group_step],
+          &elems[i],
+          &elems[i + group_step],
+        )
+        .ok_or(AccError::InputsNotCoprime)?;
+        elems[i] = int(&elems[i] * &elems[i + group_step]);
       }
 
-      acc_next = shamir_trick::<G>(&acc_next, &witness.0, &elem_aggregate, elem)
-        .ok_or(AccError::InputsNotCoprime)?;
-      elem_aggregate *= elem;
+      group_step *= 2;
+      skip *= 2;
+
+      if skip >= num_deletes {
+        break;
+      }
+    }
+
+    if num_deletes > 0 {
+      elem_aggregate = elems[0].clone();
+      acc_next = witnesses[0].clone();
     }
 
     let poe_proof = Poe::<G>::prove(&acc_next, &elem_aggregate, &self.0);
