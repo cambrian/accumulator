@@ -74,6 +74,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
+  /// Uses a MergeSort approach to running the ShamirTrick, which keeps the average input smaller:
+  /// For `[a, b, c, d]` do `S(S(a, b), S(c, d))` instead of `S(S(S(a, b), c), d)`.
   pub fn delete(
     self,
     elem_witnesses: &[(Integer, Self)],
@@ -105,7 +107,6 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
           return Err(AccError::BadWitness);
         }
 
-        // TODO: Bad witness check.
         witnesses[i] = shamir_trick::<G>(
           &witnesses[i],
           &witnesses[i + merge_step],
