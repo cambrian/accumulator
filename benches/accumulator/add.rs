@@ -59,8 +59,8 @@ fn criterion_benchmark(c: &mut Criterion) {
   let elems_2 = elems.clone();
   let elems_3 = elems.clone();
 
-  // c.bench_function("add_1", move |b| b.iter(|| bench_add(&elems_1[0..1])));
-  // c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
+  c.bench_function("add_1", move |b| b.iter(|| bench_add(&elems_1[0..1])));
+  c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
   c.bench_function("add_100", move |b| b.iter(|| bench_add(&elems_3)));
   c.bench_function("verify", move |b| {
     b.iter(|| bench_verify(&acc, &elems, &proof))

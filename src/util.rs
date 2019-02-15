@@ -18,17 +18,6 @@ where
   Integer::from(val)
 }
 
-/// Merge-based computation of Integer array products. Faster than  the iterative `iter.product()`
-/// for really large Integers.
-pub fn merge_product(xs: &mut [Integer]) -> Integer {
-  try_merge_reduce(
-    |a, b| -> Result<Integer, Never> { Ok(int(a * b)) },
-    int(1),
-    xs,
-  )
-  .unwrap()
-}
-
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
 /// Consider moving this to accumulator?
 #[allow(clippy::similar_names)]
@@ -57,7 +46,6 @@ pub fn try_merge_reduce<F, T, E>(merge: F, acc: T, xs: &mut [T]) -> Result<T, E>
 where
   F: Fn(&T, &T) -> Result<T, E>,
 {
-  // First iter is merge_skip == 2.
   let mut merge_step = 2_usize.pow(0);
   let mut merge_skip = 2_usize.pow(1);
   let num_xs = xs.len();
@@ -73,7 +61,7 @@ where
     merge_step *= 2;
     merge_skip *= 2;
 
-    if merge_skip >= xs.len() {
+    if merge_step >= num_xs {
       break;
     }
   }
@@ -91,6 +79,22 @@ mod tests {
   use crate::group::{Group, Rsa2048, UnknownOrderGroup};
   use crate::util::int;
 
+  /// Merge-based computation of Integer array products. Faster than  the iterative `iter.product()`
+  /// for really large Integers.
+  fn merge_product(xs: &[Integer]) -> Integer {
+    let mut xs_clone = Vec::new();
+    for x in xs {
+      xs_clone.push(x.clone());
+    }
+
+    try_merge_reduce(
+      |a, b| -> Result<Integer, Never> { Ok(int(a * b)) },
+      int(1),
+      &mut xs_clone,
+    )
+    .unwrap()
+  }
+
   #[test]
   fn test_shamir_trick() {
     let (x, y, z) = (&int(13), &int(17), &int(19));
@@ -106,5 +110,11 @@ mod tests {
     let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z));
     let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z));
     assert!(shamir_trick::<Rsa2048>(&xth_root, &yth_root, x, y) == None);
+  }
+
+  #[test]
+  fn test_merge_product() {
+    let ints = vec![int(3), int(5), int(7), int(9), int(11)];
+    assert!(merge_product(&ints) == int(10395));
   }
 }

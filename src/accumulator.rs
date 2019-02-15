@@ -4,7 +4,7 @@
 //! that you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
 use crate::proof::{Poe, Poke2};
-use crate::util::{int, merge_product, shamir_trick, try_merge_reduce};
+use crate::util::{int, shamir_trick, try_merge_reduce};
 use rug::Integer;
 
 #[derive(Debug)]
@@ -61,12 +61,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are coprime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
-    let mut elems_clone = Vec::new();
-    for elem in elems {
-      elems_clone.push(elem.clone());
-    }
-
-    let x = merge_product(&mut elems_clone);
+    let x = elems.iter().product();
     let acc_new = G::exp(&self.0, &x);
     let poe_proof = Poe::<G>::prove(&self.0, &x, &acc_new);
     (
