@@ -135,6 +135,26 @@ fn new_mpz() -> mpz_t {
   }
 }
 
+pub struct SubCtx {
+  g: mpz_t,
+  d: mpz_t,
+  e: mpz_t,
+  q: mpz_t,
+  r: mpz_t,
+}
+
+impl Default for SubCtx {
+  fn default() -> Self {
+    Self {
+      g: new_mpz(),
+      d: new_mpz(),
+      e: new_mpz(),
+      q: new_mpz(),
+      r: new_mpz(),
+    }
+  }
+}
+
 pub struct Ctx {
   negative_a: mpz_t,
   r: mpz_t,
@@ -162,11 +182,12 @@ pub struct Ctx {
   t: mpz_t,
   l: mpz_t,
   j: mpz_t,
+  sctx: SubCtx,
 }
 
 impl Default for Ctx {
   fn default() -> Self {
-    Ctx {
+    Self {
       negative_a: new_mpz(),
       r: new_mpz(),
       denom: new_mpz(),
@@ -193,24 +214,31 @@ impl Default for Ctx {
       t: new_mpz(),
       l: new_mpz(),
       j: new_mpz(),
+      sctx: SubCtx::default(),
     }
   }
 }
 
-// TODO: Use seperate context object for linear congruences and move into util.rs
 // TODO: Check for solution
-pub fn solve_linear_congruence_mpz(ctx: &mut Ctx) {
+pub fn solve_linear_congruence_mpz(
+  ctx: &mut SubCtx,
+  mu: &mut mpz_t,
+  v: &mut mpz_t,
+  a: &mpz_t,
+  b: &mpz_t,
+  m: &mpz_t,
+) {
   unsafe {
     // g = gcd(a, m) => da + em = g
-    mpz_gcdext(&mut ctx.g, &mut ctx.d, &mut ctx.e, &ctx.a, &ctx.m);
+    mpz_gcdext(&mut ctx.g, &mut ctx.d, &mut ctx.e, a, m);
     // q = floor_div(b, g)
     // r = b % g
-    mpz_fdiv_qr(&mut ctx.q, &mut ctx.r, &ctx.b, &ctx.g);
+    mpz_fdiv_qr(&mut ctx.q, &mut ctx.r, b, &ctx.g);
     // mu = (q * d) % m
-    mpz_mul(&mut ctx.mu, &ctx.q, &ctx.d);
-    mpz_mod(&mut ctx.mu, &ctx.mu, &ctx.m);
+    mpz_mul(mu, &ctx.q, &ctx.d);
+    mpz_mod(mu, mu, m);
     // v = m / g
-    mpz_fdiv_q(&mut ctx.v, &ctx.m, &ctx.g);
+    mpz_fdiv_q(v, m, &ctx.g);
   }
 }
 
@@ -294,7 +322,14 @@ impl ClassElem {
   fn square_ctx(&mut self, ctx: &mut Ctx) {
     unsafe {
       // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
-      solve_linear_congruence_mpz(ctx);
+      solve_linear_congruence_mpz(
+        &mut ctx.sctx,
+        &mut ctx.mu,
+        &mut ctx.v,
+        &self.b,
+        &self.c,
+        &self.a,
+      );
 
       // tmp = (b * mu) / a
       mpz_mul(&mut ctx.m, &self.b, &ctx.mu);
@@ -423,7 +458,14 @@ impl Group for ClassGroup {
         // m = st
         mpz_mul(&mut ctx.m, &ctx.s, &ctx.t);
         // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
-        solve_linear_congruence_mpz(ctx);
+        solve_linear_congruence_mpz(
+          &mut ctx.sctx,
+          &mut ctx.mu,
+          &mut ctx.v,
+          &ctx.a,
+          &ctx.b,
+          &ctx.m,
+        );
 
         // a = tv
         mpz_mul(&mut ctx.m, &ctx.t, &ctx.v);
@@ -433,7 +475,14 @@ impl Group for ClassGroup {
         // m = s
         mpz_set(&mut ctx.m, &ctx.s);
         // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
-        solve_linear_congruence_mpz(ctx);
+        solve_linear_congruence_mpz(
+          &mut ctx.sctx,
+          &mut ctx.lambda,
+          &mut ctx.sigma,
+          &ctx.a,
+          &ctx.b,
+          &ctx.m,
+        );
 
         // k = mu + v * lambda
         mpz_mul(&mut ctx.a, &ctx.v, &ctx.lambda);
@@ -1061,9 +1110,11 @@ mod tests {
     }
 
     // g^2
-    let mut g2 = ClassGroup::op(&g, &g);
+    let mut g2 = g.clone();
+    //let mut g2 = ClassGroup::op(&g, &g);
 
     // g^4
+    g2.square();
     g2.square();
 
     assert_eq!(&g2, &g4);
