@@ -67,7 +67,11 @@ impl Eq for Mpz {}
 
 impl PartialOrd for Mpz {
   fn partial_cmp(&self, other: &Mpz) -> Option<Ordering> {
-    Some(Ordering::Less)
+    match self.cmp(&other) {
+      x if x < 0 => Some(Ordering::Less),
+      0 => Some(Ordering::Equal),
+      _ => Some(Ordering::Greater),
+    }
   }
 }
 
@@ -76,7 +80,7 @@ impl Ord for Mpz {
     match self.cmp(&other) {
       x if x < 0 => Ordering::Less,
       0 => Ordering::Equal,
-      x if x > 0 => Ordering::Greater,
+      _ => Ordering::Greater,
     }
   }
 }
@@ -111,11 +115,12 @@ impl Mpz {
       mpz_add(&mut self.inner, &x.inner, &y.inner);
     }
   }
-  // TODO: Make enum for cmp results?
+  pub fn add_mut(&mut self, x: &Mpz) {
+    unsafe { mpz_add(&mut self.inner, &self.inner, &x.inner) }
+  }
   pub fn cmp(&self, other: &Mpz) -> i32 {
     unsafe { mpz_cmp(&self.inner, &other.inner) }
   }
-  // TODO: Combine cmp into one funtion w/ match on type?
   pub fn cmp_si(&self, val: i64) -> i32 {
     unsafe { mpz_cmp_si(&self.inner, val) }
   }
@@ -123,6 +128,9 @@ impl Mpz {
     unsafe {
       mpz_fdiv_q(&mut self.inner, &x.inner, &y.inner);
     }
+  }
+  pub fn floor_div_mut(&mut self, x: &Mpz) {
+    unsafe { mpz_fdiv_q(&mut self.inner, &self.inner, &x.inner) }
   }
   pub fn floor_div_rem(&mut self, r: &mut Mpz, x: &Mpz, y: &Mpz) {
     unsafe { mpz_fdiv_qr(&mut self.inner, &mut r.inner, &x.inner, &y.inner) }
@@ -132,8 +140,16 @@ impl Mpz {
       mpz_fdiv_q_ui(&mut self.inner, &x.inner, val);
     }
   }
+  pub fn floor_div_ui_mut(&mut self, val: u64) {
+    unsafe {
+      mpz_fdiv_q_ui(&mut self.inner, &self.inner, val);
+    }
+  }
   pub fn gcd(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_gcd(&mut self.inner, &x.inner, &y.inner) }
+  }
+  pub fn gcd_mut(&mut self, x: &Mpz) {
+    unsafe { mpz_gcd(&mut self.inner, &self.inner, &x.inner) }
   }
   pub fn gcd_cofactors(&mut self, d: &mut Mpz, e: &mut Mpz, a: &Mpz, m: &Mpz) {
     unsafe {
@@ -149,14 +165,26 @@ impl Mpz {
   pub fn modulo(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_mod(&mut self.inner, &x.inner, &y.inner) }
   }
+  pub fn modulo_mut(&mut self, x: &Mpz) {
+    unsafe { mpz_mod(&mut self.inner, &self.inner, &x.inner) }
+  }
   pub fn mul(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_mul(&mut self.inner, &x.inner, &y.inner) }
   }
-  pub fn mul_ui(&mut self, x: &Mpz, y: u64) {
-    unsafe { mpz_mul_ui(&mut self.inner, &x.inner, y) }
+  pub fn mul_mut(&mut self, x: &Mpz) {
+    unsafe { mpz_mul(&mut self.inner, &self.inner, &x.inner) }
+  }
+  pub fn mul_ui(&mut self, x: &Mpz, val: u64) {
+    unsafe { mpz_mul_ui(&mut self.inner, &x.inner, val) }
+  }
+  pub fn mul_ui_mut(&mut self, val: u64) {
+    unsafe { mpz_mul_ui(&mut self.inner, &self.inner, val) }
   }
   pub fn neg(&mut self, x: &Mpz) {
     unsafe { mpz_neg(&mut self.inner, &x.inner) }
+  }
+  pub fn neg_mut(&mut self) {
+    unsafe { mpz_neg(&mut self.inner, &self.inner) }
   }
   pub fn set(&mut self, x: &Mpz) {
     unsafe { mpz_set(&mut self.inner, &x.inner) }
@@ -171,6 +199,12 @@ impl Mpz {
   }
   pub fn sub(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_sub(&mut self.inner, &x.inner, &y.inner) }
+  }
+  pub fn sub_mut(&mut self, x: &Mpz) {
+    unsafe { mpz_sub(&mut self.inner, &self.inner, &x.inner) }
+  }
+  pub fn square_mut(&mut self) {
+    unsafe { mpz_mul(&mut self.inner, &self.inner, &self.inner) }
   }
 }
 
