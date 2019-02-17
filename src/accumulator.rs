@@ -228,7 +228,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ClassGroup, Group, Rsa2048};
+  use crate::group::{ClassGroup, Rsa2048};
   use crate::hash;
   use crate::util::int;
 
@@ -479,6 +479,7 @@ mod tests {
   }
 
   #[test]
+  #[ignore] // Ignoring for now, too slow.
   fn test_root_factor_class() {
     test_root_factor_generic::<ClassGroup>();
   }

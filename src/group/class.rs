@@ -47,7 +47,7 @@ impl ClassElem {
     // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
     let (r, _) = Integer::from(&a - &b).div_rem_floor(Integer::from(2 * &a));
     let new_b = &b + 2 * Integer::from(&r * &a);
-    let new_c = c + Integer::from(b * &r) + &a * r.square();
+    let new_c = c + b * &r + &a * r.square();
     ClassElem {
       a: a,
       b: new_b,
@@ -64,7 +64,7 @@ impl ClassElem {
       // (a, b, c) = (c, −b + 2sc, cs^2 − bs + a)
       let new_a = elem.c.clone();
       let new_b = Integer::from(-&elem.b) + 2 * Integer::from(&s * &new_a);
-      let new_c = -Integer::from(elem.b * &s) + elem.a + elem.c * s.square();
+      let new_c = -elem.b * &s + elem.a + elem.c * s.square();
       elem = ClassElem {
         a: new_a,
         b: new_b,
@@ -106,7 +106,7 @@ impl ClassElem {
   }
 
   fn is_reduced(a: &Integer, b: &Integer, c: &Integer) -> bool {
-    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && b < &Integer::from(0)))
+    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && *b < Integer::from(0)))
   }
 
   fn is_normal(a: &Integer, b: &Integer, _c: &Integer) -> bool {
