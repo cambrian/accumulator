@@ -214,11 +214,11 @@ impl ClassCtx {
       self.x.mul_ui(&x.c, 2);
       self.s.floor_div_mut(&self.x);
       self.old_a.set(&x.a);
-      self.old_b.neg(&x.b);
+      self.old_b.set(&x.b);
       x.a.set(&x.c);
       x.b.neg_mut();
       // x = 2sc
-      self.x.mul_mut(&x.c);
+      self.x.mul(&self.s, &x.c);
       self.x.mul_ui_mut(2);
       // b = 2sc - b
       x.b.add_mut(&self.x);
@@ -238,7 +238,9 @@ impl ClassCtx {
 
   fn square(&mut self, x: &mut ClassElem) {
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
-    solve_linear_congruence_mpz(&mut self.sctx, &mut self.mu, &mut self.v, &x.b, &x.c, &x.a);
+    self
+      .sctx
+      .solve_linear_congruence(&mut self.mu, &mut self.v, &x.b, &x.c, &x.a);
 
     // tmp = (b * mu) / a
     self.m.mul(&x.b, &self.mu);
@@ -291,31 +293,21 @@ impl ClassCtx {
     // m = st
     self.m.mul(&self.s, &self.t);
     // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
-    solve_linear_congruence_mpz(
-      &mut self.sctx,
-      &mut self.mu,
-      &mut self.v,
-      &self.a,
-      &self.b,
-      &self.m,
-    );
+    self
+      .sctx
+      .solve_linear_congruence(&mut self.mu, &mut self.v, &self.a, &self.b, &self.m);
 
     // a = tv
-    self.m.mul(&self.t, &self.v);
+    self.a.mul(&self.t, &self.v);
     // b = h - t * mu
     self.m.mul(&self.t, &self.mu);
     self.b.sub(&self.h, &self.m);
     // m = s
     self.m.set(&self.s);
     // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
-    solve_linear_congruence_mpz(
-      &mut self.sctx,
-      &mut self.lambda,
-      &mut self.sigma,
-      &self.a,
-      &self.b,
-      &self.m,
-    );
+    self
+      .sctx
+      .solve_linear_congruence(&mut self.lambda, &mut self.sigma, &self.a, &self.b, &self.m);
 
     // k = mu + v * lambda
     self.a.mul(&self.v, &self.lambda);
@@ -338,7 +330,7 @@ impl ClassCtx {
     // A = st - ru
     ret.a.mul(&self.s, &self.t);
     self.a.mul(&self.r, &self.u);
-    ret.a.sub(&self.a, &self.a);
+    ret.a.sub_mut(&self.a);
 
     // B = ju - kt + ls
     ret.b.mul(&self.j, &self.u);
@@ -366,27 +358,6 @@ impl ClassCtx {
     ret.c.floor_div_ui(&self.a, 4);
     ret
   }
-}
-
-// TODO: Check for solution
-pub fn solve_linear_congruence_mpz(
-  ctx: &mut LinCongruenceCtx,
-  mu: &mut Mpz,
-  v: &mut Mpz,
-  a: &Mpz,
-  b: &Mpz,
-  m: &Mpz,
-) {
-  // g = gcd(a, m) => da + em = g
-  ctx.g.gcd_cofactors(&mut ctx.d, &mut ctx.e, a, m);
-  // q = floor_div(b, g)
-  // r = b % g
-  ctx.q.floor_div_rem(&mut ctx.r, b, &ctx.g);
-  // mu = (q * d) % m
-  mu.mul(&ctx.q, &ctx.d);
-  mu.modulo_mut(m);
-  // v = m / g
-  v.floor_div(m, &ctx.g);
 }
 
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
