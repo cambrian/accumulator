@@ -26,8 +26,13 @@ criterion = "0.2.9"
 rand = "0.6.5"
 
 [[bench]]
-name = "accumulator"
-path = "benches/accumulator.rs"
+name = "add"
+path = "benches/accumulator/add.rs"
+harness = false
+
+[[bench]]
+name = "delete"
+path = "benches/accumulator/delete.rs"
 harness = false
 
 [[bench]]

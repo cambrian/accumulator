@@ -26,10 +26,10 @@ impl Ed25519 {
   }
 }
 
-/// REVIEW: Ideally we'd just use RistrettoPoint here, but only traits defined in this crate can
+/// REVIEW: Ideally we'd just use `RistrettoPoint` here, but only traits defined in this crate can
 /// be implemented for arbitrary types. How to fix without wrapping?
 ///
-/// It may make sense to fork curve25519-dalek to add the Hash impl. Then we won't need to wrap it.
+/// It may make sense to fork curve25519-dalek to add the `Hash` impl. Then we won't need to wrap.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ed25519Elem(RistrettoPoint);
 
@@ -64,11 +64,11 @@ impl Group for Ed25519 {
 
   fn exp_(_: &(), x: &Ed25519Elem, n: &Integer) -> Ed25519Elem {
     let mut remaining = n.clone();
-    let mut result = Ed25519::id();
+    let mut result = Self::id();
 
     while remaining > *MAX_SAFE_EXPONENT {
       result = Ed25519Elem(result.0 + x.0 * (*MAX_SAFE_SCALAR));
-      remaining -= Ed25519::max_safe_exponent();
+      remaining -= Self::max_safe_exponent();
     }
 
     let mut digits: [u8; 32] = [0; 32];

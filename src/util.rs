@@ -22,6 +22,7 @@ where
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
 /// Consider moving this to accumulator?
+#[allow(clippy::similar_names)]
 pub fn shamir_trick<G: Group>(
   xth_root: &G::Elem,
   yth_root: &G::Elem,

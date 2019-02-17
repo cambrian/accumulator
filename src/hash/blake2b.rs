@@ -1,4 +1,4 @@
-//! Make blake2_rfc conform to the hasher interface.
+//! Make `blake2_rfc` conform to the hasher interface.
 //! TODO: Add SHA-256 interface pending further development.
 use super::GeneralHasher;
 use blake2_rfc::blake2b::Blake2b as Blake2b_;
