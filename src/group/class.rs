@@ -257,7 +257,8 @@ impl UnknownOrderGroup for ClassGroup {
 }
 
 impl Hash for ClassElem {
-  // Assumes ClassElem
+  // Assumes ClassElem is reduced and normalized, which will be the case unless
+  // a struct is insantiated manually in this module.
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.a.hash(state);
     self.b.hash(state);

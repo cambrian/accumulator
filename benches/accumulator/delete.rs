@@ -28,6 +28,7 @@ fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<
 
 macro_rules! benchmark_delete {
   ($group_type : ident, $criterion: ident) => {
+    let group_type_str = String::from(stringify!($group_type)).to_lowercase();
     // Test verification on lots of elements. Added in batches to not go crazy with exponent size.
     let (acc, _, elems) = init_acc::<$group_type>();
     let mut delete_arg = Vec::new();
@@ -38,9 +39,10 @@ macro_rules! benchmark_delete {
       delete_arg.push((elem, witness));
     }
     let acc_2 = acc.clone();
-    $criterion.bench_function("delete_50", move |b| {
-      b.iter(|| bench_delete(acc_2.clone(), &delete_arg[..]))
-    });
+    $criterion.bench_function(
+      format! {"{}_delete_50", group_type_str}.as_str(),
+      move |b| b.iter(|| bench_delete(acc_2.clone(), &delete_arg[..])),
+    );
   };
 }
 
