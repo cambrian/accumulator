@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::group::{Rsa2048, UnknownOrderGroup};
+use accumulator::group::{ClassGroup, Rsa2048, UnknownOrderGroup};
 use accumulator::hash::hash_to_prime;
 use accumulator::util::int;
 use accumulator::{Accumulator, MembershipProof};
@@ -26,21 +26,27 @@ fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<
   (acc, proof, elems)
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-  // Test verification on lots of elements. Added in batches to not go crazy with exponent size.
-  let (acc, _, elems) = init_acc::<Rsa2048>();
+macro_rules! benchmark_delete {
+  ($group_type : ident, $criterion: ident) => {
+    // Test verification on lots of elements. Added in batches to not go crazy with exponent size.
+    let (acc, _, elems) = init_acc::<$group_type>();
+    let mut delete_arg = Vec::new();
+    for elem in elems.clone() {
+      let exp: Integer = elems.iter().product::<Integer>() / elem.clone();
+      let witness = Accumulator::<$group_type>::new();
+      let witness = witness.exp_quotient(exp, int(1)).unwrap();
+      delete_arg.push((elem, witness));
+    }
+    let acc_2 = acc.clone();
+    $criterion.bench_function("delete_50", move |b| {
+      b.iter(|| bench_delete(acc_2.clone(), &delete_arg[..]))
+    });
+  };
+}
 
-  let mut delete_arg = Vec::new();
-  for elem in elems.clone() {
-    let exp: Integer = elems.iter().product::<Integer>() / elem.clone();
-    let witness = Accumulator::<Rsa2048>::new();
-    let witness = witness.exp_quotient(exp, int(1)).unwrap();
-    delete_arg.push((elem, witness));
-  }
-  let acc_2 = acc.clone();
-  c.bench_function("delete_50", move |b| {
-    b.iter(|| bench_delete(acc_2.clone(), &delete_arg[..]))
-  });
+fn criterion_benchmark(c: &mut Criterion) {
+  benchmark_delete! {Rsa2048, c};
+  benchmark_delete! {ClassGroup, c};
 }
 
 criterion_group!(benches, criterion_benchmark);
