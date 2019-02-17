@@ -224,7 +224,6 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 }
 
-// TODO: Add test for `prove_membership`.
 #[cfg(test)]
 mod tests {
   use super::*;
