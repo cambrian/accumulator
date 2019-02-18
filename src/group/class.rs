@@ -77,8 +77,13 @@ impl Clone for ClassElem {
 }
 
 impl PartialEq for ClassElem {
+  // TODO: Ensure only reduced elements exist
   fn eq(&self, other: &ClassElem) -> bool {
-    self.a == other.a && self.b == other.b && self.c == other.c
+    let mut r_self = self.clone();
+    let mut r_other = other.clone();
+    r_self.reduce();
+    r_other.reduce();
+    r_self.a == r_other.a && r_self.b == r_other.b && r_self.c == r_other.c
   }
 }
 
@@ -393,8 +398,10 @@ impl ClassElem {
 
   // expects normalized element
   fn is_reduced(&self) -> bool {
-    !(self.a < self.c || (self.a == self.c && self.b.cmp_si(0) < 0))
+    !(self.a.cmp(&self.c) > 0 || (self.a.cmp(&self.c) == 0 && self.b.cmp_si(0) < 0))
   }
+  //TODO: replace after test starts working
+  // !(self.a > self.c || (self.a == self.c && self.b.cmp_si(0) < 0))
 
   fn is_normalized(&self, ctx: &mut ClassCtx) -> bool {
     ctx.negative_a.neg(&self.a);
