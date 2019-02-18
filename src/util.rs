@@ -97,6 +97,14 @@ impl Hash for Mpz {
   }
 }
 
+impl From<u64> for Mpz {
+  fn from(x: u64) -> Self {
+    let mut ret = Mpz::default();
+    unsafe { mpz_set_ui(&mut ret.inner, x) };
+    ret
+  }
+}
+
 impl FromStr for Mpz {
   type Err = std::ffi::NulError;
 

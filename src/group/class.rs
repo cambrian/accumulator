@@ -427,12 +427,10 @@ impl ClassElem {
   }
 
   #[cfg(feature = "benchmark")]
-  pub fn assign(&mut self, a: &mpz_t, b: &mpz_t, c: &mpz_t) {
-    unsafe {
-      mpz_set(&mut self.a, &a);
-      mpz_set(&mut self.b, &b);
-      mpz_set(&mut self.c, &c);
-    }
+  pub fn assign(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) {
+    self.a.set(&a);
+    self.b.set(&b);
+    self.c.set(&c);
   }
 }
 
@@ -517,7 +515,11 @@ where
   Mpz: From<T>,
 {
   fn elem(t: (T, T, T)) -> ClassElem {
-    let mut class_elem = ClassElem::default();
+    let mut class_elem = ClassElem {
+      a: Mpz::from(t.0),
+      b: Mpz::from(t.1),
+      c: Mpz::from(t.2),
+    };
 
     // Ideally, this should return an error and the
     // return type of ElemFrom should be Result<Self::Elem, Self:err>,
@@ -555,10 +557,10 @@ mod tests {
   }
 
   #[test]
-  /*fn test_elem_from() {
-    let a1 = Integer::from_str("16").unwrap();
-    let b1 = Integer::from_str("105").unwrap();
-    let c1 = Integer::from_str(
+  fn test_elem_from() {
+    let a1 = Mpz::from_str("16").unwrap();
+    let b1 = Mpz::from_str("105").unwrap();
+    let c1 = Mpz::from_str(
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
       672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
       531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
@@ -569,9 +571,9 @@ mod tests {
     )
     .unwrap();
 
-    let a2 = Integer::from_str("16").unwrap();
-    let b2 = Integer::from_str("9").unwrap();
-    let c2 = Integer::from_str(
+    let a2 = Mpz::from_str("16").unwrap();
+    let b2 = Mpz::from_str("9").unwrap();
+    let c2 = Mpz::from_str(
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
       672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
       531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
@@ -585,7 +587,7 @@ mod tests {
     let reduced_elem = ClassGroup::elem((a1, b1, c1));
     let also_reduced_elem = ClassGroup::elem((a2, b2, c2));
     assert_eq!(reduced_elem, also_reduced_elem);
-  }*/
+  }
   #[test]
   fn test_equality() {
     let not_reduced = construct_raw_elem_from_strings(
