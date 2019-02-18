@@ -633,7 +633,7 @@ mod tests {
 
   #[test]
   fn test_hash() {
-    let not_reduced = construct_raw_elem_from_strings(
+    let mut not_reduced = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -645,7 +645,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814207"
     );
 
-    let reduced_ground_truth = construct_raw_elem_from_strings(
+    let mut reduced_ground_truth = construct_raw_elem_from_strings(
       "16",
       "9",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -671,6 +671,8 @@ mod tests {
 
     let mut hasher_lh = DefaultHasher::new();
     let mut hasher_rh = DefaultHasher::new();
+    not_reduced.reduce();
+    reduced_ground_truth.reduce();
     not_reduced.hash(&mut hasher_lh);
     reduced_ground_truth.hash(&mut hasher_rh);
     assert!(hasher_lh.finish() == hasher_rh.finish());
