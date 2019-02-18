@@ -513,8 +513,8 @@ impl Hash for ClassElem {
 
 // TODO: This just returns (0,0,0) right now
 impl<T> ElemFrom<(T, T, T)> for ClassGroup
-//where
-//  Integer: From<T>,
+where
+  Mpz: From<T>,
 {
   fn elem(t: (T, T, T)) -> ClassElem {
     let mut class_elem = ClassElem::default();
