@@ -1,4 +1,4 @@
-use crate::u256::{u256, u512, MontgomeryReducer, U256};
+use crate::u256::{u256, u512, U256};
 use crate::util::int;
 use rug::integer::Order;
 use rug::{Assign, Integer};

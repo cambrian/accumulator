@@ -3,7 +3,6 @@ use gmp_mpfr_sys::gmp;
 use gmp_mpfr_sys::gmp::mpz_t;
 use std::cmp::{min, Ord, Ordering, PartialOrd};
 use std::convert::From;
-use std::fmt::Debug;
 use std::mem::transmute;
 use std::ops;
 
@@ -474,14 +473,14 @@ impl U256 {
   // TODO: this maybe doesn't belong here
   pub fn jacobi(a: i32, b: &Self) -> i32 {
     let mut a_data = 0;
-    let a = mpz(a, &mut a_data);
+    let a = i32_to_mpz(a, &mut a_data);
     let b = b.as_mpz();
     unsafe { gmp::mpz_jacobi(&a as *const mpz_t, &b as *const mpz_t) }
   }
 
   pub fn is_congruent(self, i: i32, m: &U256) -> bool {
     let mut data = 0;
-    let x = mpz(i, &mut data);
+    let x = i32_to_mpz(i, &mut data);
     let s = self.as_mpz();
     let m = m.as_mpz();
     let res = unsafe { gmp::mpz_congruent_p(mut_ptr(&s), mut_ptr(&x), mut_ptr(&m)) };
@@ -735,86 +734,12 @@ where
   U512::from(t)
 }
 
-fn mpz(i: i32, data: &mut u64) -> mpz_t {
+fn i32_to_mpz(i: i32, data: &mut u64) -> mpz_t {
   *data = i.abs() as u64;
   mpz_t {
     size: i.signum(),
     d: mut_ptr(&data),
     alloc: 1,
-  }
-}
-
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub struct Reduced<T: PartialEq + Eq + Debug + Clone + Copy>(T);
-
-/// We choose r = 2^256 for simplicity. Therefore this reducer only works for odd m where
-/// 3 <= m < 2^256.
-pub struct MontgomeryReducer {
-  pub m: U256,                          // modulus
-  r_inv: U256,                          // r_inv = r^(-1) (mod m)
-  k: U512,                              // k = (r*r_inv - 1) / m
-  pub one_reduced: Reduced<U256>,       // the value of 1, reduced
-  pub minus_one_reduced: Reduced<U256>, // the value of -1, reduced
-}
-
-impl MontgomeryReducer {
-  /// m must be odd and >= 3
-  /// We choose r to be 2^256 for simplicity. For correctness, it need only be greater than m and
-  /// coprime to m.
-  /// This lets us simplify x & r_mask to x.low_U256().
-  pub fn new(m: &U256) -> Self {
-    assert!(m.is_odd() && *m >= u256(3));
-    let r = u512(1) << 256;
-    let r_inv = (r % m).mod_inv(*m);
-    let k = ((u512(r_inv) << 256) - 1) / u512(*m);
-    let one_reduced = Reduced(r % m);
-    let minus_one_reduced = Reduced(((u512(*m) - 1) << 256) % m);
-    MontgomeryReducer {
-      m: *m,
-      r_inv,
-      k,
-      one_reduced,
-      minus_one_reduced,
-    }
-  }
-
-  pub fn reduce(&self, a: U256) -> Reduced<U256> {
-    Reduced((u512(a) << 256) % self.m)
-  }
-  pub fn unreduce(&self, a: Reduced<U256>) -> U256 {
-    (a.0 * self.r_inv) % self.m
-  }
-
-  pub fn mul_mod_(&self, a: Reduced<U256>, b: Reduced<U256>) -> Reduced<U256> {
-    let c = a.0 * b.0;
-    let temp = (u512(c.low_u256()) * self.k).low_u256();
-    let reduced = ((c + temp * self.m) >> 256).low_u256();
-    if reduced < self.m {
-      Reduced(reduced)
-    } else {
-      Reduced(reduced - self.m)
-    }
-  }
-
-  /// n must be non-negative
-  /// a must be reduced
-  pub fn exp_mod_(&self, a: Reduced<U256>, n: U256) -> Reduced<U256> {
-    let mut a = a;
-    let mut out = self.one_reduced;
-    let mut n = n;
-    while n != U256::zero() {
-      if n.is_odd() {
-        out = self.mul_mod_(out, a);
-      }
-      a = self.mul_mod_(a, a);
-      n >>= 1;
-    }
-    out
-  }
-
-  /// n must be non-negative
-  pub fn exp_mod(&self, a: U256, n: U256) -> U256 {
-    self.unreduce(self.exp_mod_(self.reduce(a), n))
   }
 }
 

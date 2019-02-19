@@ -2,11 +2,10 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::hash::{blake2b, hash_to_prime};
+use accumulator::hash::blake2b;
 use accumulator::U256;
 use criterion::{black_box, Criterion};
 use rug::integer::Order;
-use rug::Integer;
 use std::ops::Mul;
 
 fn bench_mul<T: Mul>(a: T, b: T) {
