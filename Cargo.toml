@@ -77,7 +77,3 @@ debug = true
 # Flamegraph debug symbols. TODO: Remove when we actually cut releases?
 [profile.release]
 debug = true
-
-[features]
-
-dev = []
