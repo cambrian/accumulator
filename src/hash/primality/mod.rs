@@ -1,4 +1,4 @@
-use crate::i256::{i256, MontgomeryReducer, I256};
+use crate::u256::{u256, u512, MontgomeryReducer, U256};
 use crate::util::int;
 use rug::integer::Order;
 use rug::{Assign, Integer};
@@ -42,15 +42,15 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
   false
 }
 
-pub fn passes_miller_rabin_base_22(n: &I256) -> bool {
-  let (d, r) = (n - 1).remove_factor(i256(2));
-  let mut x = i256(2).pow_mod(d, *n);
-  if x == i256(1) || x == n - 1 {
+pub fn passes_miller_rabin_base_22(n: &U256) -> bool {
+  let (d, r) = (n - 1).remove_factor(u256(2));
+  let mut x = u256(2).pow_mod(d, *n);
+  if x == u256(1) || x == n - 1 {
     return true;
   }
   for _ in 1..r {
     x = x * x % *n;
-    if x == i256(1) {
+    if x == u256(1) {
       return false;
     }
     if x == n - 1 {
@@ -67,7 +67,7 @@ pub fn passes_miller_rabin_base_22(n: &I256) -> bool {
 /// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
 /// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
 /// Filters perfect squares as part of choose_d.
-fn passes_lucas(n: &Integer) -> bool {
+pub fn passes_lucas(n: &Integer) -> bool {
   let d_res = choose_d(&n);
   if d_res.is_err() {
     return false;
@@ -85,6 +85,32 @@ fn passes_lucas(n: &Integer) -> bool {
     && v_delta.is_congruent(&int(2 * &q), &n)
     // Congruence check which holds for prime n by Euler's criterion.
     && q_delta_over_2.is_congruent(&int(&q * q.jacobi(&n)), &n)
+}
+
+/// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
+/// factorization of n-1). Selects parameters d, p, q according to Selfridge's method.
+/// Cf. https://en.wikipedia.org/wiki/Lucas_pseudoprime
+/// If n passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
+/// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
+/// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
+/// Filters perfect squares as part of choose_d.
+pub fn passes_lucas2(n: &U256) -> bool {
+  let d_res = choose_d2(n);
+  if d_res.is_err() {
+    return false;
+  }
+  let d = d_res.unwrap();
+  let q = (1 - d) / 4;
+
+  let (u_delta, v_delta, q_delta_over_2) =
+    compute_lucas_sequences2(*n + 1, n, u256(1), u256(1), q, d);
+  // u_delta % n != 0 proves n composite.
+  u_delta == U256::zero()
+  // Additional check which is not strictly part of Lucas test but nonetheless filters some
+    // composite n for free. See section "Checking additional congruence conditions" on Wikipedia.
+    && v_delta.is_congruent(2 * q, n)
+    // Congruence check which holds for prime n by Euler's criterion.
+    && q_delta_over_2.is_congruent(q * U256::jacobi(q, n), n)
 }
 
 #[derive(Debug)]
@@ -110,6 +136,90 @@ fn choose_d(n: &Integer) -> Result<Integer, IsPerfectSquare> {
     }
   }
   panic!("n is not square but we still couldn't find a d value!")
+}
+
+fn choose_d2(n: &U256) -> Result<i32, IsPerfectSquare> {
+  if n.is_perfect_square() {
+    return Err(IsPerfectSquare());
+  }
+  for &d in D_VALUES.iter() {
+    if U256::jacobi(d, n) == -1 {
+      return Ok(d);
+    }
+  }
+  panic!("n is not square but we still couldn't find a d value!")
+}
+
+/// Computes the Lucas sequences {u_i(p, q)} and {v_i(p, q)} up to a specified index k_target in
+/// O(log(k_target)) time by recursively calculating only the (2i)th and (2i+1)th elements in an
+/// order determined by the binary expansion of k. Also returns q^{k/2} (mod n), which is used in
+/// a stage of the strong Lucas test. In the Lucas case we specify that d = p^2 - 4q and set
+/// k_target = delta = n - (d/n) = n + 1.
+/// we set p = 1
+fn compute_lucas_sequences2(
+  mut k_target: U256,
+  n: &U256,
+  mut u: U256,
+  mut v: U256,
+  q_: i32,
+  d_: i32,
+) -> (U256, U256, U256) {
+  // Coerce an i32 into the [0,n) range
+  let i_mod_n = |x: i32| {
+    if x < 0 {
+      *n - (u256(x.abs() as u64) % *n)
+    } else {
+      u256(x as u64) % *n
+    }
+  };
+  let q_ = i_mod_n(q_);
+  let d_ = i_mod_n(d_);
+  let mut q = q_;
+  let mut q_k_over_2 = q;
+
+  // Finds t in Z_n with 2t = x (mod n)
+  // assumes x in 0..n
+  let half = |x: U256| {
+    if x.is_odd() {
+      (x >> 1) + (*n >> 1) + 1
+    } else {
+      x >> 1
+    }
+  };
+
+  // Write binary expansion of k as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. x_1 is always
+  // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
+  // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
+  // we will have computed u_k and v_k, with k as given, in log(delta) time.
+  let mut bits = [0; 257];
+  let len = k_target.write_binary(&mut bits);
+  let sub_mod_n = |a, b| {
+    if a > b {
+      (a - b) % *n
+    } else {
+      *n - (b - a) % *n
+    }
+  };
+  for &bit in bits[..len].iter().skip(1) {
+    // Compute (u, v)_{2k} from (u, v)_k according to the following:
+    // u_2k = u_k * v_k (mod n)
+    // v_2k = v_k^2 - 2*q^k (mod n)
+    u = u * v % *n;
+    v = sub_mod_n(v * v, u512(q) << 1);
+    // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
+    q_k_over_2 = q;
+    q = q * q % *n;
+    if bit == 1 {
+      // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
+      // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
+      // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
+      let u_old = u;
+      u = half((u512(u) + u512(v)) % *n);
+      v = half((d_ * u_old + u512(v)) % *n);
+      q = (q * q_) % *n;
+    }
+  }
+  (u, v, q_k_over_2)
 }
 
 /// Computes the Lucas sequences {u_i(p, q)} and {v_i(p, q)} up to a specified index k_target in
@@ -191,16 +301,16 @@ mod tests {
   }
   #[test]
   fn test_miller_rabin2() {
-    assert!(passes_miller_rabin_base_22(&i256(13)));
-    assert!(!passes_miller_rabin_base_22(&i256(65)));
+    assert!(passes_miller_rabin_base_22(&u256(13)));
+    assert!(!passes_miller_rabin_base_22(&u256(65)));
     for &p in LARGE_PRIMES.iter() {
-      assert!(passes_miller_rabin_base_22(&i256(p)));
+      assert!(passes_miller_rabin_base_22(&u256(p)));
       assert!(!passes_miller_rabin_base_22(
-        &(i256(p) * i256(106_957)).low_i256()
+        &(u256(p) * u256(106_957)).low_u256()
       ));
     }
     for &n in STRONG_BASE_2_PSEUDOPRIMES.iter() {
-      assert!(passes_miller_rabin_base_22(&i256(u64::from(n))));
+      assert!(passes_miller_rabin_base_22(&u256(u64::from(n))));
     }
   }
   #[test]
@@ -228,6 +338,27 @@ mod tests {
     for &lp in LARGE_PRIMES.iter() {
       assert!(passes_lucas(&int(lp)));
       assert!(!passes_lucas(&(int(lp) * 7)));
+    }
+  }
+
+  #[test]
+  fn test_lucas2() {
+    // Should fail on p = 2.
+    for &sp in SMALL_PRIMES[1..].iter() {
+      assert!(passes_lucas2(&u256(u64::from(sp))));
+      // Note: The factor cannot be in SMALL_PRIMES or this test will fail because `choose_d` fails
+      // on square numbers.
+      assert!(!passes_lucas2(
+        &(u256(u64::from(sp)) * u256(2047)).low_u256()
+      ));
+    }
+    for &mp in MED_PRIMES.iter() {
+      assert!(passes_lucas2(&u256(u64::from(mp))));
+      assert!(!passes_lucas2(&(u256(u64::from(mp)) * u256(5)).low_u256()));
+    }
+    for &lp in LARGE_PRIMES.iter() {
+      assert!(passes_lucas2(&u256(lp)));
+      assert!(!passes_lucas2(&(u256(lp) * u256(7)).low_u256()));
     }
   }
 

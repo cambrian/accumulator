@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use accumulator::hash::{blake2b, hash_to_prime};
-use accumulator::I256;
+use accumulator::U256;
 use criterion::{black_box, Criterion};
 use rug::integer::Order;
 use rug::Integer;
@@ -17,9 +17,9 @@ fn criterion_benchmark(c: &mut Criterion) {
   let int = blake2b("data");
   let mut bytes = [0; 4];
   int.write_digits(&mut bytes, Order::LsfBe);
-  let i256 = I256::from(bytes);
+  let u256 = U256::from(bytes);
   c.bench_function("mul_rug", move |b| b.iter(|| bench_mul(&int, &int)));
-  c.bench_function("mul_u256", move |b| b.iter(|| bench_mul(&i256, &i256)));
+  c.bench_function("mul_u256", move |b| b.iter(|| bench_mul(&u256, &u256)));
 }
 
 criterion_group!(benches, criterion_benchmark);
