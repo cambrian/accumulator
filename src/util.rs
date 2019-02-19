@@ -1,8 +1,9 @@
 use crate::group::Group;
 use gmp_mpfr_sys::gmp::{
-  mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
-  mpz_gcdext, mpz_get_str, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str,
-  mpz_set_ui, mpz_sub, mpz_t,
+  mpz_abs, mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_cmpabs, mpz_divexact, mpz_fdiv_q,
+  mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext, mpz_get_str, mpz_init, mpz_mod, mpz_mul,
+  mpz_mul_ui, mpz_neg, mpz_root, mpz_set, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_sub, mpz_submul,
+  mpz_t,
 };
 use rug::Integer;
 use std::cmp::Ordering;
@@ -118,6 +119,9 @@ impl FromStr for Mpz {
 
 // TODO: Make functions inline?
 impl Mpz {
+  pub fn abs(&mut self, x: &Mpz) {
+    unsafe { mpz_abs(&mut self.inner, &x.inner) }
+  }
   pub fn add(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
       mpz_add(&mut self.inner, &x.inner, &y.inner);
@@ -128,6 +132,9 @@ impl Mpz {
   }
   pub fn cmp(&self, other: &Mpz) -> i32 {
     unsafe { mpz_cmp(&self.inner, &other.inner) }
+  }
+  pub fn cmp_abs(&self, other: &Mpz) -> i32 {
+    unsafe { mpz_cmpabs(&self.inner, &other.inner) }
   }
   pub fn cmp_si(&self, val: i64) -> i32 {
     unsafe { mpz_cmp_si(&self.inner, val) }
@@ -148,6 +155,15 @@ impl Mpz {
       mpz_fdiv_q_ui(&mut self.inner, &x.inner, val);
     }
   }
+
+  pub fn div_exact(&mut self, n: &Mpz, d: &Mpz) {
+    unsafe { mpz_divexact(&mut self.inner, &n.inner, &d.inner) }
+  }
+
+  pub fn div_exact_mut(&mut self, d: &Mpz) {
+    unsafe { mpz_divexact(&mut self.inner, &self.inner, &d.inner) }
+  }
+
   pub fn floor_div_ui_mut(&mut self, val: u64) {
     unsafe {
       mpz_fdiv_q_ui(&mut self.inner, &self.inner, val);
@@ -194,6 +210,10 @@ impl Mpz {
   pub fn neg_mut(&mut self) {
     unsafe { mpz_neg(&mut self.inner, &self.inner) }
   }
+  pub fn root_mut(&mut self, x: u64) -> i32 {
+    unsafe { mpz_root(&mut self.inner, &self.inner, x) }
+  }
+
   pub fn set(&mut self, x: &Mpz) {
     unsafe { mpz_set(&mut self.inner, &x.inner) }
   }
@@ -205,8 +225,15 @@ impl Mpz {
   pub fn set_ui(&mut self, val: u64) {
     unsafe { mpz_set_ui(&mut self.inner, val) }
   }
+  pub fn sgn(&self) -> i32 {
+    unsafe { mpz_sgn(&self.inner) }
+  }
+
   pub fn sub(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_sub(&mut self.inner, &x.inner, &y.inner) }
+  }
+  pub fn sub_mul(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { mpz_submul(&mut self.inner, &x.inner, &y.inner) }
   }
   pub fn sub_mut(&mut self, x: &Mpz) {
     unsafe { mpz_sub(&mut self.inner, &self.inner, &x.inner) }
