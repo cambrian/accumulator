@@ -49,7 +49,7 @@ pub fn passes_miller_rabin_base_22(n: &U256) -> bool {
     return true;
   }
   for _ in 1..r {
-    x = x * x % *n;
+    x = x * x % n;
     if x == u256(1) {
       return false;
     }
@@ -157,19 +157,19 @@ fn choose_d2(n: &U256) -> Result<i32, IsPerfectSquare> {
 /// k_target = delta = n - (d/n) = n + 1.
 /// we set p = 1
 fn compute_lucas_sequences2(
-  mut k_target: U256,
+  k_target: U256,
   n: &U256,
   mut u: U256,
   mut v: U256,
   q_: i32,
   d_: i32,
 ) -> (U256, U256, U256) {
-  // Coerce an i32 into the [0,n) range
+  // Mod an i32 into the [0,n) range
   let i_mod_n = |x: i32| {
     if x < 0 {
-      *n - (u256(x.abs() as u64) % *n)
+      *n - (u256(x.abs() as u64) % n)
     } else {
-      u256(x as u64) % *n
+      u256(x as u64) % n
     }
   };
   let q_ = i_mod_n(q_);
@@ -191,32 +191,32 @@ fn compute_lucas_sequences2(
   // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
   // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
   // we will have computed u_k and v_k, with k as given, in log(delta) time.
-  let mut bits = [0; 257];
-  let len = k_target.write_binary(&mut bits);
+  let mut k_target_bits = [0; 257];
+  let len = k_target.write_binary(&mut k_target_bits);
   let sub_mod_n = |a, b| {
     if a > b {
-      (a - b) % *n
+      (a - b) % n
     } else {
-      *n - (b - a) % *n
+      *n - (b - a) % n
     }
   };
-  for &bit in bits[..len].iter().skip(1) {
+  for &bit in k_target_bits[..len].iter().skip(1) {
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
-    u = u * v % *n;
+    u = u * v % n;
     v = sub_mod_n(v * v, u512(q) << 1);
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
     q_k_over_2 = q;
-    q = q * q % *n;
+    q = q * q % n;
     if bit == 1 {
       // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
       // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
       let u_old = u;
-      u = half((u512(u) + u512(v)) % *n);
-      v = half((d_ * u_old + u512(v)) % *n);
-      q = (q * q_) % *n;
+      u = half((u512(u) + u512(v)) % n);
+      v = half((d_ * u_old + u512(v)) % n);
+      q = (q * q_) % n;
     }
   }
   (u, v, q_k_over_2)

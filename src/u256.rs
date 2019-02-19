@@ -106,16 +106,6 @@ impl U512 {
     y.normalize_size();
     y
   }
-
-  /// Use when self - x may be negative
-  pub fn sub_mod(self, x: Self, m: &U256) -> U256 {
-    // can't use mpz_sub because of eager realloc
-    if self > x {
-      (self - x) % *m
-    } else {
-      *m - (x - self) % *m
-    }
-  }
 }
 
 /// Lower-endian u64s
@@ -309,9 +299,9 @@ impl ops::RemAssign for U512 {
 }
 
 // This gets its own implementation because it needs to be fast.
-impl ops::Rem<U256> for U512 {
+impl ops::Rem<&U256> for U512 {
   type Output = U256;
-  fn rem(self, x: U256) -> U256 {
+  fn rem(self, x: &U256) -> U256 {
     if x.size > self.size {
       return self.low_u256();
     }
@@ -329,6 +319,14 @@ impl ops::Rem<U256> for U512 {
     };
     rem.normalize_size();
     rem
+  }
+}
+
+impl ops::Rem<U256> for U512 {
+  type Output = U256;
+  fn rem(self, x: U256) -> U256 {
+    #![allow(clippy::op_ref)]
+    self % &x
   }
 }
 
@@ -391,7 +389,7 @@ impl U256 {
   }
 
   /// Returns (result, remainder)
-  pub fn div_rem(self, x: Self) -> (Self, Self) {
+  pub fn div_rem(self, x: &Self) -> (Self, Self) {
     if x.size > self.size {
       return (Self::zero(), self);
     }
@@ -413,7 +411,7 @@ impl U256 {
   }
 
   /// mutates self to the remainder, returning result;
-  pub fn div_rem_mut(&mut self, x: Self) -> Self {
+  pub fn div_rem_mut(&mut self, x: &Self) -> Self {
     if x.size > self.size {
       return Self::zero();
     }
@@ -698,20 +696,28 @@ impl ops::Mul for &U256 {
 impl ops::Div for U256 {
   type Output = Self;
   fn div(self, x: Self) -> Self {
-    self.div_rem(x).0
+    self.div_rem(&x).0
+  }
+}
+
+impl ops::Rem<&Self> for U256 {
+  type Output = Self;
+  fn rem(self, x: &Self) -> Self {
+    self.div_rem(x).1
   }
 }
 
 impl ops::Rem for U256 {
   type Output = Self;
   fn rem(self, x: Self) -> Self {
-    self.div_rem(x).1
+    #![allow(clippy::op_ref)]
+    self % &x
   }
 }
 
 impl ops::RemAssign for U256 {
   fn rem_assign(&mut self, x: Self) {
-    self.div_rem_mut(x);
+    self.div_rem_mut(&x);
   }
 }
 
@@ -759,10 +765,10 @@ impl MontgomeryReducer {
   pub fn new(m: &U256) -> Self {
     assert!(m.is_odd() && *m >= u256(3));
     let r = u512(1) << 256;
-    let r_inv = (r % *m).mod_inv(*m);
+    let r_inv = (r % m).mod_inv(*m);
     let k = ((u512(r_inv) << 256) - 1) / u512(*m);
-    let one_reduced = Reduced(r % *m);
-    let minus_one_reduced = Reduced(((u512(*m) - 1) << 256) % *m);
+    let one_reduced = Reduced(r % m);
+    let minus_one_reduced = Reduced(((u512(*m) - 1) << 256) % m);
     MontgomeryReducer {
       m: *m,
       r_inv,
