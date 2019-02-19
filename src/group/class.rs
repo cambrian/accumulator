@@ -39,7 +39,7 @@ pub struct ClassElem {
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
 impl ClassElem {
-  fn normalize(a: Integer, b: Integer, c: Integer) -> ClassElem {
+  pub fn normalize(a: Integer, b: Integer, c: Integer) -> ClassElem {
     if ClassElem::is_normal(&a, &b, &c) {
       return ClassElem { a, b, c };
     }
@@ -55,7 +55,7 @@ impl ClassElem {
     }
   }
 
-  fn reduce(a: Integer, b: Integer, c: Integer) -> ClassElem {
+  pub fn reduce(a: Integer, b: Integer, c: Integer) -> ClassElem {
     let mut elem = ClassElem::normalize(a, b, c);
     while !ClassElem::is_reduced(&elem.a, &elem.b, &elem.c) {
       // s = floor_div(c + b, 2c)
@@ -75,7 +75,7 @@ impl ClassElem {
   }
 
   #[allow(non_snake_case)]
-  fn square(&mut self) {
+  pub fn square(&mut self) {
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
     //
     let (mu, _) = util::solve_linear_congruence(&self.b, &self.c, &self.a).unwrap();
@@ -111,34 +111,6 @@ impl ClassElem {
 
   fn is_normal(a: &Integer, b: &Integer, _c: &Integer) -> bool {
     -Integer::from(a) < Integer::from(b) && b <= a
-  }
-
-  // Dev methods below, for testing and benchmarking.
-
-  #[inline]
-  #[cfg(feature = "dev")]
-  pub fn square_pub(&mut self) {
-    self.square()
-  }
-
-  #[inline]
-  #[cfg(feature = "dev")]
-  #[allow(non_snake_case)]
-  pub fn normalize_pub(elem: ClassElem) -> ClassElem {
-    ClassElem::normalize(elem.a, elem.b, elem.c)
-  }
-
-  #[inline]
-  #[cfg(feature = "dev")]
-  #[allow(non_snake_case)]
-  pub fn reduce_pub(elem: ClassElem) -> ClassElem {
-    ClassElem::reduce(elem.a, elem.b, elem.c)
-  }
-
-  #[inline]
-  #[cfg(feature = "dev")]
-  pub fn new_raw(a: Integer, b: Integer, c: Integer) -> ClassElem {
-    ClassElem { a, b, c }
   }
 }
 
@@ -390,7 +362,7 @@ mod tests {
     assert!(not_reduced != diff_elem);
     assert!(reduced_ground_truth != diff_elem);
 
-    let not_reduced = ClassElem::reduce_pub(not_reduced);
+    let not_reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
     assert!(not_reduced == reduced_ground_truth);
   }
 
@@ -443,7 +415,7 @@ mod tests {
 
     hasher_lh = DefaultHasher::new();
     hasher_rh = DefaultHasher::new();
-    let reduced = ClassElem::reduce_pub(not_reduced);
+    let reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
     reduced.hash(&mut hasher_lh);
     reduced_ground_truth.hash(&mut hasher_rh);
     assert!(hasher_lh.finish() == hasher_rh.finish());
@@ -491,11 +463,11 @@ mod tests {
       1564478239095738726823372184204"
     );
 
-    to_reduce = ClassElem::reduce_pub(to_reduce);
+    to_reduce = ClassElem::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
     assert_eq!(to_reduce, reduced_ground_truth);
 
     let mut already_reduced = reduced_ground_truth.clone();
-    already_reduced = ClassElem::reduce_pub(already_reduced);
+    already_reduced = ClassElem::reduce(already_reduced.a, already_reduced.b, already_reduced.c);
     assert_eq!(already_reduced, reduced_ground_truth);
   }
 
@@ -526,7 +498,7 @@ mod tests {
        9945629057462766047140854869124473221137588347335081555186814036",
     );
 
-    unnormalized = ClassElem::normalize_pub(unnormalized);
+    unnormalized = ClassElem::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
     assert_eq!(normalized_ground_truth, unnormalized);
   }
 

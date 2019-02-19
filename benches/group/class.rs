@@ -57,9 +57,10 @@ fn criterion_benchmark(c: &mut Criterion) {
   )
   .unwrap();
 
-  // element which requires one iteration to reduce
-  let g_red = <ClassGroup as Group>::Elem::new_raw(cc.clone(), bb.clone(), aa.clone());
-  let g_norm = <ClassGroup as Group>::Elem::new_raw(aa.clone(), bb.clone(), cc.clone());
+  // Element which requires one iteration to reduce, represented as a tuple
+  // here, since only reduced representations of ClassElem are allowed.
+  let g_red = (cc.clone(), bb.clone(), aa.clone());
+  let g_norm = (aa.clone(), bb.clone(), cc.clone());
 
   c.bench_function("group_class_op", move |b| {
     b.iter(|| ClassGroup::op(&left, &right))
@@ -73,17 +74,17 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function("group_class_normalize", move |b| {
     b.iter_with_setup(
       || g_norm.clone(),
-      |g| <ClassGroup as Group>::Elem::normalize_pub(g),
+      |g| <ClassGroup as Group>::Elem::normalize(g.0, g.1, g.2),
     )
   });
   c.bench_function("group_class_reduce", move |b| {
     b.iter_with_setup(
       || g_red.clone(),
-      |g| <ClassGroup as Group>::Elem::reduce_pub(g),
+      |g| <ClassGroup as Group>::Elem::reduce(g.0, g.1, g.2),
     )
   });
   c.bench_function("group_class_square", move |b| {
-    b.iter_with_setup(|| g_sq.clone(), |mut g| g.square_pub())
+    b.iter_with_setup(|| g_sq.clone(), |mut g| g.square())
   });
 }
 
