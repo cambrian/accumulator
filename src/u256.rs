@@ -308,7 +308,7 @@ impl ops::RemAssign for U512 {
   }
 }
 
-/// This needs to be fast
+// This gets its own implementation because it needs to be fast.
 impl ops::Rem<U256> for U512 {
   type Output = U256;
   fn rem(self, x: U256) -> U256 {
