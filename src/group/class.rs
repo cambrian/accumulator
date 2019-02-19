@@ -91,10 +91,7 @@ impl ClassElem {
     );
     let C = mu.square() - tmp;
 
-    let ClassElem { a: A, b: B, c: C } = ClassElem::reduce(A, B, C);
-    self.a = A;
-    self.b = B;
-    self.c = C;
+    *self = ClassElem::reduce(A, B, C);
   }
 
   fn discriminant(&self) -> Integer {
