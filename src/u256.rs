@@ -82,7 +82,6 @@ impl U512 {
     };
     y.normalize_size();
     rem.normalize_size();
-    // dbg!((self, x, y, rem));
     (y, rem)
   }
 
@@ -309,10 +308,27 @@ impl ops::RemAssign for U512 {
   }
 }
 
+/// This needs to be fast
 impl ops::Rem<U256> for U512 {
   type Output = U256;
   fn rem(self, x: U256) -> U256 {
-    self.div_rem(u512(x)).1.low_u256()
+    if x.size > self.size {
+      return self.low_u256();
+    }
+    let (mut y, mut rem) = (U512::zero(), U256::zero());
+    unsafe {
+      gmp::mpn_tdiv_qr(
+        y.ptr_mut(),
+        rem.ptr_mut(),
+        0,
+        self.ptr(),
+        self.size,
+        x.ptr(),
+        x.size,
+      )
+    };
+    rem.normalize_size();
+    rem
   }
 }
 
