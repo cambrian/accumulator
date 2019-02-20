@@ -50,7 +50,7 @@ where
   Ok(f(&acc, &divide_and_conquer_(&f, xs)?)?)
 }
 
-pub fn divide_and_conquer_<F, T: Clone, E>(f: &F, xs: &[T]) -> Result<T, E>
+fn divide_and_conquer_<F, T: Clone, E>(f: &F, xs: &[T]) -> Result<T, E>
 where
   F: Fn(&T, &T) -> Result<T, E>,
 {
