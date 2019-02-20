@@ -6,120 +6,253 @@ use std::convert::From;
 use std::mem::transmute;
 use std::ops;
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
-pub struct U512 {
-  size: i64,       // Number of limbs in use. Negative size represents a negative number.
-  limbs: [u64; 8], // GMP limbs are lower-endian
+macro_rules! u_types {
+  ($($t:ident,$size:expr),+) => {
+    $(
+      #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
+      pub struct $t {
+        size: i64,
+        limbs: [u64; $size],
+      }
+
+      impl $t {
+        fn ptr(&self) -> *const u64 {
+          &self.limbs as *const u64
+        }
+        fn ptr_mut(&mut self) -> *mut u64 {
+          &self.limbs as *const u64 as *mut u64
+        }
+        fn as_mpz(&self) -> mpz_t {
+          mpz_t {
+            size: self.size as i32,
+            d: self.ptr() as *mut u64,
+            alloc: $size,
+          }
+        }
+        pub fn zero() -> Self {
+          Self {
+            size: 0,
+            limbs: [0; $size],
+          }
+        }
+        pub fn one() -> Self {
+          let mut limbs = [0; $size];
+          limbs[0] = 1;
+          Self { size: 1, limbs }
+        }
+        pub fn minus_one() -> Self {
+          let mut limbs = [0; $size];
+          limbs[0] = 1;
+          Self { size: -1, limbs }
+        }
+        fn normalize_size(&mut self) {
+          self.size = 0;
+          for i in (0..$size).rev() {
+            if self.limbs[i] != 0 {
+              self.size = (i + 1) as i64;
+              break;
+            }
+          }
+        }
+        /// Returns (result, remainder)
+        pub fn div_rem(self, x: &Self) -> (Self, Self) {
+          if x.size > self.size {
+            return (Self::zero(), self);
+          }
+          let (mut y, mut rem) = (Self::zero(), Self::zero());
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.ptr_mut(),
+              rem.ptr_mut(),
+              0,
+              self.ptr(),
+              self.size,
+              x.ptr(),
+              x.size,
+            )
+          };
+          y.normalize_size();
+          rem.normalize_size();
+          (y, rem)
+        }
+
+        /// mutates self to the remainder, returning result;
+        pub fn div_rem_mut(&mut self, x: &Self) -> Self {
+          if x.size > self.size {
+            return Self::zero();
+          }
+          let mut y = Self::zero();
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.ptr_mut(),
+              self.ptr_mut(),
+              0,
+              self.ptr(),
+              self.size,
+              x.ptr(),
+              x.size,
+            )
+          };
+          self.normalize_size();
+          y.normalize_size();
+          y
+        }
+      }
+
+      impl From<[u64; $size]> for $t {
+        fn from(limbs: [u64; $size]) -> Self {
+          let mut x = Self { size: 0, limbs };
+          x.normalize_size();
+          x
+        }
+      }
+
+      impl From<u64> for $t {
+        fn from(x: u64) -> Self {
+          let mut limbs = [0; $size];
+          limbs[0] = x;
+          Self::from(limbs)
+        }
+      }
+
+      impl PartialOrd for $t {
+        fn partial_cmp(&self, x: &Self) -> Option<Ordering> {
+          let x = unsafe { gmp::mpn_cmp(self.ptr(), x.ptr(), $size) };
+          Some({
+            if x < 0 {
+              Ordering::Less
+            } else if x == 0 {
+              Ordering::Equal
+            } else {
+              Ordering::Greater
+            }
+          })
+        }
+      }
+
+      impl Ord for $t {
+        fn cmp(&self, x: &Self) -> Ordering {
+          let x = unsafe { gmp::mpn_cmp(self.ptr(), x.ptr(), $size) };
+          if x < 0 {
+            Ordering::Less
+          } else if x == 0 {
+            Ordering::Equal
+          } else {
+            Ordering::Greater
+          }
+        }
+      }
+
+      impl ops::ShlAssign<u32> for $t {
+        fn shl_assign(&mut self, mut x: u32) {
+          while x != 0 {
+            let sz = min(gmp::LIMB_BITS as u32, x);
+            x -= sz;
+            unsafe { gmp::mpn_lshift(self.ptr_mut(), self.ptr(), $size, sz) };
+          }
+          self.normalize_size();
+        }
+      }
+
+      impl ops::Shl<u32> for $t {
+        type Output = Self;
+        fn shl(self, x: u32) -> Self {
+          let mut y = self;
+          y <<= x;
+          y
+        }
+      }
+
+      impl ops::ShrAssign<u32> for $t {
+        fn shr_assign(&mut self, mut x: u32) {
+          while x != 0 {
+            let sz = min(gmp::LIMB_BITS as u32, x);
+            x -= sz;
+            unsafe { gmp::mpn_rshift(self.ptr_mut(), self.ptr(), $size, sz) };
+          }
+          self.normalize_size();
+        }
+      }
+
+      impl ops::Shr<u32> for $t {
+        type Output = Self;
+        fn shr(self, x: u32) -> Self {
+          let mut y = self;
+          y >>= x;
+          y
+        }
+      }
+
+      impl ops::AddAssign for $t {
+        /// panics if result overflows.
+        fn add_assign(&mut self, x: Self) {
+          let carry = unsafe { gmp::mpn_add_n(self.ptr_mut(), self.ptr(), x.ptr(), $size) };
+          assert!(carry == 0);
+          self.normalize_size();
+        }
+      }
+
+      impl ops::Add for $t {
+        /// panics if result overflows.
+        type Output = Self;
+        fn add(self, x: Self) -> Self {
+          let mut y = self;
+          y += x;
+          y
+        }
+      }
+
+      impl ops::SubAssign for $t {
+        /// panics if result is negative.
+        fn sub_assign(&mut self, x: Self) {
+          let borrow = unsafe { gmp::mpn_sub_n(self.ptr_mut(), self.ptr(), x.ptr(), $size) };
+          assert!(borrow == 0);
+          self.normalize_size();
+        }
+      }
+
+      impl ops::Sub for $t {
+        type Output = Self;
+        /// panics if result is negative.
+        fn sub(self, x: Self) -> Self {
+          let mut y = self;
+          y -= x;
+          y
+        }
+      }
+
+      impl ops::Sub<u64> for $t {
+        type Output = Self;
+        /// panics if result is negative.
+        fn sub(self, x: u64) -> Self {
+          self - Self::from(x)
+        }
+      }
+
+      impl ops::Div for $t {
+        type Output = Self;
+        fn div(self, x: Self) -> Self {
+          self.div_rem(&x).0
+        }
+      }
+
+      impl ops::RemAssign for $t {
+        fn rem_assign(&mut self, x: Self) {
+          self.div_rem_mut(&x);
+        }
+      }
+    )+
+  }
 }
 
+u_types!(U256, 4, U512, 8);
+
 impl U512 {
-  fn ptr(&self) -> *const u64 {
-    &self.limbs as *const u64
-  }
-  fn ptr_mut(&mut self) -> *mut u64 {
-    &self.limbs as *const u64 as *mut u64
-  }
-  fn as_mpz(&self) -> mpz_t {
-    mpz_t {
-      size: self.size as i32,
-      d: self.ptr() as *mut u64,
-      alloc: 8,
-    }
-  }
-  pub fn zero() -> Self {
-    U512 {
-      size: 0,
-      limbs: [0; 8],
-    }
-  }
-
-  pub fn one() -> Self {
-    let mut limbs = [0; 8];
-    limbs[0] = 1;
-    U512 { size: 1, limbs }
-  }
-
-  pub fn minus_one() -> Self {
-    let mut limbs = [0; 8];
-    limbs[0] = 1;
-    U512 { size: -1, limbs }
-  }
-
-  fn normalize_size(&mut self) {
-    self.size = 0;
-    for i in (0..8).rev() {
-      if self.limbs[i] != 0 {
-        self.size = (i + 1) as i64;
-        break;
-      }
-    }
-  }
-
   /// Returns the lower half of this U512 as a U256
   pub fn low_u256(self) -> U256 {
     let mut x = unsafe { transmute::<U512, (U256, [u64; 4])>(self) }.0;
     x.normalize_size();
     x
-  }
-
-  /// Returns (result, remainder)
-  pub fn div_rem(self, x: Self) -> (Self, Self) {
-    if x.size > self.size {
-      return (Self::zero(), self);
-    }
-    let (mut y, mut rem) = (U512::zero(), U512::zero());
-    unsafe {
-      gmp::mpn_tdiv_qr(
-        y.ptr_mut(),
-        rem.ptr_mut(),
-        0,
-        self.ptr(),
-        self.size,
-        x.ptr(),
-        x.size,
-      )
-    };
-    y.normalize_size();
-    rem.normalize_size();
-    (y, rem)
-  }
-
-  /// mutates self to the remainder, returning result;
-  pub fn div_rem_mut(&mut self, x: Self) -> Self {
-    if x.size > self.size {
-      return Self::zero();
-    }
-    let mut y = U512::zero();
-    unsafe {
-      gmp::mpn_tdiv_qr(
-        y.ptr_mut(),
-        self.ptr_mut(),
-        0,
-        self.ptr(),
-        self.size,
-        x.ptr(),
-        x.size,
-      )
-    };
-    self.normalize_size();
-    y.normalize_size();
-    y
-  }
-}
-
-/// Lower-endian u64s
-impl From<[u64; 8]> for U512 {
-  fn from(limbs: [u64; 8]) -> Self {
-    let mut x = U512 { size: 0, limbs };
-    x.normalize_size();
-    x
-  }
-}
-
-impl From<u64> for U512 {
-  fn from(x: u64) -> Self {
-    let limbs = [x, 0, 0, 0, 0, 0, 0, 0];
-    Self::from(limbs)
   }
 }
 
@@ -132,120 +265,6 @@ impl From<U256> for U512 {
       size: x.size,
       limbs,
     }
-  }
-}
-
-impl PartialOrd for U512 {
-  fn partial_cmp(&self, x: &Self) -> Option<Ordering> {
-    let x = unsafe { gmp::mpn_cmp(self.ptr(), x.ptr(), 8) };
-    Some({
-      if x < 0 {
-        Ordering::Less
-      } else if x == 0 {
-        Ordering::Equal
-      } else {
-        Ordering::Greater
-      }
-    })
-  }
-}
-
-impl Ord for U512 {
-  fn cmp(&self, x: &Self) -> Ordering {
-    let x = unsafe { gmp::mpn_cmp(self.ptr(), x.ptr(), 8) };
-    if x < 0 {
-      Ordering::Less
-    } else if x == 0 {
-      Ordering::Equal
-    } else {
-      Ordering::Greater
-    }
-  }
-}
-
-impl ops::ShlAssign<u32> for U512 {
-  fn shl_assign(&mut self, mut x: u32) {
-    while x != 0 {
-      let sz = min(gmp::LIMB_BITS as u32, x);
-      x -= sz;
-      unsafe { gmp::mpn_lshift(self.ptr_mut(), self.ptr(), 8, sz) };
-    }
-    self.normalize_size();
-  }
-}
-
-impl ops::Shl<u32> for U512 {
-  type Output = U512;
-  fn shl(self, x: u32) -> U512 {
-    let mut y = self;
-    y <<= x;
-    y
-  }
-}
-
-impl ops::ShrAssign<u32> for U512 {
-  fn shr_assign(&mut self, mut x: u32) {
-    while x != 0 {
-      let sz = min(gmp::LIMB_BITS as u32, x);
-      x -= sz;
-      unsafe { gmp::mpn_rshift(self.ptr_mut(), self.ptr(), 8, sz) };
-    }
-    self.normalize_size();
-  }
-}
-
-impl ops::Shr<u32> for U512 {
-  type Output = U512;
-  fn shr(self, x: u32) -> U512 {
-    let mut y = self;
-    y >>= x;
-    y
-  }
-}
-
-impl ops::AddAssign for U512 {
-  /// panics if result overflows.
-  fn add_assign(&mut self, x: Self) {
-    let carry = unsafe { gmp::mpn_add_n(self.ptr_mut(), self.ptr(), x.ptr(), 8) };
-    assert!(carry == 0);
-    self.normalize_size();
-  }
-}
-
-impl ops::Add for U512 {
-  /// panics if result overflows.
-  type Output = Self;
-  fn add(self, x: Self) -> Self {
-    let mut y = self;
-    y += x;
-    y
-  }
-}
-
-impl ops::SubAssign for U512 {
-  /// panics if result is negative.
-  fn sub_assign(&mut self, x: Self) {
-    let borrow = unsafe { gmp::mpn_sub_n(self.ptr_mut(), self.ptr(), x.ptr(), 8) };
-    assert!(borrow == 0);
-    self.normalize_size();
-  }
-}
-
-impl ops::Sub for U512 {
-  type Output = Self;
-  /// panics if result is negative.
-  fn sub(self, x: Self) -> Self {
-    let mut y = self;
-    y -= x;
-    y
-  }
-}
-
-impl ops::Sub<u64> for U512 {
-  type Output = Self;
-  /// panics if result is negative.
-  fn sub(self, x: u64) -> Self {
-    self - U512::from(x)
   }
 }
 
@@ -277,23 +296,10 @@ impl ops::Mul for &U512 {
   }
 }
 
-impl ops::Div for U512 {
-  type Output = Self;
-  fn div(self, x: Self) -> Self {
-    self.div_rem(x).0
-  }
-}
-
 impl ops::Rem for U512 {
   type Output = Self;
   fn rem(self, x: Self) -> Self {
-    self.div_rem(x).1
-  }
-}
-
-impl ops::RemAssign for U512 {
-  fn rem_assign(&mut self, x: Self) {
-    self.div_rem_mut(x);
+    self.div_rem(&x).1
   }
 }
 
@@ -329,106 +335,14 @@ impl ops::Rem<U256> for U512 {
   }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
-pub struct U256 {
-  size: i64,       // Number of limbs in use. Negative size represents a negative number.
-  limbs: [u64; 4], // GMP limbs are lower-endian
-}
-
 #[allow(unused_mut)]
 fn mut_ptr<T>(mut t: &T) -> *mut T {
   t as *const T as *mut T
 }
 
 impl U256 {
-  fn ptr(&self) -> *const u64 {
-    &self.limbs as *const u64
-  }
-  fn ptr_mut(&mut self) -> *mut u64 {
-    &self.limbs as *const u64 as *mut u64
-  }
-  fn as_mpz(&self) -> mpz_t {
-    mpz_t {
-      size: self.size as i32,
-      d: self.ptr() as *mut u64,
-      alloc: 4,
-    }
-  }
-  pub fn zero() -> Self {
-    Self {
-      size: 0,
-      limbs: [0; 4],
-    }
-  }
-
-  pub fn one() -> Self {
-    let mut limbs = [0; 4];
-    limbs[0] = 1;
-    Self { size: 1, limbs }
-  }
-
-  pub fn minus_one() -> Self {
-    let mut limbs = [0; 4];
-    limbs[0] = 1;
-    Self { size: -1, limbs }
-  }
-
-  fn normalize_size(&mut self) {
-    self.size = 0;
-    for i in (0..4).rev() {
-      if self.limbs[i] != 0 {
-        self.size = (i + 1) as i64;
-        break;
-      }
-    }
-  }
-
   pub fn is_odd(&self) -> bool {
     self.limbs[0] & 1 == 1
-  }
-
-  /// Returns (result, remainder)
-  pub fn div_rem(self, x: &Self) -> (Self, Self) {
-    if x.size > self.size {
-      return (Self::zero(), self);
-    }
-    let (mut y, mut rem) = (Self::zero(), Self::zero());
-    unsafe {
-      gmp::mpn_tdiv_qr(
-        y.ptr_mut(),
-        rem.ptr_mut(),
-        0,
-        self.ptr(),
-        self.size,
-        x.ptr(),
-        x.size,
-      )
-    };
-    y.normalize_size();
-    rem.normalize_size();
-    (y, rem)
-  }
-
-  /// mutates self to the remainder, returning result;
-  pub fn div_rem_mut(&mut self, x: &Self) -> Self {
-    if x.size > self.size {
-      return Self::zero();
-    }
-    let mut y = Self::zero();
-    unsafe {
-      gmp::mpn_tdiv_qr(
-        y.ptr_mut(),
-        self.ptr_mut(),
-        0,
-        self.ptr(),
-        self.size,
-        x.ptr(),
-        x.size,
-      )
-    };
-    self.normalize_size();
-    y.normalize_size();
-    y
   }
 
   /// returns (result of removing all fs, number of fs removed)
@@ -516,131 +430,11 @@ impl From<&[u8; 32]> for U256 {
   }
 }
 
-/// Lower-endian u64s
-impl From<[u64; 4]> for U256 {
-  fn from(limbs: [u64; 4]) -> Self {
-    let mut x = U256 { size: 0, limbs };
-    x.normalize_size();
-    x
-  }
-}
-
-impl From<u64> for U256 {
-  fn from(x: u64) -> Self {
-    let limbs = [x, 0, 0, 0];
-    Self::from(limbs)
-  }
-}
-
-impl PartialOrd for U256 {
-  fn partial_cmp(&self, x: &U256) -> Option<Ordering> {
-    let x = unsafe { gmp::mpn_cmp(self.ptr(), x.ptr(), 4) };
-    Some({
-      if x < 0 {
-        Ordering::Less
-      } else if x == 0 {
-        Ordering::Equal
-      } else {
-        Ordering::Greater
-      }
-    })
-  }
-}
-
-impl Ord for U256 {
-  fn cmp(&self, x: &U256) -> Ordering {
-    let x = unsafe { gmp::mpn_cmp(self.ptr(), x.ptr(), 4) };
-    if x < 0 {
-      Ordering::Less
-    } else if x == 0 {
-      Ordering::Equal
-    } else {
-      Ordering::Greater
-    }
-  }
-}
-
-impl ops::ShlAssign<u32> for U256 {
-  fn shl_assign(&mut self, mut x: u32) {
-    while x != 0 {
-      let sz = min(gmp::LIMB_BITS as u32, x);
-      x -= sz;
-      unsafe { gmp::mpn_lshift(self.ptr_mut(), self.ptr(), 4, sz) };
-    }
-    self.normalize_size();
-  }
-}
-
-impl ops::Shl<u32> for U256 {
-  type Output = U256;
-  fn shl(self, x: u32) -> U256 {
-    let mut y = self;
-    y <<= x;
-    y
-  }
-}
-
-impl ops::ShrAssign<u32> for U256 {
-  fn shr_assign(&mut self, mut x: u32) {
-    while x != 0 {
-      let sz = min(gmp::LIMB_BITS as u32, x);
-      x -= sz;
-      unsafe { gmp::mpn_rshift(self.ptr_mut(), self.ptr(), 4, sz) };
-    }
-    self.normalize_size();
-  }
-}
-
-impl ops::Shr<u32> for U256 {
-  type Output = U256;
-  fn shr(self, x: u32) -> U256 {
-    let mut y = self;
-    y >>= x;
-    y
-  }
-}
-
-impl ops::AddAssign for U256 {
-  fn add_assign(&mut self, x: Self) {
-    let carry = unsafe { gmp::mpn_add_n(self.ptr_mut(), self.ptr(), x.ptr(), 4) };
-    assert!(carry == 0);
-    self.normalize_size();
-  }
-}
-
-impl ops::Add for U256 {
-  type Output = Self;
-  fn add(self, x: Self) -> Self {
-    let mut y = self;
-    y += x;
-    y
-  }
-}
-
 impl ops::Add<u64> for U256 {
   type Output = Self;
   /// panics if result overflows.
   fn add(self, x: u64) -> Self {
     self + U256::from(x)
-  }
-}
-
-impl ops::SubAssign for U256 {
-  /// panics if result is negative.
-  fn sub_assign(&mut self, x: Self) {
-    let borrow = unsafe { gmp::mpn_sub_n(self.ptr_mut(), self.ptr(), x.ptr(), 4) };
-    assert!(borrow == 0);
-    self.normalize_size();
-  }
-}
-
-impl ops::Sub for U256 {
-  type Output = Self;
-  /// panics if result is negative.
-  fn sub(self, x: Self) -> Self {
-    let mut y = self;
-    y -= x;
-    y
   }
 }
 
@@ -653,14 +447,6 @@ impl ops::Sub for &U256 {
     assert!(borrow == 0);
     y.normalize_size();
     y
-  }
-}
-
-impl ops::Sub<u64> for U256 {
-  type Output = Self;
-  /// panics if result is negative.
-  fn sub(self, x: u64) -> Self {
-    self - U256::from(x)
   }
 }
 
@@ -692,13 +478,6 @@ impl ops::Mul for &U256 {
   }
 }
 
-impl ops::Div for U256 {
-  type Output = Self;
-  fn div(self, x: Self) -> Self {
-    self.div_rem(&x).0
-  }
-}
-
 impl ops::Rem<&Self> for U256 {
   type Output = Self;
   fn rem(self, x: &Self) -> Self {
@@ -711,12 +490,6 @@ impl ops::Rem for U256 {
   fn rem(self, x: Self) -> Self {
     #![allow(clippy::op_ref)]
     self % &x
-  }
-}
-
-impl ops::RemAssign for U256 {
-  fn rem_assign(&mut self, x: Self) {
-    self.div_rem_mut(&x);
   }
 }
 
