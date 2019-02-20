@@ -1,5 +1,6 @@
 #![allow(clippy::unknown_clippy_lints)]
 #![allow(clippy::many_single_char_names)]
+#![allow(clippy::empty_enum)]
 
 #[macro_use]
 extern crate lazy_static;

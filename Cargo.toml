@@ -26,6 +26,7 @@ criterion = "0.2.9"
 rand = "0.6.5"
 
 [[bench]]
+<<<<<<< HEAD
 name = "u256"
 path = "benches/u256.rs"
 harness = false
@@ -33,6 +34,15 @@ harness = false
 [[bench]]
 name = "accumulator"
 path = "benches/accumulator.rs"
+=======
+name = "add"
+path = "benches/accumulator/add.rs"
+harness = false
+
+[[bench]]
+name = "delete"
+path = "benches/accumulator/delete.rs"
+>>>>>>> 2e2f8b3bc3fbc8d32efcd1f6f4100043212c0912
 harness = false
 
 [[bench]]

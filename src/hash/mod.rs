@@ -7,29 +7,29 @@ mod blake2b;
 pub use blake2b::Blake2b;
 pub mod primality;
 
-/// Like std::hash::Hasher, but general over output type.
+/// Like `std::hash::Hasher`, but general over output type.
 pub trait GeneralHasher: Hasher {
   type Output;
-  /// Similar to Hasher::finish, but consumes self.
+  /// Similar to `Hasher::finish`, but consumes `self`.
   fn finalize(self) -> Self::Output;
 }
 
 // Note: We explicitly pass in the hasher constructor so we don't have to specify its type via
-// generics. Rust has poor support for type applications, so if we wanted to pass H at the
-// type-level, we'd need to fully specify T as well, which is a pain in the ass.
+// generics. Rust has poor support for type applications, so if we wanted to pass `H` at the
+// type-level, we'd need to fully specify `T` as well, which is a pain in the ass.
 //
 // Instead of writing:
-// hash::<Blake2b, (&G::Elem, &BigUint, &G::Elem)>(&(base, exp, result))
+// `hash::<Blake2b, (&G::Elem, &BigUint, &G::Elem)>(&(base, exp, result))`
 //
 // This lets us write:
-// hash(&Blake2b::default, &(base, exp, result))
+// `hash(&Blake2b::default, &(base, exp, result))`
 pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> H::Output {
   let mut h = new_hasher();
   t.hash(&mut h);
   h.finalize()
 }
 
-/// Calls hash with Blake2b hasher.
+/// Calls `hash` with Blake2b hasher.
 pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
   Integer::from_digits(&hash(&Blake2b::default, t), Order::Msf)
 }

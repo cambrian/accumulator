@@ -38,9 +38,9 @@ pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
 }
 
 /// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
-/// factorization of n-1). Selects parameters d, p, q according to Selfridge's method.
-/// Cf. https://en.wikipedia.org/wiki/Lucas_pseudoprime
-/// If n passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
+/// factorization of `n-1`). Selects parameters `d`, `p`, `q` according to Selfridge's method.
+/// Cf. [Lucas pseudoprime](https://en.wikipedia.org/wiki/Lucas_pseudoprime) on Wikipedia
+/// If `n` passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
 /// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
 /// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
 /// Filters perfect squares as part of choose_d.
@@ -66,13 +66,14 @@ pub fn passes_lucas(n: &U256) -> bool {
 #[derive(Debug)]
 struct IsPerfectSquare();
 
-/// Finds and returns first D in [5, -7, 9, ..., 5 + 2 * max_iter] for which Jacobi symbol (D/n) =
-/// -1, or None if no such D exists. In the case that n is square, there is no such D even with
-/// max_iter infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a
-/// low value to max_iter to avoid wasting too much time. Note that the average number of iterations
-/// required for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.
+/// Finds and returns first `D` in `[5, -7, 9, ..., 5 + 2 * max_iter]` for which Jacobi symbol
+/// `(D/n) = -1`, or None if no such `D` exists. In the case that `n` is square, there is no such
+/// `D` even with `max_iter` infinite. Hence if you are not precisely sure that `n` is nonsquare,
+/// you should pass a low value to `max_iter` to avoid wasting too much time. Note that the average
+/// number of iterations required for nonsquare `n` is 1.8, and empirically we find it is extremely
+/// rare that `|d| > 13`.
 ///
-/// We experimented with postponing the is_perfect_square check until after some number of
+/// We experimented with postponing the `is_perfect_square` check until after some number of
 /// iterations but ultimately found no performance gain. It is likely that most perfect squares
 /// are caught by the Miller-Rabin test.
 fn choose_d(n: &U256) -> Result<i32, IsPerfectSquare> {
@@ -203,7 +204,6 @@ mod tests {
     assert!(is_prob_prime(&u256(5)));
     assert!(is_prob_prime(&u256(7)));
     assert!(is_prob_prime(&u256(241)));
-    // assert!(false);
     assert!(is_prob_prime(&u256(7919)));
     assert!(is_prob_prime(&u256(48131)));
     assert!(is_prob_prime(&u256(76463)));
