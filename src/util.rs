@@ -1,9 +1,6 @@
 use crate::group::Group;
 use rug::Integer;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Never {}
-
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
 pub trait TypeRep: 'static {
@@ -40,37 +37,34 @@ pub fn shamir_trick<G: Group>(
   Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
 }
 
-/// Folds over `xs` but in a fashion that repeatedly merges adjacent elements: Instead of
-/// `F(F(F(F(acc, a), b), c), d))` this computes `F(acc, F(F(a, b), F(c, d)))`.
-pub fn try_merge_reduce<F, T, E>(merge: F, acc: T, xs: &mut [T]) -> Result<T, E>
+/// Folds over `xs` but in a divide-and-conquer fashion: Instead of `F(F(F(F(acc, a), b), c), d))`
+/// this computes `F(acc, F(F(a, b), F(c, d)))`.
+pub fn divide_and_conquer<F, T: Clone, E>(f: F, acc: T, xs: &[T]) -> Result<T, E>
 where
   F: Fn(&T, &T) -> Result<T, E>,
 {
-  let mut merge_step = 2_usize.pow(0);
-  let mut merge_skip = 2_usize.pow(1);
-  let num_xs = xs.len();
-  loop {
-    for i in (0..num_xs).step_by(merge_skip) {
-      if i + merge_step >= num_xs {
-        break;
-      }
-
-      xs[i] = merge(&xs[i], &xs[i + merge_step])?;
-    }
-
-    merge_step *= 2;
-    merge_skip *= 2;
-
-    if merge_step >= num_xs {
-      break;
-    }
+  if xs.is_empty() {
+    return Ok(acc);
   }
 
-  if num_xs == 0 {
-    Ok(acc)
-  } else {
-    Ok(merge(&acc, &xs[0])?)
+  Ok(f(&acc, &divide_and_conquer_(&f, xs)?)?)
+}
+
+pub fn divide_and_conquer_<F, T: Clone, E>(f: &F, xs: &[T]) -> Result<T, E>
+where
+  F: Fn(&T, &T) -> Result<T, E>,
+{
+  if xs.len() == 1 {
+    return Ok(xs[0].clone());
   }
+
+  let mid = xs.len() / 2;
+  let left = &xs[..mid];
+  let right = &xs[mid..];
+  Ok(f(
+    &divide_and_conquer_(f, left)?,
+    &divide_and_conquer_(f, right)?,
+  )?)
 }
 
 #[cfg(test)]
@@ -79,18 +73,16 @@ mod tests {
   use crate::group::{Group, Rsa2048, UnknownOrderGroup};
   use crate::util::int;
 
+  #[derive(Debug)]
+  enum Never {}
+
   /// Merge-based computation of Integer array products. Faster than  the iterative `iter.product()`
   /// for really large Integers.
   fn merge_product(xs: &[Integer]) -> Integer {
-    let mut xs_clone = Vec::new();
-    for x in xs {
-      xs_clone.push(x.clone());
-    }
-
-    try_merge_reduce(
+    divide_and_conquer(
       |a, b| -> Result<Integer, Never> { Ok(int(a * b)) },
       int(1),
-      &mut xs_clone,
+      &xs,
     )
     .unwrap()
   }

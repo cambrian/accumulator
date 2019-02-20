@@ -1,5 +1,5 @@
 use super::Group;
-use crate::util::{int, Never, TypeRep};
+use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
@@ -9,7 +9,7 @@ use rug::Integer;
 use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Ed25519(Never);
+pub enum Ed25519 {}
 
 lazy_static! {
   pub static ref MAX_SAFE_EXPONENT: Integer = int(2).pow(255) - 1;
