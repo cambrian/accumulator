@@ -1,6 +1,8 @@
 //! TODO: reduce U256/U512 duplication with a macro
 use gmp_mpfr_sys::gmp;
 use gmp_mpfr_sys::gmp::mpz_t;
+use rug::integer::Order;
+use rug::Integer;
 use std::cmp::{min, Ord, Ordering, PartialOrd};
 use std::convert::From;
 use std::mem::transmute;
@@ -40,6 +42,9 @@ macro_rules! u_types {
         }
         pub fn zero() -> Self {
           Self { size: 0, limbs: [0; $size] }
+        }
+        pub fn is_zero(&self) -> bool {
+          self.size == 0
         }
         pub fn one() -> Self {
           let mut limbs = [0; $size];
@@ -98,9 +103,27 @@ macro_rules! u_types {
           res != 0
         }
 
+        pub fn is_divisible_u(&self, u: u64) -> bool {
+          let s = self.as_mpz();
+          let divisible = unsafe {gmp::mpz_divisible_ui_p(mut_ptr(&s), u)};
+          divisible != 0
+        }
+
         /// panics if buf is not large enough
         pub fn write_binary(&self, buf: &mut [u8]) -> usize {
           unsafe { gmp::mpn_get_str(mut_ptr(&buf[0]), 2, self.data(), self.size) }
+        }
+
+        pub fn from_be_bytes(bytes: &[u8]) -> Self {
+          let x = Self::zero();
+          unsafe { gmp::mpn_set_str(x.data(), &bytes[0] as *const u8, bytes.len(), 256) };
+          x
+        }
+      }
+
+      impl PartialEq<u64> for $t {
+        fn eq(&self, u: &u64) -> bool {
+          (*u == 0 && self.size == 0) || (self.size == 1 && self.limbs[0] == *u)
         }
       }
 
@@ -360,6 +383,12 @@ macro_rules! u_types {
         fn div(self, x: Self) -> Self {
           #![allow(clippy::op_ref)]
           self / &x
+        }
+      }
+
+      impl From<$t> for Integer {
+        fn from(x: $t) -> Integer {
+          Integer::from_digits(&x.limbs, Order::Lsf)
         }
       }
     )+

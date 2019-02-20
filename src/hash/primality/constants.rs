@@ -1,5 +1,5 @@
 /// Used as a prefilter to is_prob_prime. The number of these has been tuned on a 2018 macbook pro.
-pub const SMALL_PRIMES: [u32; 200] = [
+pub const SMALL_PRIMES: [u64; 200] = [
   2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
   101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193,
   197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307,
@@ -14,7 +14,7 @@ pub const SMALL_PRIMES: [u32; 200] = [
 ];
 
 #[allow(dead_code, clippy::unreadable_literal)]
-pub const MED_PRIMES: [u32; 456] = [
+pub const MED_PRIMES: [u64; 456] = [
   106957, 106961, 106963, 106979, 106993, 107021, 107033, 107053, 107057, 107069, 107071, 107077,
   107089, 107099, 107101, 107119, 107123, 107137, 107171, 107183, 107197, 107201, 107209, 107227,
   107243, 107251, 107269, 107273, 107279, 107309, 107323, 107339, 107347, 107351, 107357, 107377,
@@ -64,17 +64,17 @@ pub const LARGE_PRIMES: [u64; 4] = [
 ];
 
 #[allow(dead_code)]
-pub const STRONG_BASE_2_PSEUDOPRIMES: [u32; 10] = [
+pub const STRONG_BASE_2_PSEUDOPRIMES: [u64; 10] = [
   2047, 3277, 4033, 4681, 8321, 15841, 29341, 42799, 49141, 52633,
 ];
 
 #[allow(dead_code)]
-pub const STRONG_LUCAS_PSEUDOPRIMES: [u32; 10] = [
+pub const STRONG_LUCAS_PSEUDOPRIMES: [u64; 10] = [
   5459, 5777, 10877, 16109, 18971, 22499, 24569, 25199, 40309, 58519,
 ];
 
 #[allow(dead_code)]
-pub const EXTRA_STRONG_LUCAS_PSEUDOPRIMES: [u32; 10] = [
+pub const EXTRA_STRONG_LUCAS_PSEUDOPRIMES: [u64; 10] = [
   989, 3239, 5777, 10877, 27971, 29681, 30739, 31631, 39059, 72389,
 ];
 
