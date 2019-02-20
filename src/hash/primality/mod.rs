@@ -88,12 +88,12 @@ fn choose_d(n: &U256) -> Result<i32, IsPerfectSquare> {
   panic!("n is not square but we still couldn't find a d value!")
 }
 
-/// Computes the Lucas sequences {u_i(p, q)} and {v_i(p, q)} up to a specified index k_target in
-/// O(log(k_target)) time by recursively calculating only the (2i)th and (2i+1)th elements in an
-/// order determined by the binary expansion of k. Also returns q^{k/2} (mod n), which is used in
-/// a stage of the strong Lucas test. In the Lucas case we specify that d = p^2 - 4q and set
-/// k_target = delta = n - (d/n) = n + 1.
-/// we set p = 1
+/// Computes the Lucas sequences `{u_i(p, q)}` and `{v_i(p, q)}` up to a specified index `k_target`
+/// in O(log(`k_target`)) time by recursively calculating only the `(2i)`th and `(2i+1)`th elements
+/// in an order determined by the binary expansion of `k`. Also returns `q^{k/2} (mod n)`, which is
+/// used in a stage of the strong Lucas test. In the Lucas case we specify that `d = p^2 - 4q` and
+/// set `k_target = delta = n - (d/n) = n + 1`.
+/// Note that `p` does not show up in the code because it is set to 1.
 fn compute_lucas_sequences(
   k_target: U256,
   n: &U256,
