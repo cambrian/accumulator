@@ -13,9 +13,8 @@ macro_rules! u_types {
     $(
       #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
       pub struct $t {
-        // size is negative to denote a negative integer, while limbs reflect the magnitude.
-        // however the gmp implementation for signed addition will eagerly realloc to ensure that
-        // the result fits, so we implement only unsigned logic.
+        // size also denotes the sign of the number, while limbs reflect only the magnitude.
+        // We keep size >= 0 except in very rare circumstances.
         size: i64,
         limbs: [u64; $size],
       }
@@ -470,8 +469,8 @@ impl U256 {
   }
 }
 
-/// It turns out to be faster to provide multiplication as U256 * U256 -> U512.
-/// This is because we can use mpn_mul_n instead of mpn_mul.
+/// It turns out to be faster to provide multiplication as U256 * U256 -> U512, because it lets us
+/// use mpn_mul_n instead of mpn_mul.
 impl ops::Mul<&Self> for U256 {
   type Output = U512;
   fn mul(self, x: &Self) -> U512 {

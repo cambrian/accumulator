@@ -22,12 +22,12 @@ pub fn is_prob_prime(n: &U256) -> bool {
 pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
   let (d, r) = (n - 1).remove_factor(u256(2));
   let mut x = u256(2).pow_mod(d, n);
-  if x == u256(1) || x == n - 1 {
+  if x == 1 || x == n - 1 {
     return true;
   }
   for _ in 1..r {
     x = x * x % n;
-    if x == u256(1) {
+    if x == 1 {
       return false;
     }
     if x == n - 1 {
