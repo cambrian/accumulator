@@ -55,7 +55,7 @@ pub fn passes_lucas(n: &U256) -> bool {
   let (u_delta, v_delta, q_delta_over_2) =
     compute_lucas_sequences(*n + 1, n, u256(1), u256(1), q, d);
   // u_delta % n != 0 proves n composite.
-  u_delta == U256::zero()
+  u_delta == 0
   // Additional check which is not strictly part of Lucas test but nonetheless filters some
     // composite n for free. See section "Checking additional congruence conditions" on Wikipedia.
     && v_delta.is_congruent(2 * q, n)
