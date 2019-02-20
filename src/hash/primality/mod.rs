@@ -44,7 +44,7 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
 
 pub fn passes_miller_rabin_base_22(n: &U256) -> bool {
   let (d, r) = (n - 1).remove_factor(u256(2));
-  let mut x = u256(2).pow_mod(d, *n);
+  let mut x = u256(2).pow_mod(d, n);
   if x == u256(1) || x == n - 1 {
     return true;
   }
@@ -161,8 +161,8 @@ fn compute_lucas_sequences2(
   n: &U256,
   mut u: U256,
   mut v: U256,
-  q_: i32,
-  d_: i32,
+  q0: i32,
+  d: i32,
 ) -> (U256, U256, U256) {
   // Mod an i32 into the [0,n) range
   let i_mod_n = |x: i32| {
@@ -172,10 +172,10 @@ fn compute_lucas_sequences2(
       u256(x as u64) % n
     }
   };
-  let q_ = i_mod_n(q_);
-  let d_ = i_mod_n(d_);
-  let mut q = q_;
-  let mut q_k_over_2 = q;
+  let q0 = i_mod_n(q0);
+  let d = i_mod_n(d);
+  let mut q = q0;
+  let mut q_k_over_2 = q0;
 
   // Finds t in Z_n with 2t = x (mod n)
   // assumes x in 0..n
@@ -186,13 +186,6 @@ fn compute_lucas_sequences2(
       x >> 1
     }
   };
-
-  // Write binary expansion of k as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. x_1 is always
-  // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
-  // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
-  // we will have computed u_k and v_k, with k as given, in log(delta) time.
-  let mut k_target_bits = [0; 257];
-  let len = k_target.write_binary(&mut k_target_bits);
   let sub_mod_n = |a, b| {
     if a > b {
       (a - b) % n
@@ -200,6 +193,12 @@ fn compute_lucas_sequences2(
       *n - (b - a) % n
     }
   };
+  // Write binary expansion of k as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. x_1 is always
+  // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
+  // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
+  // we will have computed u_k and v_k, with k as given, in log(delta) time.
+  let mut k_target_bits = [0; 257];
+  let len = k_target.write_binary(&mut k_target_bits);
   for &bit in k_target_bits[..len].iter().skip(1) {
     // Compute (u, v)_{2k} from (u, v)_k according to the following:
     // u_2k = u_k * v_k (mod n)
@@ -215,10 +214,11 @@ fn compute_lucas_sequences2(
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
       let u_old = u;
       u = half((u512(u) + u512(v)) % n);
-      v = half((d_ * u_old + u512(v)) % n);
-      q = (q * q_) % n;
+      v = half((d * u_old + u512(v)) % n);
+      q = q * q0 % n;
     }
   }
+  // These are all % n so the low_u256 is lossless. We could make it checked...
   (u, v, q_k_over_2)
 }
 
@@ -327,8 +327,6 @@ mod tests {
     // Should fail on p = 2.
     for &sp in SMALL_PRIMES[1..].iter() {
       assert!(passes_lucas(&int(sp)));
-      // Note: The factor cannot be in SMALL_PRIMES or this test will fail because `choose_d` fails
-      // on square numbers.
       assert!(!passes_lucas(&(int(sp) * 2047)));
     }
     for &mp in MED_PRIMES.iter() {
@@ -343,11 +341,10 @@ mod tests {
 
   #[test]
   fn test_lucas2() {
+    assert!(passes_lucas2(&u256(5)));
     // Should fail on p = 2.
     for &sp in SMALL_PRIMES[1..].iter() {
       assert!(passes_lucas2(&u256(u64::from(sp))));
-      // Note: The factor cannot be in SMALL_PRIMES or this test will fail because `choose_d` fails
-      // on square numbers.
       assert!(!passes_lucas2(
         &(u256(u64::from(sp)) * u256(2047)).low_u256()
       ));

@@ -55,14 +55,14 @@ fn bench_lucas_zero(bytes: &[u8; 32]) {
 fn criterion_benchmark(c: &mut Criterion) {
   let mut random_bytes = rand::thread_rng().gen::<[u8; 32]>();
   random_bytes[0] |= 1;
-  c.bench_function("jacobi_rug", |b| b.iter(bench_jacobi_rug));
-  c.bench_function("mr2_pablo", move |b| {
-    b.iter(|| bench_mr2_pablo(&random_bytes))
-  });
-  c.bench_function("mr2_rug", move |b| b.iter(|| bench_mr2_rug(&random_bytes)));
-  c.bench_function("mr2_zero", move |b| {
-    b.iter(|| bench_mr2_zero(&random_bytes))
-  });
+  // c.bench_function("jacobi_rug", |b| b.iter(bench_jacobi_rug));
+  // c.bench_function("mr2_pablo", move |b| {
+  //   b.iter(|| bench_mr2_pablo(&random_bytes))
+  // });
+  // c.bench_function("mr2_rug", move |b| b.iter(|| bench_mr2_rug(&random_bytes)));
+  // c.bench_function("mr2_zero", move |b| {
+  //   b.iter(|| bench_mr2_zero(&random_bytes))
+  // });
   c.bench_function("lucas_rug", move |b| {
     b.iter(|| bench_lucas_rug(&random_bytes))
   });
