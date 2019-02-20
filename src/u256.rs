@@ -1,4 +1,4 @@
-//! TODO: reduce U256/U512 duplication with a macro
+//! Zero-allocation U256 and U512 types built on GMP.
 use gmp_mpfr_sys::gmp;
 use gmp_mpfr_sys::gmp::mpz_t;
 use rug::integer::Order;
