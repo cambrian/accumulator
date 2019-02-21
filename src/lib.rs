@@ -8,6 +8,7 @@ mod accumulator;
 pub use crate::accumulator::*;
 pub mod group;
 pub mod hash;
+pub mod mpz;
 pub mod proof;
 pub mod util;
 mod vector_commitment;
