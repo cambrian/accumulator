@@ -75,3 +75,7 @@ debug = true
 [features]
 
 benchmark = []
+
+# Optimizations for class group squaring.
+flint = []
+nudulp = []

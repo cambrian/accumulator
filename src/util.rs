@@ -1,8 +1,9 @@
 use crate::group::Group;
 use gmp_mpfr_sys::gmp::{
-  mpz_abs, mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmp_ui, mpz_cmpabs, mpz_divexact, mpz_fdiv_q,
-  mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext, mpz_get_str, mpz_init, mpz_mod, mpz_mul,
-  mpz_mul_ui, mpz_neg, mpz_root, mpz_set, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_sub, mpz_submul,
+  mpz_abs, mpz_add, mpz_add_ui, mpz_cdiv_q, mpz_cdiv_r, mpz_cmp, mpz_cmp_si, mpz_cmp_ui,
+  mpz_cmpabs, mpz_divexact, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_fdiv_r, mpz_fits_slong_p,
+  mpz_gcd, mpz_gcdext, mpz_get_si, mpz_get_str, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg,
+  mpz_odd_p, mpz_root, mpz_set, mpz_set_si, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_sub, mpz_submul,
   mpz_t,
 };
 use rug::Integer;
@@ -33,10 +34,20 @@ where
   Integer::from(val)
 }
 
+pub type mp_limb_t = ::std::os::raw::c_ulong;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __mpz_struct {
+  pub _mp_alloc: ::std::os::raw::c_int,
+  pub _mp_size: ::std::os::raw::c_int,
+  pub _mp_d: *mut mp_limb_t,
+}
+
 #[derive(Debug)]
 #[cfg_attr(repr_transparent, repr(transparent))]
 pub struct Mpz {
-  inner: mpz_t,
+  pub inner: mpz_t,
 }
 
 impl Default for Mpz {
@@ -106,6 +117,16 @@ impl From<u64> for Mpz {
   }
 }
 
+impl From<__mpz_struct> for Mpz {
+  fn from(x: __mpz_struct) -> Self {
+    let mut ret = Mpz::default();
+    ret.inner.alloc = x._mp_alloc;
+    ret.inner.size = x._mp_size;
+    ret.inner.d = x._mp_d;
+    ret
+  }
+}
+
 impl FromStr for Mpz {
   type Err = std::ffi::NulError;
 
@@ -127,6 +148,9 @@ impl Mpz {
       mpz_add(&mut self.inner, &x.inner, &y.inner);
     }
   }
+  pub fn add_mut_ui(&mut self, x: u64) {
+    unsafe { mpz_add_ui(&mut self.inner, &self.inner, x) }
+  }
   pub fn add_mut(&mut self, x: &Mpz) {
     unsafe { mpz_add(&mut self.inner, &self.inner, &x.inner) }
   }
@@ -139,6 +163,16 @@ impl Mpz {
   pub fn cmp_si(&self, val: i64) -> i32 {
     unsafe { mpz_cmp_si(&self.inner, val) }
   }
+  pub fn ceil_div(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe {
+      mpz_cdiv_q(&mut self.inner, &x.inner, &y.inner);
+    }
+  }
+  pub fn ceil_div_rem(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe {
+      mpz_cdiv_r(&mut self.inner, &x.inner, &y.inner);
+    }
+  }
   pub fn floor_div(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
       mpz_fdiv_q(&mut self.inner, &x.inner, &y.inner);
@@ -147,7 +181,10 @@ impl Mpz {
   pub fn floor_div_mut(&mut self, x: &Mpz) {
     unsafe { mpz_fdiv_q(&mut self.inner, &self.inner, &x.inner) }
   }
-  pub fn floor_div_rem(&mut self, r: &mut Mpz, x: &Mpz, y: &Mpz) {
+  pub fn floor_div_rem(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { mpz_fdiv_r(&mut self.inner, &x.inner, &y.inner) }
+  }
+  pub fn floor_div_qrem(&mut self, r: &mut Mpz, x: &Mpz, y: &Mpz) {
     unsafe { mpz_fdiv_qr(&mut self.inner, &mut r.inner, &x.inner, &y.inner) }
   }
   pub fn floor_div_ui(&mut self, x: &Mpz, val: u64) {
@@ -156,14 +193,22 @@ impl Mpz {
     }
   }
 
+  pub fn get_si(&mut self) -> i64 {
+    unsafe { mpz_get_si(&mut self.inner) }
+  }
+
   pub fn div_exact(&mut self, n: &Mpz, d: &Mpz) {
     unsafe { mpz_divexact(&mut self.inner, &n.inner, &d.inner) }
   }
 
   pub fn div_exact_mut(&mut self, d: &Mpz) {
-    unsafe { mpz_divexact(&mut self.inner, &self.inner, &d.inner) }
+    unsafe {
+      mpz_divexact(&mut self.inner, &self.inner, &d.inner);
+    }
   }
-
+  pub fn fits_slong_p(&mut self) -> i32 {
+    unsafe { mpz_fits_slong_p(&mut self.inner) }
+  }
   pub fn floor_div_ui_mut(&mut self, val: u64) {
     unsafe {
       mpz_fdiv_q_ui(&mut self.inner, &self.inner, val);
@@ -210,6 +255,9 @@ impl Mpz {
   pub fn neg_mut(&mut self) {
     unsafe { mpz_neg(&mut self.inner, &self.inner) }
   }
+  pub fn odd(&mut self) -> i32 {
+    unsafe { mpz_odd_p(&mut self.inner) }
+  }
   pub fn root_mut(&mut self, x: u64) -> i32 {
     unsafe { mpz_root(&mut self.inner, &self.inner, x) }
   }
@@ -225,6 +273,10 @@ impl Mpz {
   pub fn set_ui(&mut self, val: u64) {
     unsafe { mpz_set_ui(&mut self.inner, val) }
   }
+  pub fn set_si(&mut self, val: i64) {
+    unsafe { mpz_set_si(&mut self.inner, val) }
+  }
+
   pub fn sgn(&self) -> i32 {
     unsafe { mpz_sgn(&self.inner) }
   }

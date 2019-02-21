@@ -1,13 +1,12 @@
 //! Class Group implementation
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::util;
-use crate::util::{int, Mpz, TypeRep};
+use crate::util::{int, Mpz, TypeRep, __mpz_struct};
 use rug::Integer;
 use std::cell::RefCell;
-use std::ffi::CString;
 use std::hash::{Hash, Hasher};
-use std::ptr;
 use std::str::FromStr;
+
+include!("/Users/hal/workspace/vest/accumulator/src/group/flint_bindings.rs");
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClassGroup {}
@@ -119,7 +118,7 @@ impl LinCongruenceCtx {
     self.g.gcd_cofactors(&mut self.d, &mut self.e, a, m);
     // q = floor_div(b, g)
     // r = b % g
-    self.q.floor_div_rem(&mut self.r, b, &self.g);
+    self.q.floor_div_qrem(&mut self.r, b, &self.g);
     // mu = (q * d) % m
     mu.mul(&self.q, &self.d);
     mu.modulo_mut(m);
@@ -128,6 +127,7 @@ impl LinCongruenceCtx {
   }
 }
 
+#[allow(non_snake_case)]
 pub struct ClassCtx {
   negative_a: Mpz,
   r: Mpz,
@@ -174,7 +174,7 @@ pub struct ClassCtx {
 
 impl Default for ClassCtx {
   fn default() -> Self {
-    Self {
+    let mut s = Self {
       negative_a: Mpz::default(),
       r: Mpz::default(),
       denom: Mpz::default(),
@@ -199,7 +199,8 @@ impl Default for ClassCtx {
       l: Mpz::default(),
       j: Mpz::default(),
       sctx: LinCongruenceCtx::default(),
-      // Alan's additions
+
+      // Alan's additions for squaring.
       G_square_opt: Mpz::default(),
       x_square_opt: Mpz::default(),
       y_square_opt: Mpz::default(),
@@ -217,7 +218,10 @@ impl Default for ClassCtx {
       ay_square_opt: Mpz::default(),
       Q1_square_opt: Mpz::default(),
       unused_square_opt: Mpz::default(),
-    }
+    };
+    s.L_square_opt.abs(&CLASS_GROUP_DISCRIMINANT.clone());
+    s.L_square_opt.root_mut(4);
+    s
   }
 }
 
@@ -277,7 +281,7 @@ impl ClassCtx {
     self.normalize(x);
   }
 
-  fn square_(&mut self, x: &mut ClassElem) {
+  fn square(&mut self, x: &mut ClassElem) {
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
     self
       .sctx
@@ -304,197 +308,149 @@ impl ClassCtx {
     self.reduce(x);
   }
 
-  fn square(&mut self, x: &mut ClassElem) {
-    // --- BEGIN TODO: Move to initialization code
-    //mpz_abs(L, D);
-    let mut d = Mpz::default();
-    x.discriminant(&mut d);
-    self.L_square_opt.abs(&d);
-    //mpz_root(L, L, 4);
-    self.L_square_opt.root_mut(4);
-    // --- END TODO: Move to initialization code
+  #[allow(non_snake_case)]
+  fn square_help_flint(ctx: &mut ClassCtx) {
+    unsafe {
+      let mut fy: fmpz = 0;
+      let mut fx: fmpz = 0;
+      let mut fby: fmpz = 0;
+      let mut fbx: fmpz = 0;
+      let mut fL: fmpz = 0;
 
-    //mpz_gcdext(G, y, NULL, f.b, f.a); // gcd of f.b, f.c
+      let mut y_square_clone: __mpz_struct = __mpz_struct::from(&ctx.y_square_opt);
+      let mut x_square_clone: __mpz_struct = __mpz_struct::from(&ctx.x_square_opt);
+      let mut by_square_clone: __mpz_struct = __mpz_struct::from(&ctx.by_square_opt);
+      let mut bx_square_clone: __mpz_struct = __mpz_struct::from(&ctx.bx_square_opt);
+      let mut L_square_clone: __mpz_struct = __mpz_struct::from(&ctx.L_square_opt);
+
+      fmpz_set_mpz(&mut fy, &mut y_square_clone);
+      fmpz_set_mpz(&mut fx, &mut x_square_clone);
+      fmpz_set_mpz(&mut fby, &mut by_square_clone);
+      fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
+      fmpz_set_mpz(&mut fL, &mut L_square_clone);
+
+      // Flint Lehmer partial extended GCD.
+      fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
+
+      fmpz_get_mpz(&mut y_square_clone, &mut fy);
+      fmpz_get_mpz(&mut x_square_clone, &mut fx);
+      fmpz_get_mpz(&mut by_square_clone, &mut fby);
+      fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
+
+      ctx.y_square_opt = Mpz::from(y_square_clone);
+      ctx.x_square_opt = Mpz::from(x_square_clone);
+      ctx.by_square_opt = Mpz::from(by_square_clone);
+      ctx.bx_square_opt = Mpz::from(bx_square_clone);
+    }
+
+    ctx.x_square_opt.neg_mut();
+    if ctx.x_square_opt.sgn() > 0 {
+      ctx.y_square_opt.neg_mut();
+    } else {
+      ctx.by_square_opt.neg_mut();
+    }
+  }
+
+  fn square_help_regular(ctx: &mut ClassCtx) {
+    ctx.x_square_opt.set_ui(1);
+    ctx.y_square_opt.set_ui(0);
+    while ctx.by_square_opt.cmp_abs(&ctx.L_square_opt) > 0 && ctx.bx_square_opt.sgn() == 0 {
+      ctx
+        .q_square_opt
+        .floor_div(&ctx.by_square_opt, &ctx.bx_square_opt);
+      ctx
+        .t_square_opt
+        .floor_div_rem(&ctx.by_square_opt, &ctx.bx_square_opt);
+
+      ctx.by_square_opt.set(&ctx.bx_square_opt);
+      ctx.bx_square_opt.set(&ctx.t_square_opt);
+      ctx
+        .y_square_opt
+        .sub_mul(&ctx.q_square_opt, &ctx.x_square_opt);
+      ctx.t_square_opt.set(&ctx.y_square_opt);
+      ctx.y_square_opt.set(&ctx.x_square_opt);
+      ctx.x_square_opt.set(&ctx.t_square_opt);
+      ctx.z_square_opt.add_mut_ui(1);
+    }
+
+    if ctx.z_square_opt.odd() != 0 {
+      ctx.by_square_opt.neg_mut();
+      ctx.y_square_opt.neg_mut();
+    }
+  }
+
+  fn square_nudulp(&mut self, x: &mut ClassElem) {
     self.G_square_opt.gcd_cofactors(
       &mut self.y_square_opt,
       &mut self.unused_square_opt,
       &x.b,
-      &x.c,
+      &x.a,
     );
-
-    // mpz_divexact(By, f.a, G);
     self.By_square_opt.div_exact(&x.a, &self.G_square_opt);
-
-    //mpz_divexact(Dy, f.b, G);
     self.Dy_square_opt.div_exact(&x.b, &self.G_square_opt);
-
-    // mpz_mul(bx, y, f.c);
     self.bx_square_opt.mul(&self.y_square_opt, &x.c);
-
-    // mpz_mod(bx, bx, By);
     self.bx_square_opt.modulo_mut(&self.By_square_opt);
-
-    // mpz_set(by, By);
     self.by_square_opt.set(&self.By_square_opt);
-
-    // if (mpz_cmpabs(by, L) <= 0) {
     if self.by_square_opt.cmp_abs(&self.L_square_opt) <= 0 {
-      // mpz_mul(dx, bx, Dy);
       self
         .dx_square_opt
         .mul(&self.bx_square_opt, &self.Dy_square_opt);
-
-      // mpz_sub(dx, dx, f.c);
       self.dx_square_opt.sub_mut(&x.c);
-
-      // mpz_divexact(dx, dx, By);
       self.dx_square_opt.div_exact_mut(&self.By_square_opt);
-
-      // mpz_mul(f.a, by, by);
       x.a.mul(&self.by_square_opt, &self.by_square_opt);
-
-      // mpz_mul(f.c, bx, bx);
       x.c.mul(&self.bx_square_opt, &self.bx_square_opt);
-
-      // mpz_add(t, bx, by);
       self
         .t_square_opt
         .add(&self.bx_square_opt, &self.by_square_opt);
-
-      // mpz_mul(t, t, t);
       self.t_square_opt.square_mut();
-
-      // mpz_sub(f.b, f.b, t);
       x.b.sub_mut(&self.t_square_opt);
-
-      // mpz_add(f.b, f.b, f.a);
       x.b.add_mut(&x.a);
-
-      // mpz_add(f.b, f.b, f.c);
       x.b.add_mut(&x.c);
-
-      // mpz_mul(t, G, dx);
       self
         .t_square_opt
         .mul(&self.G_square_opt, &self.dx_square_opt);
-
-      // mpz_sub(f.c, f.c, t);
       x.c.sub_mut(&self.t_square_opt);
       return;
     }
 
-    // ---------------- BEGIN modified middle section ----------------------
-
-    // TODO: bindings for FLINT here.
-
-    // fmpz_set_mpz(fy, y);
-    // fmpz_set_mpz(fx, x);
-    // fmpz_set_mpz(fby, by);
-    // fmpz_set_mpz(fbx, bx);
-    // fmpz_set_mpz(fL, L);
-
-    // fmpz_xgcd_partial(fy, fx, fby, fbx, fL);
-
-    // fmpz_get_mpz(y, fy);
-    // fmpz_get_mpz(x, fx);
-    // fmpz_get_mpz(by, fby);
-    // fmpz_get_mpz(bx, fbx);
-    // fmpz_get_mpz(L, fL);
-
-    // mpz_neg(x, x);
-    self.x_square_opt.neg_mut();
-
-    // if (mpz_sgn(x) > 0) {
-    //   mpz_neg(y, y);
-    // } else {
-    //   mpz_neg(by, by);
-    // }
-
-    if self.x_square_opt.sgn() > 0 {
-      self.y_square_opt.neg_mut();
+    if cfg!(feature = "flint") {
+      ClassCtx::square_help_flint(self);
     } else {
-      self.by_square_opt.neg_mut();
+      ClassCtx::square_help_regular(self);
     }
 
-    // ------------ END modified middle section ----------
-
-    // // ax = G * x
-    // mpz_mul(ax, G, x);
     self
       .ax_square_opt
       .mul(&self.G_square_opt, &self.x_square_opt);
-
-    // // ay = G * y
-    // mpz_mul(ay, G, y);
     self
       .ay_square_opt
       .mul(&self.G_square_opt, &self.y_square_opt);
-
-    // mpz_mul(t, Dy, bx);
     self
       .t_square_opt
       .mul(&self.Dy_square_opt, &self.bx_square_opt);
-
-    // mpz_submul(t, f.c, x);
-    self.t_square_opt.mul(&x.c, &self.x_square_opt);
-
-    // mpz_divexact(dx, t, By);
+    self.t_square_opt.sub_mul(&x.c, &self.x_square_opt);
     self
       .dx_square_opt
       .div_exact(&self.t_square_opt, &self.By_square_opt);
-
-    // // Q1 = dx *y
-    // mpz_mul(Q1, y, dx);
     self
       .Q1_square_opt
       .mul(&self.y_square_opt, &self.dx_square_opt);
-
-    // // dy = Q1 + Dy
-    // mpz_add(dy, Q1, Dy);
     self
       .dy_square_opt
       .add(&self.Q1_square_opt, &self.Dy_square_opt);
-
-    // // new_b = G (dy + Q1)
-    // mpz_add(f.b, dy, Q1);
     x.b.add(&self.dy_square_opt, &self.Q1_square_opt);
-
-    // mpz_mul(f.b, f.b, G);
     x.b.mul_mut(&self.G_square_opt);
-
-    // // dy = dy / x
-    // mpz_divexact(dy, dy, x);
     self.dy_square_opt.div_exact_mut(&self.x_square_opt);
-
-    // // f.x = by^2
-    // mpz_mul(f.a, by, by);
     x.a.mul(&self.by_square_opt, &self.by_square_opt);
-
-    // // f.c = bx^2
-    // mpz_mul(f.c, bx, bx);
     x.c.mul(&self.bx_square_opt, &self.bx_square_opt);
-
-    // f.b = f.b - (bx + by)^2 + new_a + new_c
-    // mpz_add(t, bx, by);
-    // mpz_submul(f.b, t, t);
-    // mpz_add(f.b, f.b, f.a);
-    // mpz_add(f.b, f.b, f.c);
-
     self
       .t_square_opt
       .add(&self.bx_square_opt, &self.by_square_opt);
-    x.c.sub_mul(&self.t_square_opt, &self.t_square_opt);
+    x.b.sub_mul(&self.t_square_opt, &self.t_square_opt);
     x.b.add_mut(&x.a);
     x.b.add_mut(&x.c);
-
-    // f.a = f.a - ay * dy
-    // f.c = f.c - ax * dx
-    // mpz_submul(f.a, ay, dy);
-    // mpz_submul(f.c, ax, dx);
-
     x.a.sub_mul(&self.ay_square_opt, &self.dy_square_opt);
     x.c.sub_mul(&self.ax_square_opt, &self.dx_square_opt);
-
     self.reduce(x);
   }
 
@@ -706,7 +662,13 @@ impl Group for ClassGroup {
         if n.is_odd() {
           val = ctx.op(&val, &a);
         }
-        ctx.square(&mut a);
+
+        if cfg!(feature = "nudulp") {
+          // NUDULP optimization, optionally using FLINT bindings.
+          ctx.square_nudulp(&mut a);
+        } else {
+          ctx.square(&mut a);
+        }
         n >>= 1;
       }
     })
@@ -1112,7 +1074,6 @@ mod tests {
         gs.push(g.clone());
         gs_invs.push(ClassGroup::inv(&g));
         g_star = ClassGroup::op(&g, &g_star);
-        println!("{}", i);
         assert!(g_star.validate());
       }
     }
@@ -1199,4 +1160,25 @@ mod tests {
 
     assert_eq!(&g2, &g4);
   }
+
+  #[test]
+  fn test_square_repeated() {
+    let g = ClassGroup::unknown_order_elem();
+    let mut g1024 = ClassGroup::id();
+
+    // g^1024
+    for _ in 0..4096 {
+      g1024 = ClassGroup::op(&g, &g1024);
+    }
+
+    // g^2
+    let mut g2 = g.clone();
+
+    // g^1024
+    for _ in 0..12 {
+      g2.square();
+    }
+    assert_eq!(g2, g1024);
+  }
+
 }
