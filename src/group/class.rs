@@ -1,6 +1,7 @@
 //! Class Group implementation
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::util::{int, Mpz, TypeRep, __mpz_struct};
+use crate::mpz::{Mpz, __mpz_struct};
+use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
 use std::hash::{Hash, Hasher};
@@ -40,15 +41,6 @@ thread_local! {
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
-pub fn with_context<T, U>(f: T) -> U
-where
-  T: FnOnce(&mut ClassCtx) -> U,
-{
-  let mut opt = None;
-  CTX.with(|x| opt = Some(f(&mut x.borrow_mut())));
-  opt.unwrap()
-}
-
 #[derive(Debug)]
 pub struct ClassElem {
   a: Mpz,
@@ -77,7 +69,6 @@ impl Clone for ClassElem {
 }
 
 impl PartialEq for ClassElem {
-  // TODO: Ensure only reduced elements exist
   fn eq(&self, other: &ClassElem) -> bool {
     let mut r_self = self.clone();
     let mut r_other = other.clone();
@@ -455,7 +446,6 @@ impl ClassCtx {
   }
 
   fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    // TODO: Assert discriminants equal
     // g = (b1 + b2) / 2
     self.g.add(&x.b, &y.b);
     self.g.floor_div_ui_mut(2);
@@ -556,15 +546,15 @@ impl ClassCtx {
 
 impl ClassElem {
   fn normalize(&mut self) {
-    with_context(|x| x.normalize(self))
+    CTX.with(|ctx| ctx.borrow_mut().normalize(self))
   }
 
   fn reduce(&mut self) {
-    with_context(|x| x.reduce(self))
+    CTX.with(|ctx| ctx.borrow_mut().reduce(self))
   }
 
   fn square(&mut self) {
-    with_context(|x| x.square(self))
+    CTX.with(|ctx| ctx.borrow_mut().square(self))
   }
 
   fn discriminant(&self, d: &mut Mpz) -> Mpz {
@@ -578,16 +568,14 @@ impl ClassElem {
 
   fn validate(&self) -> bool {
     let mut d = Mpz::default();
-    &self.discriminant(&mut d);
+    self.discriminant(&mut d);
     d == *ClassGroup::rep()
   }
 
   // expects normalized element
   fn is_reduced(&self) -> bool {
-    !(self.a.cmp(&self.c) > 0 || (self.a.cmp(&self.c) == 0 && self.b.cmp_si(0) < 0))
+    !(self.a > self.c || (self.a == self.c && self.b.cmp_si(0) < 0))
   }
-  //TODO: replace after test starts working
-  // !(self.a > self.c || (self.a == self.c && self.b.cmp_si(0) < 0))
 
   fn is_normalized(&self, ctx: &mut ClassCtx) -> bool {
     ctx.negative_a.neg(&self.a);
@@ -631,11 +619,13 @@ impl Group for ClassGroup {
   type Elem = ClassElem;
 
   fn op_(_: &Mpz, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    with_context(|ctx| ctx.op(x, y))
+    CTX.with(|ctx| ctx.borrow_mut().op(x, y))
+    //  with_context(|ctx| ctx.op(x, y))
   }
 
   fn id_(d: &Mpz) -> ClassElem {
-    with_context(|ctx| ctx.id(d))
+    CTX.with(|ctx| ctx.borrow_mut().id(d))
+    //  with_context(|ctx| ctx.id(d))
   }
 
   fn inv_(_: &Mpz, x: &ClassElem) -> ClassElem {
@@ -647,7 +637,8 @@ impl Group for ClassGroup {
   }
 
   fn exp_(d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
-    with_context(|ctx| {
+    CTX.with(|ctx| {
+      let mut ctx = ctx.borrow_mut();
       let (mut val, mut a, mut n) = {
         if *n < int(0) {
           (ctx.id(d), Self::inv(a), int(-n))
@@ -701,7 +692,6 @@ impl Hash for ClassElem {
   }
 }
 
-// TODO: This just returns (0,0,0) right now
 impl<T> ElemFrom<(T, T, T)> for ClassGroup
 where
   Mpz: From<T>,
@@ -882,7 +872,7 @@ mod tests {
 
   #[test]
   fn test_reduce_basic() {
-    let mut to_reduce = construct_raw_elem_from_strings(
+    let to_reduce = construct_raw_elem_from_strings(
       "59162244921619725812008939143220718157267937427074598447911241410131470159247784852210767449\
       675610037288729551814191198624164179866076352187405442496568188988272422133088755036699145362\
       385840772236403043664778415471196678638241785773530531198720497580622741709880533724904220122\
