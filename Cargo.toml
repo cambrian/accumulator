@@ -15,12 +15,12 @@ repository = "https://github.com/1protocol/accumulator"
 
 [dependencies]
 blake2-rfc = "0.2.18"
-curve25519-dalek = "1.0.3"
+curve25519-dalek = "1.1.2"
 lazy_static = "1.2.0"
 rug = "1.3.0"
 
 [dev-dependencies]
-criterion = "0.2.9"
+criterion = "0.2.10"
 rand = "0.6.5"
 
 [[bench]]
@@ -29,13 +29,13 @@ path = "benches/accumulator/add.rs"
 harness = false
 
 [[bench]]
-name = "delete"
-path = "benches/accumulator/delete.rs"
+name = "comparison"
+path = "benches/group/comparison.rs"
 harness = false
 
 [[bench]]
-name = "comparison"
-path = "benches/group/comparison.rs"
+name = "delete"
+path = "benches/accumulator/delete.rs"
 harness = false
 
 [[bench]]
