@@ -42,12 +42,12 @@ pub fn passes_miller_rabin_base_2(n: &Integer) -> bool {
 }
 
 /// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
-/// factorization of n-1). Selects parameters d, p, q according to Selfridge's method.
-/// Cf. https://en.wikipedia.org/wiki/Lucas_pseudoprime
-/// If n passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
+/// factorization of `n-1`). Selects parameters `d`, `p`, `q` according to Selfridge's method.
+/// Cf. [Lucas pseudoprime](https://en.wikipedia.org/wiki/Lucas_pseudoprime) on Wikipedia
+/// If `n` passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
 /// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
 /// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
-/// Filters perfect squares as part of choose_d.
+/// Filters perfect squares as part of `choose_d`.
 fn passes_lucas(n: &Integer) -> bool {
   let d_res = choose_d(&n);
   if d_res.is_err() {
@@ -71,13 +71,14 @@ fn passes_lucas(n: &Integer) -> bool {
 #[derive(Debug)]
 struct IsPerfectSquare();
 
-/// Finds and returns first D in [5, -7, 9, ..., 5 + 2 * max_iter] for which Jacobi symbol (D/n) =
-/// -1, or None if no such D exists. In the case that n is square, there is no such D even with
-/// max_iter infinite. Hence if you are not precisely sure that n is nonsquare, you should pass a
-/// low value to max_iter to avoid wasting too much time. Note that the average number of iterations
-/// required for nonsquare n is 1.8, and empirically we find it is extremely rare that |d| > 13.
+/// Finds and returns first `D` in `[5, -7, 9, ..., 5 + 2 * max_iter]` for which Jacobi symbol
+/// `(D/n) = -1`, or None if no such `D` exists. In the case that `n` is square, there is no such
+/// `D` even with `max_iter` infinite. Hence if you are not precisely sure that `n` is nonsquare,
+/// you should pass a low value to `max_iter` to avoid wasting too much time. Note that the average
+/// number of iterations required for nonsquare `n` is 1.8, and empirically we find it is extremely
+/// rare that `|d| > 13`.
 ///
-/// We experimented with postponing the is_perfect_square check until after some number of
+/// We experimented with postponing the `is_perfect_square` check until after some number of
 /// iterations but ultimately found no performance gain. It is likely that most perfect squares
 /// are caught by the Miller-Rabin test.
 fn choose_d(n: &Integer) -> Result<Integer, IsPerfectSquare> {
@@ -93,11 +94,11 @@ fn choose_d(n: &Integer) -> Result<Integer, IsPerfectSquare> {
   panic!("n is not square but we still couldn't find a d value!")
 }
 
-/// Computes the Lucas sequences {u_i(p, q)} and {v_i(p, q)} up to a specified index k_target in
-/// O(log(k_target)) time by recursively calculating only the (2i)th and (2i+1)th elements in an
-/// order determined by the binary expansion of k. Also returns q^{k/2} (mod n), which is used in
-/// a stage of the strong Lucas test. In the Lucas case we specify that d = p^2 - 4q and set
-/// k_target = delta = n - (d/n) = n + 1.
+/// Computes the Lucas sequences `{u_i(p, q)}` and `{v_i(p, q)}` up to a specified index `k_target`
+/// in O(log(`k_target`)) time by recursively calculating only the `(2i)`th and `(2i+1)`th elements
+/// in an order determined by the binary expansion of `k`. Also returns `q^{k/2} (mod n)`, which is
+/// used in a stage of the strong Lucas test. In the Lucas case we specify that `d = p^2 - 4q` and
+/// set `k_target = delta = n - (d/n) = n + 1`.
 fn compute_lucas_sequences(
   k_target: &Integer,
   n: &Integer,
@@ -111,10 +112,10 @@ fn compute_lucas_sequences(
   let mut v_k = v_1.clone();
   let mut q_k = q.clone();
   let mut q_k_over_2 = q.clone();
-  let mut u_old = Integer::new(); // ugly performance hack
+  let mut u_old = Integer::new(); // Ugly performance hack.
 
-  // Finds t in Z_n with 2t = x (mod n)
-  // assumes x in 0..n
+  // Finds t in Z_n with 2t = x (mod n).
+  // Assumes x in 0..n
   let half = |x: Integer| {
     if x.is_odd() {
       (x + n) / 2
@@ -133,7 +134,7 @@ fn compute_lucas_sequences(
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
     u_k = (u_k * &v_k) % n;
-    // we use *= for squaring to avoid the performance penalty of unboxing a MulIncomplete
+    // We use *= for squaring to avoid the performance penalty of unboxing a MulIncomplete.
     v_k *= v_k.clone();
     v_k = (v_k - 2 * &q_k) % n;
     // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
@@ -185,8 +186,8 @@ mod tests {
     // Should fail on p = 2.
     for &sp in SMALL_PRIMES[1..].iter() {
       assert!(passes_lucas(&int(sp)));
-      // Note: The factor cannot be in SMALL_PRIMES or this test will fail because `choose_d` fails
-      // on square numbers.
+      // Note: The factor cannot be in `SMALL_PRIMES` or this test will fail because `choose_d`
+      // fails on square numbers.
       assert!(!passes_lucas(&(int(sp) * 2047)));
     }
     for &mp in MED_PRIMES.iter() {
@@ -206,7 +207,6 @@ mod tests {
     assert!(is_prob_prime(&int(5)));
     assert!(is_prob_prime(&int(7)));
     assert!(is_prob_prime(&int(241)));
-    // assert!(false);
     assert!(is_prob_prime(&int(7919)));
     assert!(is_prob_prime(&int(48131)));
     assert!(is_prob_prime(&int(76463)));

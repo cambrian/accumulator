@@ -4,10 +4,11 @@ use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(clippy::stutter)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Rsa2048 {}
 
-/// RSA-2048 modulus, taken from https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048.
+/// RSA-2048 modulus, taken from [Wikipedia](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
 const RSA2048_MODULUS_DECIMAL: &str = "25195908475657893494027183240048398571429282126204032027777\
                                        13783604366202070759555626401852588078440691829064124951508\
                                        21892985591491761845028084891200728449926873928072877767359\
@@ -25,6 +26,7 @@ lazy_static! {
   pub static ref HALF_MODULUS: Integer = RSA2048_MODULUS.clone() / 2;
 }
 
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Rsa2048Elem(Integer);
 
@@ -38,17 +40,17 @@ impl TypeRep for Rsa2048 {
 impl Group for Rsa2048 {
   type Elem = Rsa2048Elem;
   fn op_(modulus: &Integer, a: &Rsa2048Elem, b: &Rsa2048Elem) -> Rsa2048Elem {
-    Rsa2048::elem(int(&a.0 * &b.0) % modulus)
+    Self::elem(int(&a.0 * &b.0) % modulus)
   }
   fn id_(_: &Integer) -> Rsa2048Elem {
-    Rsa2048::elem(1)
+    Self::elem(1)
   }
   fn inv_(modulus: &Integer, x: &Rsa2048Elem) -> Rsa2048Elem {
-    Rsa2048::elem(x.0.invert_ref(modulus).unwrap())
+    Self::elem(x.0.invert_ref(modulus).unwrap())
   }
   fn exp_(modulus: &Integer, x: &Rsa2048Elem, n: &Integer) -> Rsa2048Elem {
     // A side-channel resistant impl is 40% slower; we'll consider it in the future if we need to.
-    Rsa2048::elem(x.0.pow_mod_ref(n, modulus).unwrap())
+    Self::elem(x.0.pow_mod_ref(n, modulus).unwrap())
   }
 }
 
@@ -69,7 +71,7 @@ where
 
 impl UnknownOrderGroup for Rsa2048 {
   fn unknown_order_elem_(_: &Integer) -> Rsa2048Elem {
-    Rsa2048::elem(2)
+    Self::elem(2)
   }
 }
 
@@ -90,7 +92,7 @@ mod tests {
     assert!(b == Rsa2048::elem(6));
   }
 
-  /// Tests that -x and x are treated as the same element.
+  /// Tests that `-x` and `x` are treated as the same element.
   #[test]
   fn test_cosets() {
     assert!(Rsa2048::elem(3) == Rsa2048::elem(RSA2048_MODULUS.clone() - 3));

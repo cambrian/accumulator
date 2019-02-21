@@ -1,13 +1,15 @@
 use gmp_mpfr_sys::gmp::{
-  mpz_add, mpz_cmp, mpz_cmp_si, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext,
-  mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub,
-  mpz_t, mpz_sgn, mpz_submul, mpz_set_si, mpz_odd_p, mpz_root, mpz_fits_slong_p, mpz_divexact, mpz_get_si, mpz_fdiv_r, mpz_cdiv_r, mpz_cdiv_q, mpz_cmpabs, mpz_add_ui, mpz_abs
+  mpz_abs, mpz_add, mpz_add_ui, mpz_cdiv_q, mpz_cdiv_r, mpz_cmp, mpz_cmp_si, mpz_cmpabs,
+  mpz_divexact, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_fdiv_r, mpz_fits_slong_p, mpz_gcd,
+  mpz_gcdext, mpz_get_si, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_odd_p, mpz_root,
+  mpz_set, mpz_set_si, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_sub, mpz_submul, mpz_t,
 };
 
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
 use std::mem::uninitialized;
+use std::ops::Neg;
 use std::slice;
 use std::str::FromStr;
 

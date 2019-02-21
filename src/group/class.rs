@@ -9,15 +9,8 @@ use std::str::FromStr;
 
 include!("/Users/hal/workspace/vest/accumulator/src/group/flint_bindings.rs");
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ClassGroup {}
-
-// REVIEW: It appears that this group implementation always expects its elements to be reduced.
-// However, the type signature fn reduce(&mut self) implies that there is a valid representation
-// for un-reduced elements. This is suboptimal. Can you restructure the code in such a way that
-// ClassElem instances are only created for valid elements? Likewise for normalize.
-// Hint: change reduce to look something like
-// fn reduce(a: Integer, b: Integer, c: Integer) -> ClassElem { ... }
 
 // 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
 
@@ -70,11 +63,9 @@ impl Clone for ClassElem {
 
 impl PartialEq for ClassElem {
   fn eq(&self, other: &ClassElem) -> bool {
-    let mut r_self = self.clone();
-    let mut r_other = other.clone();
-    r_self.reduce();
-    r_other.reduce();
-    r_self.a == r_other.a && r_self.b == r_other.b && r_self.c == r_other.c
+    // ClassElems only ever exist in reduced form, unless manually
+    // instantiated with ClassElem {...}
+    self.a == other.a && self.b == other.b && self.c == other.c
   }
 }
 
@@ -217,59 +208,81 @@ impl Default for ClassCtx {
 }
 
 impl ClassCtx {
-  fn normalize(&mut self, x: &mut ClassElem) {
-    if x.is_normalized(self) {
-      return;
-    }
+  fn normalize_(&mut self, a: &mut Mpz, b: &mut Mpz, c: &mut Mpz) {
     // r = floor_div((a - b), 2a)
     // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
-    self.r.sub(&x.a, &x.b);
-    self.denom.mul_ui(&x.a, 2);
+    self.r.sub(&a, &b);
+    self.denom.mul_ui(&a, 2);
     self.r.floor_div_mut(&self.denom);
 
-    self.old_b.set(&x.b);
+    self.old_b.set(&b);
 
-    self.ra.mul(&self.r, &x.a);
-    x.b.add_mut(&self.ra);
-    x.b.add_mut(&self.ra);
+    self.ra.mul(&self.r, &a);
+    b.add_mut(&self.ra);
+    b.add_mut(&self.ra);
 
     self.ra.mul_mut(&self.r);
-    x.c.add_mut(&self.ra);
+    c.add_mut(&self.ra);
 
     self.ra.set(&self.r);
     self.ra.mul_mut(&self.old_b);
-    x.c.add_mut(&self.ra);
+    c.add_mut(&self.ra);
   }
 
-  fn reduce(&mut self, x: &mut ClassElem) {
-    self.normalize(x);
-    while !x.is_reduced() {
+  fn normalize_mut(&mut self, x: &mut ClassElem) {
+    if ClassElem::is_normal(&x.a, &x.b, &x.c) {
+      return;
+    }
+    self.normalize_(&mut x.a, &mut x.b, &mut x.c);
+  }
+
+  fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> ClassElem {
+    if ClassElem::is_normal(&a, &b, &c) {
+      return ClassElem { a, b, c };
+    }
+    self.normalize_(&mut a, &mut b, &mut c);
+    ClassElem { a, b, c }
+  }
+
+  fn reduce_(&mut self, elem: &mut ClassElem) {
+    while !ClassElem::is_reduced(&elem.a, &elem.b, &elem.c) {
       // s = floor_div(c + b, 2c)
-      self.s.add(&x.c, &x.b);
+      self.s.add(&elem.c, &elem.b);
       // x = 2c
-      self.x.mul_ui(&x.c, 2);
+      self.x.mul_ui(&elem.c, 2);
       self.s.floor_div_mut(&self.x);
-      self.old_a.set(&x.a);
-      self.old_b.set(&x.b);
-      x.a.set(&x.c);
-      x.b.neg_mut();
+      self.old_a.set(&elem.a);
+      self.old_b.set(&elem.b);
+      elem.a.set(&elem.c);
+      elem.b.neg_mut();
       // x = 2sc
-      self.x.mul(&self.s, &x.c);
+      self.x.mul(&self.s, &elem.c);
       self.x.mul_ui_mut(2);
       // b = 2sc - b
-      x.b.add_mut(&self.x);
+      elem.b.add_mut(&self.x);
 
       // c = cs^2
-      x.c.mul_mut(&self.s);
-      x.c.mul_mut(&self.s);
+      elem.c.mul_mut(&self.s);
+      elem.c.mul_mut(&self.s);
       // x = bs
       self.x.mul(&self.old_b, &self.s);
       // c -= bs
-      x.c.sub_mut(&self.x);
+      elem.c.sub_mut(&self.x);
       // c += a
-      x.c.add_mut(&self.old_a);
+      elem.c.add_mut(&self.old_a);
     }
-    self.normalize(x);
+  }
+
+  fn reduce(&mut self, a: Mpz, b: Mpz, c: Mpz) -> ClassElem {
+    let mut elem = self.normalize(a, b, c);
+    self.reduce_(&mut elem);
+    self.normalize(elem.a, elem.b, elem.c)
+  }
+
+  fn reduce_mut(&mut self, x: &mut ClassElem) {
+    self.normalize_mut(x);
+    self.reduce_(x);
+    self.normalize_mut(x);
   }
 
   fn square(&mut self, x: &mut ClassElem) {
@@ -296,7 +309,7 @@ impl ClassCtx {
     x.c.mul(&self.mu, &self.mu);
     x.c.sub_mut(&self.m);
 
-    self.reduce(x);
+    self.reduce_mut(x);
   }
 
   #[allow(non_snake_case)]
@@ -442,7 +455,7 @@ impl ClassCtx {
     x.b.add_mut(&x.c);
     x.a.sub_mul(&self.ay_square_opt, &self.dy_square_opt);
     x.c.sub_mul(&self.ax_square_opt, &self.dx_square_opt);
-    self.reduce(x);
+    self.reduce_mut(x);
   }
 
   fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
@@ -526,7 +539,7 @@ impl ClassCtx {
     ret.c.mul(&self.k, &self.l);
     self.a.mul(&self.j, &self.m);
     ret.c.sub_mut(&self.a);
-    self.reduce(&mut ret);
+    ret = self.reduce(ret.a, ret.b, ret.c);
     ret
   }
 
@@ -545,15 +558,15 @@ impl ClassCtx {
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
 impl ClassElem {
-  fn normalize(&mut self) {
-    CTX.with(|ctx| ctx.borrow_mut().normalize(self))
+  pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> ClassElem {
+    CTX.with(|ctx| ctx.borrow_mut().normalize(a, b, c))
   }
 
-  fn reduce(&mut self) {
-    CTX.with(|ctx| ctx.borrow_mut().reduce(self))
+  pub fn reduce(a: Mpz, b: Mpz, c: Mpz) -> ClassElem {
+    CTX.with(|ctx| ctx.borrow_mut().reduce(a, b, c))
   }
 
-  fn square(&mut self) {
+  pub fn square(&mut self) {
     CTX.with(|ctx| ctx.borrow_mut().square(self))
   }
 
@@ -573,31 +586,14 @@ impl ClassElem {
   }
 
   // expects normalized element
-  fn is_reduced(&self) -> bool {
-    !(self.a > self.c || (self.a == self.c && self.b.cmp_si(0) < 0))
+  fn is_reduced(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
   }
 
-  fn is_normalized(&self, ctx: &mut ClassCtx) -> bool {
-    ctx.negative_a.neg(&self.a);
-    self.b > ctx.negative_a && self.b <= self.a
-  }
-
-  #[inline]
-  #[cfg(feature = "benchmark")]
-  pub fn bench_square(&mut self) {
-    self.square()
-  }
-
-  #[inline]
-  #[cfg(feature = "benchmark")]
-  pub fn bench_normalize(&mut self) {
-    self.normalize()
-  }
-
-  #[inline]
-  #[cfg(feature = "benchmark")]
-  pub fn bench_reduce(&mut self) {
-    self.reduce()
+  fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
+    let mut neg_a = Mpz::default();
+    neg_a.neg(a);
+    &neg_a < b && b <= a
   }
 
   #[cfg(feature = "benchmark")]
@@ -679,12 +675,13 @@ impl UnknownOrderGroup for ClassGroup {
     ret.c.sub_mut(&d);
     ret.c.floor_div_ui_mut(8);
 
-    ret.reduce();
-    ret
+    ClassElem::reduce(ret.a, ret.b, ret.c)
   }
 }
 
 impl Hash for ClassElem {
+  // Assumes ClassElem is reduced and normalized, which will be the case unless
+  // a struct is insantiated manually in this module.
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.a.hash(state);
     self.b.hash(state);
@@ -697,11 +694,7 @@ where
   Mpz: From<T>,
 {
   fn elem(t: (T, T, T)) -> ClassElem {
-    let mut class_elem = ClassElem {
-      a: Mpz::from(t.0),
-      b: Mpz::from(t.1),
-      c: Mpz::from(t.2),
-    };
+    let class_elem = ClassElem::reduce(Mpz::from(t.0), Mpz::from(t.1), Mpz::from(t.2));
 
     // Ideally, this should return an error and the
     // return type of ElemFrom should be Result<Self::Elem, Self:err>,
@@ -710,7 +703,6 @@ where
     // elements, so an invalid ElemFrom here should signal a severe internal error.
     assert!(class_elem.validate());
 
-    class_elem.reduce();
     class_elem
   }
 }
@@ -808,16 +800,19 @@ mod tests {
       16229851064188563419476497892884550353389340326220747256139"
     );
 
-    assert!(not_reduced == reduced_ground_truth);
+    assert!(not_reduced != reduced_ground_truth);
     assert!(not_reduced == not_reduced.clone());
     assert!(reduced_ground_truth == reduced_ground_truth.clone());
     assert!(not_reduced != diff_elem);
     assert!(reduced_ground_truth != diff_elem);
+
+    let not_reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
+    assert!(not_reduced == reduced_ground_truth);
   }
 
   #[test]
   fn test_hash() {
-    let mut not_reduced = construct_raw_elem_from_strings(
+    let not_reduced = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -829,7 +824,7 @@ mod tests {
       9057462766047140854869124473221137588347335081555186814207"
     );
 
-    let mut reduced_ground_truth = construct_raw_elem_from_strings(
+    let reduced_ground_truth = construct_raw_elem_from_strings(
       "16",
       "9",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -855,17 +850,23 @@ mod tests {
 
     let mut hasher_lh = DefaultHasher::new();
     let mut hasher_rh = DefaultHasher::new();
-    not_reduced.reduce();
-    reduced_ground_truth.reduce();
     not_reduced.hash(&mut hasher_lh);
     reduced_ground_truth.hash(&mut hasher_rh);
-    assert!(hasher_lh.finish() == hasher_rh.finish());
+
+    assert!(hasher_lh.finish() != hasher_rh.finish());
     assert!(hasher_lh.finish() == hasher_lh.finish());
     assert!(hasher_rh.finish() == hasher_rh.finish());
 
     hasher_lh = DefaultHasher::new();
     hasher_rh = DefaultHasher::new();
-    not_reduced.hash(&mut hasher_lh);
+    let reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
+    reduced.hash(&mut hasher_lh);
+    reduced_ground_truth.hash(&mut hasher_rh);
+    assert!(hasher_lh.finish() == hasher_rh.finish());
+
+    hasher_lh = DefaultHasher::new();
+    hasher_rh = DefaultHasher::new();
+    reduced.hash(&mut hasher_lh);
     diff_elem.hash(&mut hasher_rh);
     assert!(hasher_lh.finish() != hasher_rh.finish());
   }
@@ -904,8 +905,10 @@ mod tests {
       614456845205980227091403964285870107268917183244016635907926846271829374679124848388403486656\
       1564478239095738726823372184204"
     );
-    // Equality checking should be defined to reduce
-    assert_eq!(to_reduce, reduced_ground_truth);
+
+    assert_ne!(to_reduce, reduced_ground_truth);
+    let reduced = ClassElem::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
+    assert_eq!(reduced, reduced_ground_truth);
     let already_reduced = reduced_ground_truth.clone();
     assert_eq!(already_reduced, reduced_ground_truth);
   }
@@ -937,7 +940,7 @@ mod tests {
        9945629057462766047140854869124473221137588347335081555186814036",
     );
 
-    unnormalized.normalize();
+    unnormalized = ClassElem::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
     assert_eq!(normalized_ground_truth, unnormalized);
   }
 
