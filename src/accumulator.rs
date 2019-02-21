@@ -4,7 +4,7 @@
 //! that you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
 use crate::proof::{Poe, Poke2};
-use crate::util::{int, shamir_trick};
+use crate::util::{divide_and_conquer, int, shamir_trick};
 use rug::Integer;
 
 #[derive(Debug)]
@@ -40,7 +40,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Accumulator(G::unknown_order_elem())
   }
 
-  // Computes `self ^ (numerator / denominator)`.
+  /// Computes `self ^ (numerator / denominator)`.
   pub fn exp_quotient(self, numerator: Integer, denominator: Integer) -> Result<Self, AccError> {
     if denominator == int(0) {
       return Err(AccError::DivisionByZero);
@@ -74,28 +74,34 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
+  /// Uses a divide-and-conquer approach to running the ShamirTrick, which keeps the average input
+  /// smaller: For `[a, b, c, d]` do `S(S(a, b), S(c, d))` instead of `S(S(S(a, b), c), d)`.
   pub fn delete(
     self,
     elem_witnesses: &[(Integer, Self)],
   ) -> Result<(Self, MembershipProof<G>), AccError> {
-    let mut elem_aggregate = int(1);
-    let mut acc_next = self.0.clone();
-
     for (elem, witness) in elem_witnesses {
       if G::exp(&witness.0, elem) != self.0 {
         return Err(AccError::BadWitness);
       }
-
-      acc_next = shamir_trick::<G>(&acc_next, &witness.0, &elem_aggregate, elem)
-        .ok_or(AccError::InputsNotCoprime)?;
-      elem_aggregate *= elem;
     }
 
-    let poe_proof = Poe::<G>::prove(&acc_next, &elem_aggregate, &self.0);
+    let (elem_aggregate, acc_next) = divide_and_conquer(
+      |(e1, w1), (e2, w2)| {
+        Ok((
+          int(e1 * e2),
+          Accumulator(shamir_trick::<G>(&w1.0, &w2.0, e1, e2).ok_or(AccError::InputsNotCoprime)?),
+        ))
+      },
+      (int(1), self.clone()),
+      elem_witnesses,
+    )?;
+
+    let poe_proof = Poe::<G>::prove(&acc_next.0, &elem_aggregate, &self.0);
     Ok((
-      Accumulator(acc_next.clone()),
+      acc_next.clone(),
       MembershipProof {
-        witness: Accumulator(acc_next),
+        witness: acc_next,
         proof: poe_proof,
       },
     ))
@@ -224,6 +230,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 }
 
+// TODO: Clean up tests.
 #[cfg(test)]
 mod tests {
   use super::*;
