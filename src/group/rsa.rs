@@ -42,12 +42,15 @@ impl Group for Rsa2048 {
   fn op_(modulus: &Integer, a: &Rsa2048Elem, b: &Rsa2048Elem) -> Rsa2048Elem {
     Self::elem(int(&a.0 * &b.0) % modulus)
   }
+
   fn id_(_: &Integer) -> Rsa2048Elem {
     Self::elem(1)
   }
+
   fn inv_(modulus: &Integer, x: &Rsa2048Elem) -> Rsa2048Elem {
     Self::elem(x.0.invert_ref(modulus).unwrap())
   }
+
   fn exp_(modulus: &Integer, x: &Rsa2048Elem, n: &Integer) -> Rsa2048Elem {
     // A side-channel resistant impl is 40% slower; we'll consider it in the future if we need to.
     Self::elem(x.0.pow_mod_ref(n, modulus).unwrap())

@@ -35,8 +35,9 @@ pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
 }
 
 /// Hashes t with an incrementing counter (with blake2b) until a prime is found.
+#[allow(clippy::stutter)]
 pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
-  let mut counter = 0u64;
+  let mut counter = 0_u64;
   loop {
     let mut hash = hash(&Blake2b::default, &(t, counter));
     // Make the candidate prime odd. This gives ~7% performance gain on a 2018 Macbook Pro.

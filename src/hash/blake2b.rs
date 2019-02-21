@@ -1,4 +1,4 @@
-//! GeneralHasher interface for blake2_rfc.
+//! `GeneralHasher` interface for `blake2_rfc`.
 use super::GeneralHasher;
 use blake2_rfc::blake2b::Blake2b as Blake2b_;
 use std::hash::Hasher;

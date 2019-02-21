@@ -1,4 +1,6 @@
 //! Zero-allocation U256 and U512 types built on GMP.
+#![allow(clippy::cast_sign_loss)]
+
 use gmp_mpfr_sys::gmp;
 use gmp_mpfr_sys::gmp::mpz_t;
 use rug::integer::Order;
@@ -13,7 +15,7 @@ macro_rules! u_types {
     $(
       #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
       pub struct $t {
-        // size also denotes the sign of the number, while limbs reflect only the magnitude.
+        // Size also denotes the sign of the number, while limbs reflect only the magnitude.
         // We keep size >= 0 except in very rare circumstances.
         size: i64,
         limbs: [u64; $size],
@@ -23,6 +25,7 @@ macro_rules! u_types {
         fn data(&self) -> *mut u64 {
           &self.limbs as *const u64 as *mut u64
         }
+
         fn normalize_size(&mut self) {
           self.size = 0;
           for i in (0..$size).rev() {
@@ -32,6 +35,9 @@ macro_rules! u_types {
             }
           }
         }
+
+        // TODO: Add a check for the rare possibility of truncation?
+        #[allow(clippy::cast_possible_truncation)]
         fn as_mpz(&self) -> mpz_t {
           mpz_t {
             size: self.size as i32,
@@ -39,12 +45,15 @@ macro_rules! u_types {
             alloc: $size,
           }
         }
+
         pub fn zero() -> Self {
           Self { size: 0, limbs: [0; $size] }
         }
+
         pub fn is_zero(&self) -> bool {
           self.size == 0
         }
+
         pub fn one() -> Self {
           let mut limbs = [0; $size];
           limbs[0] = 1;
@@ -55,6 +64,7 @@ macro_rules! u_types {
           self.limbs[0] & 1 == 1
         }
 
+        #[allow(clippy::if_not_else)]
         pub fn mod_inv(self, m: &Self) -> Option<Self> {
           let mut out = Self::zero();
           let outmpz = out.as_mpz();
@@ -108,7 +118,7 @@ macro_rules! u_types {
           divisible != 0
         }
 
-        /// panics if buf is not large enough
+        /// Panics if `buf` is not large enough.
         pub fn write_binary(&self, buf: &mut [u8]) -> usize {
           unsafe { gmp::mpn_get_str(mut_ptr(&buf[0]), 2, self.data(), self.size) }
         }
@@ -142,7 +152,7 @@ macro_rules! u_types {
         }
       }
 
-      /// Lower-endian bytes
+      /// Lower-endian `bytes`.
       impl From<[u8; $size * 8]> for $t {
         fn from(bytes: [u8; $size * 8]) -> Self {
           let chunks = unsafe { transmute::<[u8; $size * 8], [[u8; 8]; $size]>(bytes) };
@@ -154,7 +164,7 @@ macro_rules! u_types {
         }
       }
 
-      /// Lower-endian bytes
+      /// Lower-endian `bytes`.
       impl From<&[u8; $size * 8]> for $t {
         fn from(bytes: &[u8; $size * 8]) -> Self {
           let chunks = unsafe { transmute::<[u8; $size * 8], [[u8; 8]; $size]>(*bytes) };
@@ -235,7 +245,7 @@ macro_rules! u_types {
       }
 
       impl ops::AddAssign for $t {
-        /// panics if result overflows.
+        /// Panics if result overflows.
         fn add_assign(&mut self, x: Self) {
           let carry = unsafe { gmp::mpn_add_n(self.data(), self.data(), x.data(), $size) };
           assert!(carry == 0);
@@ -244,7 +254,7 @@ macro_rules! u_types {
       }
 
       impl ops::Add for $t {
-        /// panics if result overflows.
+        /// Panics if result overflows.
         type Output = Self;
         fn add(self, x: Self) -> Self {
           let mut y = self;
@@ -254,14 +264,14 @@ macro_rules! u_types {
       }
       impl ops::Add<u64> for $t {
         type Output = Self;
-        /// panics if result overflows.
+        /// Panics if result overflows.
         fn add(self, x: u64) -> Self {
           self + Self::from(x)
         }
       }
 
       impl ops::SubAssign for $t {
-        /// panics if result is negative.
+        /// Panics if result is negative.
         fn sub_assign(&mut self, x: Self) {
           let borrow = unsafe { gmp::mpn_sub_n(self.data(), self.data(), x.data(), $size) };
           assert!(borrow == 0);
@@ -271,7 +281,7 @@ macro_rules! u_types {
 
       impl ops::Sub for $t {
         type Output = Self;
-        /// panics if result is negative.
+        /// Panics if result is negative.
         fn sub(self, x: Self) -> Self {
           let mut y = self;
           y -= x;
@@ -281,7 +291,7 @@ macro_rules! u_types {
 
       impl ops::Sub<u64> for $t {
         type Output = Self;
-        /// panics if result is negative.
+        /// Panics if result is negative.
         fn sub(self, x: u64) -> Self {
           self - Self::from(x)
         }
@@ -289,7 +299,7 @@ macro_rules! u_types {
 
       impl ops::Sub<u64> for &$t {
         type Output = $t;
-        /// panics if result is negative.
+        /// Panics if result is negative.
         fn sub(self, x: u64) -> $t {
           *self - $t::from(x)
         }
@@ -397,10 +407,10 @@ macro_rules! u_types {
 u_types!(U256, 4, U512, 8);
 
 impl U512 {
-  /// Returns the lower half of this U512 as a U256
-  /// TODO: make checked?
+  /// Returns the lower half of this U512 as a U256.
+  /// TODO: Make checked?
   pub fn low_u256(self) -> U256 {
-    let mut x = unsafe { transmute::<U512, (U256, [u64; 4])>(self) }.0;
+    let mut x = unsafe { transmute::<Self, (U256, [u64; 4])>(self) }.0;
     x.normalize_size();
     x
   }
@@ -410,7 +420,7 @@ impl From<&U256> for U512 {
   fn from(x: &U256) -> Self {
     let mut limbs = [0; 8];
     limbs[..4].copy_from_slice(&x.limbs);
-    U512 {
+    Self {
       size: x.size,
       limbs,
     }
@@ -430,7 +440,7 @@ impl ops::Rem<&U256> for U512 {
     if x.size > self.size {
       return self.low_u256();
     }
-    let (y, mut rem) = (U512::zero(), U256::zero());
+    let (y, mut rem) = (Self::zero(), U256::zero());
     unsafe {
       gmp::mpn_tdiv_qr(
         y.data(),
@@ -456,9 +466,9 @@ impl ops::Rem<U256> for U512 {
 }
 
 impl U256 {
-  /// returns (result of removing all fs, number of fs removed)
+  /// Returns (result of removing all `f`s, number of `f`s removed)
   pub fn remove_factor(self, f: Self) -> (Self, u64) {
-    // for some reason this needs extra scratch space
+    // For some reason this needs extra scratch space.
     let mut out = U512::zero();
     let outmpz = out.as_mpz();
     let s = self.as_mpz();
@@ -470,7 +480,7 @@ impl U256 {
 }
 
 /// It turns out to be faster to provide multiplication as U256 * U256 -> U512, because it lets us
-/// use mpn_mul_n instead of mpn_mul.
+/// use `mpn_mul_n` instead of `mpn_mul`.
 impl ops::Mul<&Self> for U256 {
   type Output = U512;
   fn mul(self, x: &Self) -> U512 {

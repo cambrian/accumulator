@@ -43,7 +43,7 @@ pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
 /// If `n` passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
 /// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
 /// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
-/// Filters perfect squares as part of choose_d.
+/// Filters perfect squares as part of `choose_d`.
 pub fn passes_lucas(n: &U256) -> bool {
   let d_ = choose_d(n);
   if d_.is_err() {
@@ -94,6 +94,7 @@ fn choose_d(n: &U256) -> Result<i32, IsPerfectSquare> {
 /// used in a stage of the strong Lucas test. In the Lucas case we specify that `d = p^2 - 4q` and
 /// set `k_target = delta = n - (d/n) = n + 1`.
 /// Note that `p` does not show up in the code because it is set to 1.
+#[allow(clippy::cast_sign_loss)]
 fn compute_lucas_sequences(
   k_target: U256,
   n: &U256,
@@ -102,7 +103,7 @@ fn compute_lucas_sequences(
   q0: i32,
   d: i32,
 ) -> (U256, U256, U256) {
-  // Mod an i32 into the [0,n) range
+  // Mod an i32 into the [0,n) range.
   let i_mod_n = |x: i32| {
     if x < 0 {
       *n - (u256(x.abs() as u64) % n)
@@ -115,8 +116,8 @@ fn compute_lucas_sequences(
   let mut q = q0;
   let mut q_k_over_2 = q0;
 
-  // Finds t in Z_n with 2t = x (mod n)
-  // assumes x in 0..n
+  // Finds t in Z_n with 2t = x (mod n).
+  // Assumes x in 0..n
   let half = |x: U256| {
     if x.is_odd() {
       (x >> 1) + (*n >> 1) + 1
