@@ -65,10 +65,8 @@ macro_rules! u_types {
         }
 
         #[allow(clippy::if_not_else)]
+        /// panics if m == 0.
         pub fn mod_inv(self, m: &Self) -> Option<Self> {
-          if m.is_zero() {
-            return None;
-          }
           let mut out = Self::zero();
           let outmpz = out.as_mpz();
           let s = self.as_mpz();
@@ -83,6 +81,7 @@ macro_rules! u_types {
           }
         }
 
+        /// panics if m == 0.
         pub fn pow_mod(self, e: Self, m: &Self) -> Self {
           let mut out = Self::zero();
           let outmpz = out.as_mpz();
