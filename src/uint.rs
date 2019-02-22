@@ -66,6 +66,9 @@ macro_rules! u_types {
 
         #[allow(clippy::if_not_else)]
         pub fn mod_inv(self, m: &Self) -> Option<Self> {
+          if m.is_zero() {
+            return None;
+          }
           let mut out = Self::zero();
           let outmpz = out.as_mpz();
           let s = self.as_mpz();
