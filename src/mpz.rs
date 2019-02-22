@@ -9,15 +9,15 @@ use std::cmp::Ordering;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
 use std::mem::uninitialized;
-use std::ops::Neg;
 use std::slice;
 use std::str::FromStr;
 
+#[allow(non_camel_case_types)]
 pub type mp_limb_t = ::std::os::raw::c_ulong;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct __mpz_struct {
+pub struct flint_mpz_struct {
   pub _mp_alloc: ::std::os::raw::c_int,
   pub _mp_size: ::std::os::raw::c_int,
   pub _mp_d: *mut mp_limb_t,
@@ -96,8 +96,18 @@ impl From<u64> for Mpz {
   }
 }
 
-impl From<__mpz_struct> for Mpz {
-  fn from(x: __mpz_struct) -> Self {
+impl From<&Mpz> for flint_mpz_struct {
+  fn from(x: &Mpz) -> Self {
+    flint_mpz_struct {
+      _mp_alloc: x.inner.alloc,
+      _mp_size: x.inner.size,
+      _mp_d: x.inner.d,
+    }
+  }
+}
+
+impl From<flint_mpz_struct> for Mpz {
+  fn from(x: flint_mpz_struct) -> Self {
     let mut ret = Mpz::default();
     ret.inner.alloc = x._mp_alloc;
     ret.inner.size = x._mp_size;

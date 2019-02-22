@@ -1,13 +1,12 @@
 //! Class Group implementation
+use super::ffi_flint;
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::mpz::{Mpz, __mpz_struct};
+use crate::mpz::{flint_mpz_struct, Mpz};
 use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
-
-include!("/Users/hal/workspace/vest/accumulator/src/group/flint_bindings.rs");
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ClassGroup {}
@@ -111,7 +110,6 @@ impl LinCongruenceCtx {
 
 #[allow(non_snake_case)]
 pub struct ClassCtx {
-  negative_a: Mpz,
   r: Mpz,
   denom: Mpz,
   old_b: Mpz,
@@ -157,7 +155,6 @@ pub struct ClassCtx {
 impl Default for ClassCtx {
   fn default() -> Self {
     let mut s = Self {
-      negative_a: Mpz::default(),
       r: Mpz::default(),
       denom: Mpz::default(),
       old_b: Mpz::default(),
@@ -315,31 +312,31 @@ impl ClassCtx {
   #[allow(non_snake_case)]
   fn square_help_flint(ctx: &mut ClassCtx) {
     unsafe {
-      let mut fy: fmpz = 0;
-      let mut fx: fmpz = 0;
-      let mut fby: fmpz = 0;
-      let mut fbx: fmpz = 0;
-      let mut fL: fmpz = 0;
+      let mut fy: ffi_flint::fmpz = 0;
+      let mut fx: ffi_flint::fmpz = 0;
+      let mut fby: ffi_flint::fmpz = 0;
+      let mut fbx: ffi_flint::fmpz = 0;
+      let mut fL: ffi_flint::fmpz = 0;
 
-      let mut y_square_clone: __mpz_struct = __mpz_struct::from(&ctx.y_square_opt);
-      let mut x_square_clone: __mpz_struct = __mpz_struct::from(&ctx.x_square_opt);
-      let mut by_square_clone: __mpz_struct = __mpz_struct::from(&ctx.by_square_opt);
-      let mut bx_square_clone: __mpz_struct = __mpz_struct::from(&ctx.bx_square_opt);
-      let mut L_square_clone: __mpz_struct = __mpz_struct::from(&ctx.L_square_opt);
+      let mut y_square_clone = flint_mpz_struct::from(&ctx.y_square_opt);
+      let mut x_square_clone = flint_mpz_struct::from(&ctx.x_square_opt);
+      let mut by_square_clone = flint_mpz_struct::from(&ctx.by_square_opt);
+      let mut bx_square_clone = flint_mpz_struct::from(&ctx.bx_square_opt);
+      let mut L_square_clone = flint_mpz_struct::from(&ctx.L_square_opt);
 
-      fmpz_set_mpz(&mut fy, &mut y_square_clone);
-      fmpz_set_mpz(&mut fx, &mut x_square_clone);
-      fmpz_set_mpz(&mut fby, &mut by_square_clone);
-      fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
-      fmpz_set_mpz(&mut fL, &mut L_square_clone);
+      ffi_flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
+      ffi_flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);
+      ffi_flint::fmpz_set_mpz(&mut fby, &mut by_square_clone);
+      ffi_flint::fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
+      ffi_flint::fmpz_set_mpz(&mut fL, &mut L_square_clone);
 
       // Flint Lehmer partial extended GCD.
-      fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
+      ffi_flint::fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
 
-      fmpz_get_mpz(&mut y_square_clone, &mut fy);
-      fmpz_get_mpz(&mut x_square_clone, &mut fx);
-      fmpz_get_mpz(&mut by_square_clone, &mut fby);
-      fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
+      ffi_flint::fmpz_get_mpz(&mut y_square_clone, &mut fy);
+      ffi_flint::fmpz_get_mpz(&mut x_square_clone, &mut fx);
+      ffi_flint::fmpz_get_mpz(&mut by_square_clone, &mut fby);
+      ffi_flint::fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
 
       ctx.y_square_opt = Mpz::from(y_square_clone);
       ctx.x_square_opt = Mpz::from(x_square_clone);
@@ -593,7 +590,7 @@ impl ClassElem {
   fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
     let mut neg_a = Mpz::default();
     neg_a.neg(a);
-    &neg_a < b && b <= a
+    neg_a < *b && b <= a
   }
 
   #[cfg(feature = "benchmark")]
