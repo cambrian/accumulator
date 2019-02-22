@@ -1,4 +1,8 @@
-use crate::util::int;
+// TODO: Consider conditional compilation of the old Rug-based version of `hash_to_prime`, just in
+// case some users are categorically opposed to our `unsafe` blocks. Of course, Rug also uses
+// `unsafe` under the hood, but has a much wider user base to catch potential pitfalls.
+use crate::uint::u256;
+use rug::integer::Order;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
@@ -30,31 +34,23 @@ pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -
 
 /// Calls `hash` with Blake2b hasher.
 pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
-  hash(&Blake2b::default, t)
+  Integer::from_digits(&hash(&Blake2b::default, t), Order::Msf)
 }
 
-/// Hashes `t` with an incrementing counter until a prime is found.
+/// Hashes t with an incrementing counter (with blake2b) until a prime is found.
 #[allow(clippy::stutter)]
-pub fn hash_to_prime_<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> Integer
-where
-  Integer: From<H::Output>,
-{
+pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
   let mut counter = 0_u64;
   loop {
-    let mut candidate_prime = int(hash(new_hasher, &(t, counter)));
+    let mut hash = hash(&Blake2b::default, &(t, counter));
     // Make the candidate prime odd. This gives ~7% performance gain on a 2018 Macbook Pro.
-    candidate_prime.set_bit(0, true);
+    hash[0] |= 1;
+    let candidate_prime = u256(hash);
     if primality::is_prob_prime(&candidate_prime) {
-      return candidate_prime;
+      return Integer::from(candidate_prime);
     }
     counter += 1;
   }
-}
-
-/// Calls `hash_to_prime_` with Blake2b hasher.
-#[allow(clippy::stutter)]
-pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
-  hash_to_prime_(&Blake2b::default, t)
 }
 
 #[cfg(test)]
@@ -75,7 +71,11 @@ mod tests {
     let h_1 = hash_to_prime(b_1);
     let h_2 = hash_to_prime(b_2);
     assert_ne!(h_1, h_2);
-    assert!(primality::is_prob_prime(&h_1));
-    assert!(primality::is_prob_prime(&h_2));
+    let mut digits1 = [0; 4];
+    h_1.write_digits(&mut digits1, Order::Lsf);
+    assert!(primality::is_prob_prime(&u256(digits1)));
+    let mut digits2 = [0; 4];
+    h_2.write_digits(&mut digits2, Order::Lsf);
+    assert!(primality::is_prob_prime(&u256(digits2)));
   }
 }

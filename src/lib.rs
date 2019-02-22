@@ -5,6 +5,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate arrayref;
+
 mod accumulator;
 pub use crate::accumulator::*;
 pub mod group;
@@ -13,3 +16,5 @@ pub mod proof;
 pub mod util;
 mod vector_commitment;
 pub use vector_commitment::*;
+mod uint;
+pub use uint::*;
