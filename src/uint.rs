@@ -533,32 +533,61 @@ mod tests {
 
   #[test]
   fn test_add() {
+    assert!(u256(1) + u256(0) == u256(1));
     assert!(u256(1) + u256(2) == u256(3));
-  }
-
-  #[test]
-  fn test_add_big() {
     assert!(u256([0, 1, 0, 0]) + u256([0, 1, 0, 0]) == u256([0, 2, 0, 0]));
+    assert!(u256([0, 1, 0, 0]) + u256([0, 1, 1, 1]) == u256([0, 2, 1, 1]));
+  }
+
+  #[should_panic(expected = "assertion failed: carry == 0")]
+  #[test]
+  fn test_add_overflow() {
+    let _ = u256([0, 0, 0, u64::max_value()]) + u256([0, 0, 0, u64::max_value()]);
   }
 
   #[test]
-  fn test_add_different_sizes() {
-    assert!(u256([0, 1, 0, 0]) + u256([0, 1, 1, 1]) == u256([0, 2, 1, 1]));
+  fn test_sub() {
+    assert!(u256(1) - u256(0) == u256(1));
+    assert!(u256(1) - u256(1) == u256(0));
+    assert!(u256([0, 1, 0, 0]) - u256([0, 1, 0, 0]) == u256([0, 0, 0, 0]));
+    assert!(u256([0, 1, 0, 1]) - u256([0, 1, 0, 0]) == u256([0, 0, 0, 1]));
+  }
+
+  #[should_panic(expected = "assertion failed: borrow == 0")]
+  #[test]
+  fn test_sub_borrow() {
+    let _ = u256([0, 1, 0, 0]) - u256([0, 0, 1, 0]);
   }
 
   #[test]
   fn test_mul() {
-    assert!(u256(2) * u256(3) == u512(6));
     assert!(u256(0) * u256(3) == u512(0));
-  }
-
-  #[test]
-  fn test_mul_big() {
+    assert!(u256(2) * u256(3) == u512(6));
     assert!(u256([0, 1, 0, 0]) * u256([0, 1, 0, 0]) == u512([0, 0, 1, 0, 0, 0, 0, 0]));
+    assert!(u256([0, 2, 0, 0]) * u256([0, 1, 0, 1]) == u512([0, 0, 2, 0, 2, 0, 0, 0]));
   }
 
   #[test]
-  fn test_mul_different_sizes() {
-    assert!(u256([0, 2, 0, 0]) * u256([0, 1, 0, 1]) == u512([0, 0, 2, 0, 2, 0, 0, 0]));
+  fn test_div() {
+    assert!(u256(0) / u256(3) == u256(0));
+    assert!(u256(5) / u256(3) == u256(1));
+    assert!(u256(6) / u256(3) == u256(2));
+    assert!(u256([0, 0, 1, 0]) / u256([0, 1, 0, 0]) == u256([0, 1, 0, 0]));
+  }
+
+  #[test]
+  fn test_rem() {
+    assert!(u256(0) % u256(3) == u256(0));
+    assert!(u256(5) % u256(3) == u256(2));
+    assert!(u256(6) % u256(3) == u256(0));
+    assert!(u256([0, 0, 1, 0]) % u256([0, 1, 0, 0]) == u256(0));
+  }
+
+  #[test]
+  fn test_rem512() {
+    assert!(u512(0) % u256(3) == u256(0));
+    assert!(u512(5) % u256(3) == u256(2));
+    assert!(u512(6) % u256(3) == u256(0));
+    assert!(u512([1, 0, 1, 0, 0, 0, 0, 0]) % u256([0, 1, 0, 0]) == u256(1));
   }
 }
