@@ -36,7 +36,7 @@ macro_rules! u_types {
           }
         }
 
-        // TODO: Add a check for the rare possibility of truncation?
+        // The cast from i64 to i32 is fine since |size| is <= 4 for U256, and <= 8 for U512.
         #[allow(clippy::cast_possible_truncation)]
         fn as_mpz(&self) -> mpz_t {
           mpz_t {

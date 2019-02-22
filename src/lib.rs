@@ -16,5 +16,5 @@ pub mod proof;
 pub mod util;
 mod vector_commitment;
 pub use vector_commitment::*;
-mod u256;
-pub use u256::*;
+mod uint;
+pub use uint::*;

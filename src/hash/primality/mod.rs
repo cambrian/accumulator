@@ -1,4 +1,4 @@
-use crate::u256::{u256, u512, U256};
+use crate::uint::{u256, u512, U256};
 
 mod constants;
 use constants::{D_VALUES, SMALL_PRIMES};

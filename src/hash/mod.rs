@@ -1,4 +1,4 @@
-use crate::u256::u256;
+use crate::uint::u256;
 use rug::integer::Order;
 use rug::Integer;
 use std::hash::{Hash, Hasher};

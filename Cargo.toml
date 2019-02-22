@@ -66,8 +66,8 @@ path = "benches/proof/poke2.rs"
 harness = false
 
 [[bench]]
-name = "u256"
-path = "benches/u256.rs"
+name = "uint"
+path = "benches/uint.rs"
 harness = false
 
 [profile.bench]
