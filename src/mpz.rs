@@ -1,7 +1,7 @@
 use gmp_mpfr_sys::gmp::{
-  mpz_add, mpz_cmp, mpz_cmp_si, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd, mpz_gcdext,
-  mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sub,
-  mpz_t,
+  mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmpabs, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
+  mpz_gcdext, mpz_getlimbn, mpz_init, mpz_mod, mpz_mul, mpz_mul_si, mpz_mul_ui, mpz_neg, mpz_set,
+  mpz_set_str, mpz_set_ui, mpz_sgn, mpz_size, mpz_sub, mpz_swap, mpz_t,
 };
 use std::cmp::Ordering;
 use std::ffi::CString;
@@ -112,6 +112,9 @@ impl Mpz {
   pub fn cmp(&self, other: &Mpz) -> i32 {
     unsafe { mpz_cmp(&self.inner, &other.inner) }
   }
+  pub fn cmp_abs(&self, other: &Mpz) -> i32 {
+    unsafe { mpz_cmpabs(&self.inner, &other.inner) }
+  }
   #[inline]
   pub fn cmp_si(&self, val: i64) -> i32 {
     unsafe { mpz_cmp_si(&self.inner, val) }
@@ -163,6 +166,10 @@ impl Mpz {
     }
   }
   #[inline]
+  pub fn limbn(&self, size: i64) -> u64 {
+    unsafe { mpz_getlimbn(&self.inner, size) as u64 }
+  }
+  #[inline]
   pub fn modulo(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_mod(&mut self.inner, &x.inner, &y.inner) }
   }
@@ -177,6 +184,10 @@ impl Mpz {
   #[inline]
   pub fn mul_mut(&mut self, x: &Mpz) {
     unsafe { mpz_mul(&mut self.inner, &self.inner, &x.inner) }
+  }
+  #[inline]
+  pub fn mul_si(&mut self, x: &Mpz, val: i64) {
+    unsafe { mpz_mul_si(&mut self.inner, &x.inner, val) }
   }
   #[inline]
   pub fn mul_ui(&mut self, x: &Mpz, val: u64) {
@@ -195,6 +206,10 @@ impl Mpz {
     unsafe { mpz_neg(&mut self.inner, &self.inner) }
   }
   #[inline]
+  pub fn is_neg(&self) -> bool {
+    unsafe { mpz_sgn(&self.inner) == -1 }
+  }
+  #[inline]
   pub fn set(&mut self, x: &Mpz) {
     unsafe { mpz_set(&mut self.inner, &x.inner) }
   }
@@ -209,6 +224,10 @@ impl Mpz {
     unsafe { mpz_set_ui(&mut self.inner, val) }
   }
   #[inline]
+  pub fn size(&self) -> u64 {
+    unsafe { mpz_size(&self.inner) as u64 }
+  }
+  #[inline]
   pub fn sub(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_sub(&mut self.inner, &x.inner, &y.inner) }
   }
@@ -219,5 +238,9 @@ impl Mpz {
   #[inline]
   pub fn square_mut(&mut self) {
     unsafe { mpz_mul(&mut self.inner, &self.inner, &self.inner) }
+  }
+  #[inline]
+  pub fn swap(&mut self, other: &mut Mpz) {
+    unsafe { mpz_swap(&mut self.inner, &mut other.inner) }
   }
 }

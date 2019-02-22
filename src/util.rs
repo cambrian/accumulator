@@ -20,6 +20,15 @@ where
   Integer::from(val)
 }
 
+const fn num_bits<T>() -> usize {
+  std::mem::size_of::<T>() * 8
+}
+
+// TODO: Generalize to other int primitives
+pub fn log_2(x: u64) -> u32 {
+  63 - x.leading_zeros()
+}
+
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
 /// Consider moving this to accumulator?
 pub fn shamir_trick<G: Group>(

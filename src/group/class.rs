@@ -1,14 +1,18 @@
 //! Class Group implementation
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::mpz::Mpz;
-use crate::util::{int, TypeRep};
+use crate::util::{int, log_2, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
+use std::cmp::{max, min};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClassGroup {}
+
+const EXP_THRESH: i64 = 31;
+const THRESH: i64 = ((1 as u64) << 31) as i64;
 
 // REVIEW: It appears that this group implementation always expects its elements to be reduced.
 // However, the type signature fn reduce(&mut self) implies that there is a valid representation
@@ -174,6 +178,50 @@ impl Default for ClassCtx {
   }
 }
 
+pub fn signed_shift(op: u64, shift: i64) -> u64 {
+  match shift {
+    x if x > 0 => op << shift,
+    x if x <= -64 => 0,
+    _ => op >> (-shift),
+  }
+}
+
+pub fn mpz_get_si_2exp(op: &Mpz) -> (i64, i64) {
+  let size = op.size();
+  let last = op.limbn((size - 1) as i64);
+  let lg2 = log_2(last) + 1;
+  let mut exp = lg2 as i64;
+  let mut ret = signed_shift(last, 63 - exp);
+  if size > 1 {
+    exp += ((size - 1) * 64) as i64;
+    let prev = op.limbn((size - 2) as i64);
+    ret += signed_shift(prev, (-1 - lg2 as i32) as i64);
+  }
+  if op.is_neg() {
+    return (exp, -(ret as i64));
+  }
+  (exp, ret as i64)
+}
+
+pub fn test_reduction(x: &mut ClassElem) -> bool {
+  let a_b = x.a.cmp_abs(&x.b);
+  let c_b = x.c.cmp_abs(&x.b);
+
+  if a_b < 0 || c_b < 0 {
+    return false;
+  }
+
+  let a_c = x.a.cmp(&x.c);
+  if a_c > 0 {
+    x.a.swap(&mut x.c);
+    x.b.neg_mut();
+  }
+  if a_c == 0 && x.b.is_neg() {
+    x.b.neg_mut();
+  }
+  true
+}
+
 impl ClassCtx {
   fn normalize(&mut self, x: &mut ClassElem) {
     if x.is_normalized(self) {
@@ -200,34 +248,106 @@ impl ClassCtx {
   }
 
   fn reduce(&mut self, x: &mut ClassElem) {
-    self.normalize(x);
-    while !x.is_reduced() {
-      // s = floor_div(c + b, 2c)
-      self.s.add(&x.c, &x.b);
-      // x = 2c
-      self.x.mul_ui(&x.c, 2);
-      self.s.floor_div_mut(&self.x);
-      self.old_a.set(&x.a);
-      self.old_b.set(&x.b);
-      x.a.set(&x.c);
-      x.b.neg_mut();
-      // x = 2sc
-      self.x.mul(&self.s, &x.c);
-      self.x.mul_ui_mut(2);
-      // b = 2sc - b
-      x.b.add_mut(&self.x);
+    // TODO: Check is_reduced against submission test_reduction function
+    while !test_reduction(x) {
+      let (mut a, a_exp) = mpz_get_si_2exp(&x.a);
+      let (mut b, b_exp) = mpz_get_si_2exp(&x.b);
+      let (mut c, c_exp) = mpz_get_si_2exp(&x.c);
 
-      // c = cs^2
-      x.c.mul_mut(&self.s);
-      x.c.mul_mut(&self.s);
-      // x = bs
-      self.x.mul(&self.old_b, &self.s);
-      // c -= bs
-      x.c.sub_mut(&self.x);
-      // c += a
-      x.c.add_mut(&self.old_a);
+      let mut max_exp = a_exp;
+      let mut min_exp = a_exp;
+
+      max_exp = max(max_exp, b_exp);
+      max_exp = max(max_exp, c_exp);
+      min_exp = min(min_exp, b_exp);
+      min_exp = min(min_exp, c_exp);
+
+      println!("max_exp: {}", max_exp);
+      println!("min_exp: {}", min_exp);
+      if max_exp - min_exp > EXP_THRESH {
+        self.normalize(x);
+        continue;
+      }
+      max_exp += 1; // for overflow safety
+      a >>= max_exp - a_exp;
+      b >>= max_exp - b_exp;
+      c >>= max_exp - c_exp;
+
+      let mut u_ = 1;
+      let mut v_ = 0;
+      let mut w_ = 0;
+      let mut y_ = 1;
+
+      let mut u;
+      let mut v;
+      let mut w;
+      let mut y;
+
+      loop {
+        u = u_;
+        v = v_;
+        w = w_;
+        y = y_;
+        let delta = if b >= 0 {
+          (b + c) / (c << 1)
+        } else {
+          -(b + c) / (c << 1)
+        };
+        let a_ = c;
+        let mut c_ = c * delta;
+        let b_ = -b + (c_ << 1);
+        let gamma = b - c_;
+        c_ = a - delta * gamma;
+
+        a = a_;
+        b = b_;
+        c = c_;
+
+        u_ = v;
+        v_ = -u + delta * v;
+        w_ = y;
+        y_ = -w + delta * y;
+        if !((v_.abs() | y_.abs()) <= THRESH && a > c && c > 0) {
+          break;
+        }
+      }
+      if (v_.abs() | y_.abs()) <= THRESH {
+        u = u_;
+        v = v_;
+        w = w_;
+        y = y_;
+      }
+      let aa = u * u;
+      let ab = u * w;
+      let ac = w * w;
+      let ba = (u * v) << 1;
+      let bb = u * y + v * w;
+      let bc = (w * y) << 1;
+      let ca = v * v;
+      let cb = v * y;
+      let cc = y * y;
+
+      self.a.mul_si(&x.a, aa); // a = faa
+      self.b.mul_si(&x.b, ab); // b = fab
+      self.h.mul_si(&x.c, ac); // h = fac
+
+      self.g.mul_si(&x.a, ba); // g = fba
+      self.j.mul_si(&x.b, bb); // j = fbb
+      self.k.mul_si(&x.c, bc); // k = fbc
+
+      self.s.mul_si(&x.a, ca); // s = fca
+      self.w.mul_si(&x.b, cb); // w = fcb
+      self.l.mul_si(&x.c, cc); // l = fcc
+
+      x.a.add(&self.a, &self.b);
+      x.a.add_mut(&self.h);
+
+      x.b.add(&self.g, &self.j);
+      x.b.add_mut(&self.k);
+
+      x.c.add(&self.s, &self.w);
+      x.c.add_mut(&self.l);
     }
-    self.normalize(x);
   }
 
   fn square(&mut self, x: &mut ClassElem) {
@@ -433,12 +553,10 @@ impl Group for ClassGroup {
 
   fn op_(_: &Mpz, x: &ClassElem, y: &ClassElem) -> ClassElem {
     CTX.with(|ctx| ctx.borrow_mut().op(x, y))
-    //  with_context(|ctx| ctx.op(x, y))
   }
 
   fn id_(d: &Mpz) -> ClassElem {
     CTX.with(|ctx| ctx.borrow_mut().id(d))
-    //  with_context(|ctx| ctx.id(d))
   }
 
   fn inv_(_: &Mpz, x: &ClassElem) -> ClassElem {
@@ -752,7 +870,7 @@ mod tests {
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
     let mut d = Mpz::default();
-    &g.discriminant(&mut d);
+    g.discriminant(&mut d);
     assert!(d == *ClassGroup::rep())
   }
 
