@@ -592,13 +592,6 @@ impl ClassElem {
     neg_a.neg(a);
     neg_a < *b && b <= a
   }
-
-  #[cfg(feature = "benchmark")]
-  pub fn assign(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) {
-    self.a.set(&a);
-    self.b.set(&b);
-    self.c.set(&c);
-  }
 }
 
 impl TypeRep for ClassGroup {
