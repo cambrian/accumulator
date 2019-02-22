@@ -485,7 +485,7 @@ mod tests {
   }
 
   #[test]
-  #[ignore] // Ignoring for now, too slow.
+  #[ignore] // Ignoring for now, too slow for a unit test.
   fn test_root_factor_class() {
     test_root_factor_generic::<ClassGroup>();
   }
