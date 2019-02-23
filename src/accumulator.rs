@@ -230,7 +230,6 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 }
 
-// TODO: Clean up tests.
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -238,11 +237,36 @@ mod tests {
   use crate::hash;
   use crate::util::int;
 
+  macro_rules! test_all_groups {
+    ($test_func:ident, $func_name_rsa:ident, $func_name_class:ident, $($attr:meta)*) => {
+      #[test]
+      $(
+        #[$attr]
+      )*
+      fn $func_name_rsa() {
+        $test_func::<Rsa2048>();
+      }
+
+      #[test]
+      $(
+        #[$attr]
+      )*
+      fn $func_name_class() {
+        $test_func::<ClassGroup>();
+      }
+    };
+  }
+
   fn init_acc<G: UnknownOrderGroup>() -> Accumulator<G> {
     Accumulator::<G>::new().add(&[int(41), int(67), int(89)]).0
   }
 
-  fn test_exp_quotient_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_exp_quotient,
+    test_exp_quotient_rsa2048,
+    test_exp_quotient_class,
+  );
+  fn test_exp_quotient<G: UnknownOrderGroup>() {
     let empty_acc = Accumulator::<G>::new();
     let exp_quotient_result = empty_acc
       .exp_quotient(int(17 * 41 * 67 * 89), int(17 * 89))
@@ -251,53 +275,32 @@ mod tests {
     assert!(exp_quotient_result == exp_quotient_expected);
   }
 
-  #[test]
-  fn test_exp_quotient_class() {
-    test_exp_quotient_generic::<ClassGroup>();
-  }
-
-  #[test]
-  fn test_exp_quotient_rsa() {
-    test_exp_quotient_generic::<Rsa2048>();
-  }
-
-  fn test_exp_quotient_zero_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_exp_quotient_zero,
+    test_exp_quotient_zero_rsa2048,
+    test_exp_quotient_zero_class,
+    should_panic(expected = "DivisionByZero")
+  );
+  fn test_exp_quotient_zero<G: UnknownOrderGroup>() {
     Accumulator::<G>::new()
       .exp_quotient(int(17 * 41 * 67 * 89), int(0))
       .unwrap();
   }
 
-  #[test]
-  #[should_panic(expected = "DivisionByZero")]
-  fn test_exp_quotient_zero_class() {
-    test_exp_quotient_zero_generic::<ClassGroup>();
-  }
-
-  #[test]
-  #[should_panic(expected = "DivisionByZero")]
-  fn test_exp_quotient_zero_rsa() {
-    test_exp_quotient_zero_generic::<Rsa2048>();
-  }
-
-  fn test_exp_quotient_inexact_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_exp_quotient_inexact,
+    test_exp_quotient_inexact_rsa2048,
+    test_exp_quotient_inexact_class,
+    should_panic(expected = "InexactDivision")
+  );
+  fn test_exp_quotient_inexact<G: UnknownOrderGroup>() {
     Accumulator::<G>::new()
       .exp_quotient(int(17 * 41 * 67 * 89), int(5))
       .unwrap();
   }
 
-  #[test]
-  #[should_panic(expected = "InexactDivision")]
-  fn test_exp_quotient_inexact_class() {
-    test_exp_quotient_inexact_generic::<ClassGroup>()
-  }
-
-  #[test]
-  #[should_panic(expected = "InexactDivision")]
-  fn test_exp_quotient_inexact_rsa() {
-    test_exp_quotient_inexact_generic::<Rsa2048>()
-  }
-
-  fn test_add_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(test_add, test_add_rsa2048, test_add_class,);
+  fn test_add<G: UnknownOrderGroup>() {
     let acc = init_acc::<G>();
     let new_elems = [int(5), int(7), int(11)];
     let (acc_new, proof) = acc.add(&new_elems);
@@ -306,17 +309,8 @@ mod tests {
     assert!(acc_new.verify_membership(&new_elems, &proof));
   }
 
-  #[test]
-  fn test_add_class() {
-    test_add_generic::<ClassGroup>();
-  }
-
-  #[test]
-  fn test_add_rsa() {
-    test_add_generic::<Rsa2048>();
-  }
-
-  fn test_delete_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(test_delete, test_delete_rsa2048, test_delete_class,);
+  fn test_delete<G: UnknownOrderGroup>() {
     let acc = init_acc::<G>();
     let y_witness = Accumulator::<G>::new().add(&[int(3649)]).0;
     let z_witness = Accumulator::<G>::new().add(&[int(2747)]).0;
@@ -329,34 +323,25 @@ mod tests {
     assert!(acc.verify_membership(&[int(67), int(89)], &proof));
   }
 
-  #[test]
-  fn test_delete_class() {
-    test_delete_generic::<ClassGroup>();
-  }
-
-  #[test]
-  fn test_delete_rsa() {
-    test_delete_generic::<Rsa2048>();
-  }
-
-  fn test_delete_empty_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_delete_empty,
+    test_delete_empty_rsa2048,
+    test_delete_empty_class,
+  );
+  fn test_delete_empty<G: UnknownOrderGroup>() {
     let acc = init_acc::<G>();
     let (acc_new, proof) = acc.clone().delete(&[]).expect("valid delete expected");
     assert!(acc_new == acc);
     assert!(acc.verify_membership(&[], &proof));
   }
 
-  #[test]
-  fn test_delete_empty_class() {
-    test_delete_empty_generic::<ClassGroup>()
-  }
-
-  #[test]
-  fn test_delete_empty_rsa() {
-    test_delete_empty_generic::<Rsa2048>()
-  }
-
-  fn test_delete_bad_witness_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_delete_bad_witness,
+    test_delete_bad_witness_rsa2048,
+    test_delete_bad_witness_class,
+    should_panic(expected = "BadWitness")
+  );
+  fn test_delete_bad_witness<G: UnknownOrderGroup>() {
     let acc = init_acc::<G>();
     let y_witness = Accumulator::<G>::new().add(&[int(3648)]).0;
     let z_witness = Accumulator::<G>::new().add(&[int(2746)]).0;
@@ -365,19 +350,12 @@ mod tests {
       .unwrap();
   }
 
-  #[test]
-  #[should_panic(expected = "BadWitness")]
-  fn test_delete_bad_witness_class() {
-    test_delete_bad_witness_generic::<ClassGroup>();
-  }
-
-  #[test]
-  #[should_panic(expected = "BadWitness")]
-  fn test_delete_bad_witness_rsa() {
-    test_delete_bad_witness_generic::<Rsa2048>();
-  }
-
-  fn test_update_membership_witness_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_update_membership_witness,
+    test_update_membership_witness_rsa2048,
+    test_update_membership_witness_class,
+  );
+  fn test_update_membership_witness<G: UnknownOrderGroup>() {
     // Original accumulator has [3, 5, 11, 13].
     // Witness is tracking elements [3, 5] and eventually [7].
     let acc_new = Accumulator::<G>::new()
@@ -390,17 +368,13 @@ mod tests {
     assert!(witness_new.add(&[int(3), int(7)]).0 == acc_new);
   }
 
-  #[test]
-  fn test_update_membership_witness_rsa() {
-    test_update_membership_witness_generic::<Rsa2048>();
-  }
-
-  #[test]
-  fn test_update_membership_witness_class() {
-    test_update_membership_witness_generic::<ClassGroup>();
-  }
-
-  fn test_update_membership_witness_failure_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_update_membership_witness_failure,
+    test_update_membership_witness_failure_rsa2048,
+    test_update_membership_witness_failure_class,
+    should_panic(expected = "BadWitnessUpdate")
+  );
+  fn test_update_membership_witness_failure<G: UnknownOrderGroup>() {
     let acc_new = Accumulator::<G>::new()
       .add(&[int(3), int(7), int(11), int(17)])
       .0;
@@ -410,19 +384,12 @@ mod tests {
       .unwrap();
   }
 
-  #[test]
-  #[should_panic(expected = "BadWitnessUpdate")]
-  fn test_update_membership_witness_failure_rsa() {
-    test_update_membership_witness_failure_generic::<Rsa2048>();
-  }
-
-  #[test]
-  #[should_panic(expected = "BadWitnessUpdate")]
-  fn test_update_membership_witness_failure_class() {
-    test_update_membership_witness_failure_generic::<ClassGroup>();
-  }
-
-  fn test_prove_nonmembership_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_prove_nonmembership,
+    test_prove_nonmembership_rsa2048,
+    test_prove_nonmembership_class,
+  );
+  fn test_prove_nonmembership<G: UnknownOrderGroup>() {
     let acc = init_acc::<G>();
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(5), int(7), int(11)];
@@ -432,36 +399,20 @@ mod tests {
     assert!(acc.verify_nonmembership(&elems, &proof));
   }
 
-  #[test]
-  fn test_prove_nonmembership_class() {
-    test_prove_nonmembership_generic::<ClassGroup>();
-  }
-
-  #[test]
-  fn test_prove_nonmembership_rsa() {
-    test_prove_nonmembership_generic::<Rsa2048>();
-  }
-
-  fn test_prove_nonmembership_failure_generic<G: UnknownOrderGroup>() {
+  test_all_groups!(
+    test_prove_nonmembership_failure,
+    test_prove_nonmembership_failure_rsa2048,
+    test_prove_nonmembership_failure_class,
+    should_panic(expected = "InputsNotCoprime")
+  );
+  fn test_prove_nonmembership_failure<G: UnknownOrderGroup>() {
     let acc = init_acc::<G>();
     let acc_set = [int(41), int(67), int(89)];
     let elems = [int(41), int(7), int(11)];
     acc.prove_nonmembership(&acc_set, &elems).unwrap();
   }
 
-  #[test]
-  #[should_panic(expected = "InputsNotCoprime")]
-  fn test_prove_nonmembership_failure_class() {
-    test_prove_nonmembership_failure_generic::<ClassGroup>();
-  }
-
-  #[test]
-  #[should_panic(expected = "InputsNotCoprime")]
-  fn test_prove_nonmembership_failure_rsa() {
-    test_prove_nonmembership_failure_generic::<Rsa2048>();
-  }
-
-  fn test_root_factor_generic<G: UnknownOrderGroup>() {
+  fn test_root_factor<G: UnknownOrderGroup>() {
     let acc = init_acc::<G>();
     let orig = [
       97 as usize,
@@ -480,13 +431,8 @@ mod tests {
   }
 
   #[test]
-  fn test_root_factor_rsa() {
-    test_root_factor_generic::<Rsa2048>();
-  }
-
-  #[test]
-  #[ignore] // Ignoring for now, too slow.
-  fn test_root_factor_class() {
-    test_root_factor_generic::<ClassGroup>();
+  fn test_root_factor_rsa2048() {
+    // Class version takes too long for a unit test.
+    test_root_factor::<Rsa2048>();
   }
 }
