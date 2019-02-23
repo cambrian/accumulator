@@ -54,7 +54,7 @@ fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<
 }
 
 macro_rules! benchmark_add {
-  ($group_type : ident, $criterion: ident) => {
+  ($group_type : ty, $criterion: ident) => {
     let group_type_str = String::from(stringify!($group_type)).to_lowercase();
     let (acc, proof, elems) = init_acc::<$group_type>();
     let elems_1 = elems.clone();
