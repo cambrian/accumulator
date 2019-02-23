@@ -27,7 +27,7 @@ fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<
 }
 
 macro_rules! benchmark_delete {
-  ($group_type : ident, $criterion: ident) => {
+  ($group_type : ty, $criterion: ident) => {
     let group_type_str = String::from(stringify!($group_type)).to_lowercase();
     // Test verification on lots of elements. Added in batches to not go crazy with exponent size.
     let (acc, _, elems) = init_acc::<$group_type>();
