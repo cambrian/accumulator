@@ -1,7 +1,7 @@
 use gmp_mpfr_sys::gmp::{
-  mpz_add, mpz_cmp, mpz_cmp_si, mpz_cmpabs, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_gcd,
-  mpz_gcdext, mpz_getlimbn, mpz_init, mpz_mod, mpz_mul, mpz_mul_si, mpz_mul_ui, mpz_neg, mpz_set,
-  mpz_set_str, mpz_set_ui, mpz_sgn, mpz_size, mpz_sub, mpz_swap, mpz_t,
+  mpz_add, mpz_addmul, mpz_cmp, mpz_cmp_si, mpz_cmpabs, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr,
+  mpz_gcd, mpz_gcdext, mpz_getlimbn, mpz_init, mpz_mod, mpz_mul, mpz_mul_si, mpz_mul_ui, mpz_neg,
+  mpz_set, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_size, mpz_sub, mpz_submul, mpz_swap, mpz_t,
 };
 use std::cmp::Ordering;
 use std::ffi::CString;
@@ -103,6 +103,10 @@ impl Mpz {
     unsafe {
       mpz_add(&mut self.inner, &x.inner, &y.inner);
     }
+  }
+  #[inline]
+  pub fn addmul(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { mpz_addmul(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn add_mut(&mut self, x: &Mpz) {
@@ -230,6 +234,10 @@ impl Mpz {
   #[inline]
   pub fn sub(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { mpz_sub(&mut self.inner, &x.inner, &y.inner) }
+  }
+  #[inline]
+  pub fn submul(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { mpz_submul(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn sub_mut(&mut self, x: &Mpz) {

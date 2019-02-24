@@ -198,18 +198,26 @@ pub fn mpz_get_si_2exp(op: &Mpz) -> (i64, i64) {
     ret += signed_shift(prev, (-1 - lg2 as i32) as i64);
   }
   if op.is_neg() {
-    return (exp, -(ret as i64));
+    return (-(ret as i64), exp);
   }
-  (exp, ret as i64)
+  (ret as i64, exp)
 }
 
 pub fn test_reduction(x: &mut ClassElem) -> bool {
+  // println!("x.a: {:?}", x.a);
+  // println!("x.b: {:?}", x.b);
+  // println!("x.c: {:?}", x.c);
   let a_b = x.a.cmp_abs(&x.b);
   let c_b = x.c.cmp_abs(&x.b);
 
+  println!("a_b: {}", a_b);
+  println!("a_c: {}", c_b);
+
+  println!("about to check if in test_reduction");
   if a_b < 0 || c_b < 0 {
     return false;
   }
+  println!("didn't return false in test_reduction");
 
   let a_c = x.a.cmp(&x.c);
   if a_c > 0 {
@@ -224,7 +232,26 @@ pub fn test_reduction(x: &mut ClassElem) -> bool {
 
 impl ClassCtx {
   fn normalize(&mut self, x: &mut ClassElem) {
-    if x.is_normalized(self) {
+    self.mu.add(&x.b, &x.c);
+    self.s.mul_ui(&x.c, 2); //a = s
+    self.denom.floor_div(&self.mu, &self.s);
+
+    self.a.set(&x.c);
+
+    self.s.mul_ui(&self.denom, 2);
+    self.b.neg_mut();
+    self.b.addmul(&x.c, &self.denom);
+
+    self.r.set(&x.a);
+    self.r.submul(&self.b, &self.denom);
+    self.denom.square_mut();
+    self.r.addmul(&x.c, &self.denom);
+
+    x.a.set(&self.a);
+    x.b.set(&self.b);
+    x.c.set(&self.r);
+
+    /* if x.is_normalized(self) {
       return;
     }
     // r = floor_div((a - b), 2a)
@@ -244,7 +271,7 @@ impl ClassCtx {
 
     self.ra.set(&self.r);
     self.ra.mul_mut(&self.old_b);
-    x.c.add_mut(&self.ra);
+    x.c.add_mut(&self.ra);*/
   }
 
   fn reduce(&mut self, x: &mut ClassElem) {
@@ -253,6 +280,10 @@ impl ClassCtx {
       let (mut a, a_exp) = mpz_get_si_2exp(&x.a);
       let (mut b, b_exp) = mpz_get_si_2exp(&x.b);
       let (mut c, c_exp) = mpz_get_si_2exp(&x.c);
+
+      println!("a: {}", a);
+      println!("b: {}", b);
+      println!("c: {}", c);
 
       let mut max_exp = a_exp;
       let mut min_exp = a_exp;
@@ -272,6 +303,10 @@ impl ClassCtx {
       a >>= max_exp - a_exp;
       b >>= max_exp - b_exp;
       c >>= max_exp - c_exp;
+
+      println!("shifted a: {}", a);
+      println!("shifted b: {}", b);
+      println!("shifted c: {}", c);
 
       let mut u_ = 1;
       let mut v_ = 0;
