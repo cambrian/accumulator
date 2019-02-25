@@ -45,8 +45,8 @@ impl ClassElem {
     }
     // r = floor_div((a - b), 2a)
     // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
-    let (r, _) = Integer::from(&a - &b).div_rem_floor(Integer::from(2 * &a));
-    let new_b = &b + 2 * Integer::from(&r * &a);
+    let (r, _) = int(&a - &b).div_rem_floor(int(2 * &a));
+    let new_b = &b + 2 * int(&r * &a);
     let new_c = c + b * &r + &a * r.square();
     (a, new_b, new_c)
   }
@@ -54,14 +54,14 @@ impl ClassElem {
   pub fn reduce(mut a: Integer, mut b: Integer, mut c: Integer) -> ClassElem {
     while !ClassElem::is_reduced(&a, &b, &c) {
       // s = floor_div(c + b, 2c)
-      let (s, _) = Integer::from(&c + &b).div_rem_floor(Integer::from(2 * &c));
+      let (s, _) = int(&c + &b).div_rem_floor(int(2 * &c));
 
       // (a, b, c) = (c, −b + 2sc, cs^2 − bs + a)
       let old_a = a.clone();
       let old_b = b.clone();
       a = c.clone();
-      b = -b + 2 * Integer::from(&s * &c);
-      c = -Integer::from(&old_b * &s) + old_a + c * s.square();
+      b = -b + 2 * int(&s * &c);
+      c = -int(&old_b * &s) + old_a + c * s.square();
     }
     let (a, b, c) = ClassElem::normalize(a, b, c);
     ClassElem { a, b, c }
@@ -77,10 +77,10 @@ impl ClassElem {
     // B = b - 2a * mu
     // tmp = (b * mu) / a
     // C = mu^2 - tmp
-    let A = Integer::from(self.a.square_ref());
-    let B = &self.b - Integer::from(2 * &self.a) * &mu;
+    let A = int(self.a.square_ref());
+    let B = &self.b - int(2 * &self.a) * &mu;
     let (tmp, _) = <(Integer, Integer)>::from(
-      Integer::from((&self.b * &mu) - &self.c).div_rem_floor_ref(&self.a),
+      int((&self.b * &mu) - &self.c).div_rem_floor_ref(&self.a),
     );
     let C = mu.square() - tmp;
 
@@ -88,7 +88,7 @@ impl ClassElem {
   }
 
   fn discriminant(&self) -> Integer {
-    Integer::from(self.b.square_ref()) - Integer::from(4) * &self.a * &self.c
+    int(self.b.square_ref()) - int(4) * &self.a * &self.c
   }
 
   fn validate(&self) -> bool {
@@ -96,11 +96,11 @@ impl ClassElem {
   }
 
   fn is_reduced(a: &Integer, b: &Integer, c: &Integer) -> bool {
-    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && *b < Integer::from(0)))
+    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && *b < int(0)))
   }
 
   fn is_normal(a: &Integer, b: &Integer, _c: &Integer) -> bool {
-    -Integer::from(a) < Integer::from(b) && b <= a
+    -int(a) < int(b) && b <= a
   }
 }
 
@@ -119,16 +119,16 @@ impl Group for ClassGroup {
     // g = (b1 + b2) / 2
     // h = (b2 - b1) / 2
     // w = gcd(a1, a2, g)
-    let (g, _) = (Integer::from(&x.b) + &y.b).div_rem_floor(Integer::from(2));
-    let (h, _) = (&y.b - Integer::from(&x.b)).div_rem_floor(Integer::from(2));
-    let w = Integer::from(x.a.gcd_ref(&y.a)).gcd(&g);
+    let (g, _) = (int(&x.b) + &y.b).div_rem_floor(int(2));
+    let (h, _) = (&y.b - int(&x.b)).div_rem_floor(int(2));
+    let w = int(x.a.gcd_ref(&y.a)).gcd(&g);
 
     // j = w
     // s = a1 / w
     // t = a2 / w
     // u = g / ww
     // r = 0
-    let j = Integer::from(&w);
+    let j = int(&w);
     let (s, _) = <(Integer, Integer)>::from(x.a.div_rem_floor_ref(&w));
     let (t, _) = <(Integer, Integer)>::from(y.a.div_rem_floor_ref(&w));
     let (u, _) = g.div_rem_floor(w);
@@ -137,51 +137,51 @@ impl Group for ClassGroup {
     // b = hu + sc
     // m = st
     // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
-    let a = Integer::from(&t * &u);
-    let b = Integer::from(&h * &u) + (&s * &x.c);
-    let mut m = Integer::from(&s * &t);
+    let a = int(&t * &u);
+    let b = int(&h * &u) + (&s * &x.c);
+    let mut m = int(&s * &t);
     let (mu, v) = util::solve_linear_congruence(&a, &b, &m).unwrap();
 
     // a = tv
     // b = h - t * mu
     // m = s
     // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
-    let a = Integer::from(&t * &v);
-    let b = &h - Integer::from(&t * &mu);
+    let a = int(&t * &v);
+    let b = &h - int(&t * &mu);
     m.assign(&s);
     let (lambda, _) = util::solve_linear_congruence(&a, &b, &m).unwrap();
 
     // k = mu + v * lambda
     // l = (k * t - h) / s
     // m = (tuk - hu - cs) / st
-    let k = &mu + Integer::from(&v * &lambda);
-    let (l, _) = <(Integer, Integer)>::from((Integer::from(&k * &t) - &h).div_rem_floor_ref(&s));
+    let k = &mu + int(&v * &lambda);
+    let (l, _) = <(Integer, Integer)>::from((int(&k * &t) - &h).div_rem_floor_ref(&s));
     let (m, _) =
-      (Integer::from(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(Integer::from(&s * &t));
+      (int(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(int(&s * &t));
 
     // A = st
     // B = ju - kt + ls
     // C = kl - jm
-    let A = Integer::from(&s * &t);
-    let B = Integer::from(&j * &u) - (Integer::from(&k * &t) + Integer::from(&l * &s));
-    let C = Integer::from(&k * &l) - Integer::from(&j * &m);
+    let A = int(&s * &t);
+    let B = int(&j * &u) - (int(&k * &t) + int(&l * &s));
+    let C = int(&k * &l) - int(&j * &m);
     ClassElem::reduce(A, B, C)
   }
 
   fn id_(d: &Integer) -> ClassElem {
-    let a = Integer::from(1);
-    let b = Integer::from(1);
+    let a = int(1);
+    let b = int(1);
 
     // c = (b * b - d) / 4a
-    let (c, _) = Integer::from(1 - d).div_rem_floor(Integer::from(4));
+    let (c, _) = int(1 - d).div_rem_floor(int(4));
     ClassElem { a, b, c }
   }
 
   fn inv_(_: &Integer, x: &ClassElem) -> ClassElem {
     ClassElem {
-      a: Integer::from(&x.a),
-      b: Integer::from(-(&x.b)),
-      c: Integer::from(&x.c),
+      a: int(&x.a),
+      b: int(-(&x.b)),
+      c: int(&x.c),
     }
   }
 
@@ -211,9 +211,9 @@ impl UnknownOrderGroup for ClassGroup {
     // a = 2
     // b = 1
     // c = (b * b - d) / 4a
-    let a = Integer::from(2);
-    let b = Integer::from(1);
-    let c = Integer::from(1 - d) / Integer::from(8);
+    let a = int(2);
+    let b = int(1);
+    let c = int(1 - d) / int(8);
     ClassElem::reduce(a, b, c)
   }
 }
@@ -234,12 +234,14 @@ impl PartialEq for ClassElem {
   }
 }
 
-impl<T> ElemFrom<(T, T, T)> for ClassGroup
+impl<A, B, C> ElemFrom<(A, B, C)> for ClassGroup
 where
-  Integer: From<T>,
+  Integer: From<A>,
+  Integer: From<B>,
+  Integer: From<C>,
 {
-  fn elem(t: (T, T, T)) -> ClassElem {
-    let class_elem = ClassElem::reduce(Integer::from(t.0), Integer::from(t.1), Integer::from(t.2));
+  fn elem(abc: (A, B, C)) -> ClassElem {
+    let class_elem = ClassElem::reduce(int(abc.0), int(abc.1), int(abc.2));
 
     // Ideally, this should return an error and the
     // return type of ElemFrom should be Result<Self::Elem, Self:err>,
@@ -462,7 +464,7 @@ mod tests {
   }
 
   #[test]
-  // this test should be restructured to not construct ClassElems but it will do for now
+  // REVIEW: this test should be restructured to not construct ClassElems but it will do for now
   fn test_normalize_basic() {
     let unnormalized = construct_raw_elem_from_strings(
       "16",
@@ -676,7 +678,7 @@ mod tests {
 
     for i in 1..=1000 {
       g = ClassGroup::op(&g, &g_anchor);
-      assert_eq!(&g, &ClassGroup::exp(&g_anchor, &Integer::from(i)));
+      assert_eq!(&g, &ClassGroup::exp(&g_anchor, &int(i)));
     }
   }
 
