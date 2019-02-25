@@ -464,7 +464,7 @@ mod tests {
   }
 
   #[test]
-  // this test should be restructured to not construct ClassElems but it will do for now
+  // REVIEW: this test should be restructured to not construct ClassElems but it will do for now
   fn test_normalize_basic() {
     let unnormalized = construct_raw_elem_from_strings(
       "16",
