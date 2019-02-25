@@ -2,15 +2,15 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::group::{Rsa2048, UnknownOrderGroup};
+use accumulator::group::{ClassGroup, Rsa2048, UnknownOrderGroup};
 use accumulator::hash::hash_to_prime;
 use accumulator::{Accumulator, MembershipProof};
 use criterion::Criterion;
 use rand::Rng;
 use rug::Integer;
 
-fn bench_add(elems: &[Integer]) {
-  let acc = Accumulator::<Rsa2048>::new();
+fn bench_add<G: UnknownOrderGroup>(elems: &[Integer]) {
+  let acc = Accumulator::<G>::new();
   acc.add(elems);
 }
 
@@ -53,18 +53,32 @@ fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<
   (acc, proof, elems)
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-  let (acc, proof, elems) = init_acc::<Rsa2048>();
-  let elems_1 = elems.clone();
-  let elems_2 = elems.clone();
-  let elems_3 = elems.clone();
+macro_rules! benchmark_add {
+  ($group_type : ty, $criterion: ident) => {
+    let group_type_str = String::from(stringify!($group_type)).to_lowercase();
+    let (acc, proof, elems) = init_acc::<$group_type>();
+    let elems_1 = elems.clone();
+    let elems_2 = elems.clone();
+    let elems_3 = elems.clone();
 
-  c.bench_function("add_1", move |b| b.iter(|| bench_add(&elems_1[0..1])));
-  c.bench_function("add_10", move |b| b.iter(|| bench_add(&elems_2[0..10])));
-  c.bench_function("add_100", move |b| b.iter(|| bench_add(&elems_3)));
-  c.bench_function("verify", move |b| {
-    b.iter(|| bench_verify(&acc, &elems, &proof))
-  });
+    $criterion.bench_function(format!("{}_add_1", group_type_str).as_str(), move |b| {
+      b.iter(|| bench_add::<$group_type>(&elems_1[0..1]))
+    });
+    $criterion.bench_function(format!("{}_add_10", group_type_str).as_str(), move |b| {
+      b.iter(|| bench_add::<$group_type>(&elems_2[0..10]))
+    });
+    $criterion.bench_function(format!("{}_add_100", group_type_str).as_str(), move |b| {
+      b.iter(|| bench_add::<$group_type>(&elems_3))
+    });
+    $criterion.bench_function(format!("{}_verify", group_type_str).as_str(), move |b| {
+      b.iter(|| bench_verify(&acc, &elems, &proof))
+    });
+  };
+}
+
+fn criterion_benchmark(c: &mut Criterion) {
+  benchmark_add! {Rsa2048, c};
+  benchmark_add! {ClassGroup, c};
 }
 
 criterion_group!(benches, criterion_benchmark);

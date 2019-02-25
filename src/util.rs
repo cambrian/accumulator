@@ -37,6 +37,28 @@ pub fn shamir_trick<G: Group>(
   Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
 }
 
+// Solve a linear congruence of form `ax = b mod m` for the set of solutions x,
+// characterized by integers mu and v such that x = mu + vn where n is any integer.
+pub fn solve_linear_congruence(
+  a: &Integer,
+  b: &Integer,
+  m: &Integer,
+) -> Option<(Integer, Integer)> {
+  // g = gcd(a, m) => da + em = g
+  let (g, d, _) = <(Integer, Integer, Integer)>::from(a.gcd_cofactors_ref(m));
+
+  // q = floor_div(b, g)
+  // r = b % g
+  let (q, r) = <(Integer, Integer)>::from(b.div_rem_floor_ref(&g));
+  if r != 0 {
+    return None;
+  }
+
+  let mu = (q * d) % m;
+  let v = m / g;
+  Some((mu, v))
+}
+
 /// Folds over `xs` but in a divide-and-conquer fashion: Instead of `F(F(F(F(acc, a), b), c), d))`
 /// this computes `F(acc, F(F(a, b), F(c, d)))`.
 pub fn divide_and_conquer<F, T: Clone, E>(f: F, acc: T, xs: &[T]) -> Result<T, E>
@@ -85,6 +107,52 @@ mod tests {
       &xs,
     )
     .unwrap()
+  }
+
+  #[test]
+  fn test_linear_congruence_solver() {
+    assert_eq!(
+      (Integer::from(-2), Integer::from(4)),
+      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4)).unwrap()
+    );
+
+    assert_eq!(
+      (Integer::from(-2), Integer::from(4)),
+      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4)).unwrap()
+    );
+
+    assert_eq!(
+      (Integer::from(1), Integer::from(2)),
+      solve_linear_congruence(&Integer::from(5), &Integer::from(1), &Integer::from(2)).unwrap()
+    );
+
+    assert_eq!(
+      (Integer::from(-3), Integer::from(5)),
+      solve_linear_congruence(&Integer::from(2), &Integer::from(4), &Integer::from(5)).unwrap()
+    );
+
+    assert_eq!(
+      (Integer::from(2491), Integer::from(529)),
+      solve_linear_congruence(
+        &Integer::from(230),
+        &Integer::from(1081),
+        &Integer::from(12167)
+      )
+      .unwrap()
+    );
+  }
+
+  #[test]
+  fn test_linear_congruence_solver_no_solution() {
+    // Let g = gcd(a, m). If b is not divisible by g, there are no solutions. If b is divisible by
+    // g, there are g solutions.
+    let result =
+      solve_linear_congruence(&Integer::from(33), &Integer::from(7), &Integer::from(143));
+    assert!(result.is_none());
+
+    let result =
+      solve_linear_congruence(&Integer::from(13), &Integer::from(14), &Integer::from(39));
+    assert!(result.is_none());
   }
 
   #[test]

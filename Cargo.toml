@@ -5,7 +5,9 @@ edition = "2018"
 authors = [
   "Pablo Aldape <pablo@vest.io>",
   "Lucas Ege <lucas@vest.io>",
+  "Alan Flores-Lopez <alan@vest.io>",
   "Sanjay Kannan <sanjay@vest.io>",
+  "Michael Straka <michael.s@vest.io>",
   "Eddie Wang <eddie@vest.io>"
 ]
 description = "Cryptographic accumulators in Rust."
@@ -26,14 +28,20 @@ criterion = "0.2.10"
 rand = "0.6.5"
 
 [[bench]]
+name = "comparison"
+path = "benches/group/rsa.rs"
+harness = false
+
+[[bench]]
+name = "class"
+path = "benches/group/class.rs"
+harness = false
+
+[[bench]]
 name = "add"
 path = "benches/accumulator/add.rs"
 harness = false
 
-[[bench]]
-name = "comparison"
-path = "benches/group/comparison.rs"
-harness = false
 
 [[bench]]
 name = "delete"

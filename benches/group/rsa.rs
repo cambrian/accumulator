@@ -67,10 +67,10 @@ fn bench_inv<G: Group + ElemFrom<u8>>() {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("rsa_op", |b| b.iter(bench_op::<Rsa2048>));
-  c.bench_function("rsa_op_large", |b| b.iter(bench_op_large::<Rsa2048>));
-  c.bench_function("rsa_exp", |b| b.iter(bench_exp::<Rsa2048>));
-  c.bench_function("rsa_inv", |b| b.iter(bench_inv::<Rsa2048>));
+  c.bench_function("group_rsa_op", |b| b.iter(bench_op::<Rsa2048>));
+  c.bench_function("group_rsa_op_large", |b| b.iter(bench_op_large::<Rsa2048>));
+  c.bench_function("group_rsa_exp", |b| b.iter(bench_exp::<Rsa2048>));
+  c.bench_function("group_rsa_inv", |b| b.iter(bench_inv::<Rsa2048>));
 }
 
 criterion_group!(benches, criterion_benchmark);
