@@ -36,16 +36,14 @@ pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
         (Self::id(), a.clone(), n.clone())
       }
     };
-    loop {
-      if n == int(0) {
-        return val;
-      }
+    while n > int(0) {
       if n.is_odd() {
         val = Self::op(&val, &a);
       }
       a = Self::op(&a, &a);
       n >>= 1;
     }
+    val
   }
 
   fn inv_(rep: &Self::Rep, a: &Self::Elem) -> Self::Elem;
