@@ -54,10 +54,8 @@ pub fn solve_linear_congruence(
     return None;
   }
 
-  // mu = (q * d) % m
-  // v = m / g
   let mu = (q * d) % m;
-  let (v, _) = <(Integer, Integer)>::from(m.div_rem_floor_ref(&g));
+  let v = m / g;
   Some((mu, v))
 }
 
