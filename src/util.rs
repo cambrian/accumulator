@@ -50,7 +50,7 @@ pub fn solve_linear_congruence(
   // q = floor_div(b, g)
   // r = b % g
   let (q, r) = b.clone().div_rem_floor(g.clone());
-  if r != Integer::from(0) {
+  if r != 0 {
     return None;
   }
 
