@@ -6,14 +6,14 @@ use rug::{Assign, Integer};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ClassGroup {}
 
 // 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
-
-// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1,
-// IQ-MPQS for computing discrete logarithms in class groups with a 2048-bit discriminant is
-// comparable in complexity to GNFS for factoring a 4096-bit integer.
+// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1, IQ-MPQS for computing
+// discrete logarithms in class groups with a 2048-bit discriminant is comparable in complexity to
+// GNFS for factoring a 4096-bit integer.
 const DISCRIMINANT2048_DECIMAL: &str =
   "-30616069034807523947093657516320815215492876376165067902716988657802400037331914448218251590830\
   1102189519215849430413184776658192481976276720778009261808832630304841711366872161223643645001916\
@@ -28,6 +28,7 @@ lazy_static! {
     Integer::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
 }
 
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, Eq)]
 pub struct ClassElem {
   a: Integer,
@@ -35,12 +36,11 @@ pub struct ClassElem {
   c: Integer,
 }
 
-// ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
-//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
-
+// `ClassElem` and `ClassGroup` ops based on Chia's fantastic doc explaining applied class groups:
+// https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 impl ClassGroup {
-  /// This fn is public for benchmarking purposes. Prefer ClassGroup::elem((a, b, c)) for
-  /// constructing ClassElems.
+  /// This fn is public for benchmarking purposes. Prefer `ClassGroup::elem((a, b, c))` for
+  /// constructing `ClassElem`s.
   pub fn normalize(a: Integer, b: Integer, c: Integer) -> (Integer, Integer, Integer) {
     if Self::is_normal(&a, &b, &c) {
       return (a, b, c);
@@ -73,8 +73,7 @@ impl ClassGroup {
 
   #[allow(non_snake_case)]
   pub fn square(x: &ClassElem) -> ClassElem {
-    // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
-    //
+    // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n.
     let (mu, _) = util::solve_linear_congruence(&x.b, &x.c, &x.a).unwrap();
 
     // A = a^2
@@ -149,7 +148,7 @@ impl Group for ClassGroup {
     // a = tv
     // b = h - t * mu
     // m = s
-    // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
+    // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k.
     let a = int(&t * &v);
     let b = &h - int(&t * &mu);
     m.assign(&s);
@@ -172,7 +171,7 @@ impl Group for ClassGroup {
     Self::elem((a, b, c))
   }
 
-  // Constructs the reduced element directly instead of using Self::Elem().
+  // Constructs the reduced element directly instead of using `Self::Elem()`.
   fn id_(d: &Integer) -> ClassElem {
     let a = int(1);
     let b = int(1);
@@ -182,7 +181,7 @@ impl Group for ClassGroup {
     ClassElem { a, b, c }
   }
 
-  // Constructs the inverse directly instead of using Self::Elem().
+  // Constructs the inverse directly instead of using `Self::Elem()`.
   fn inv_(_: &Integer, x: &ClassElem) -> ClassElem {
     ClassElem {
       a: int(&x.a),
@@ -225,8 +224,8 @@ impl UnknownOrderGroup for ClassGroup {
 }
 
 impl Hash for ClassElem {
-  // Assumes ClassElem is reduced and normalized, which will be the case unless
-  // a struct is insantiated manually in this module.
+  // Assumes `ClassElem` is reduced and normalized, which will be the case unless a struct is
+  // instantiated manually in this module.
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.a.hash(state);
     self.b.hash(state);
@@ -235,12 +234,12 @@ impl Hash for ClassElem {
 }
 
 impl PartialEq for ClassElem {
-  fn eq(&self, other: &ClassElem) -> bool {
+  fn eq(&self, other: &Self) -> bool {
     self.a == other.a && self.b == other.b && self.c == other.c
   }
 }
 
-/// Panics if (a,b,c) cannot be reduced to a valid class element.
+/// Panics if (a, b, c) cannot be reduced to a valid class element.
 impl<A, B, C> ElemFrom<(A, B, C)> for ClassGroup
 where
   Integer: From<A>,
@@ -248,22 +247,20 @@ where
   Integer: From<C>,
 {
   fn elem(abc: (A, B, C)) -> ClassElem {
-    let (a, b, c) = ClassGroup::reduce(int(abc.0), int(abc.1), int(abc.2));
+    let (a, b, c) = Self::reduce(int(abc.0), int(abc.1), int(abc.2));
 
-    // Ideally, this should return an error and the
-    // return type of ElemFrom should be Result<Self::Elem, Self:err>,
-    // but this would require a lot of ugly "unwraps" in the accumulator
-    // library. Besides, users should not need to create new class group
-    // elements, so an invalid ElemFrom here should signal a severe internal error.
-    assert!(ClassGroup::validate(&a, &b, &c));
+    // Ideally, this should return an error and the return type of `ElemFrom` should be
+    // `Result<Self::Elem, Self:err>`, but this would require a lot of ugly `unwrap`s in the
+    // accumulator library. Besides, users should not need to create new class group elements, so
+    // an invalid `ElemFrom` here should signal a severe internal error.
+    assert!(Self::validate(&a, &b, &c));
 
     ClassElem { a, b, c }
   }
 }
 
-// Caveat: tests that use "ground truth" use outputs from
-//  Chia's sample implementation in python:
-//    https://github.com/Chia-Network/vdf-competition/blob/master/inkfish/classgroup.py.
+// Caveat: Tests that use "ground truth" use outputs from Chia's sample implementation in python:
+// https://github.com/Chia-Network/vdf-competition/blob/master/inkfish/classgroup.py.
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -471,7 +468,7 @@ mod tests {
   }
 
   #[test]
-  // REVIEW: this test should be restructured to not construct ClassElems but it will do for now
+  // REVIEW: This test should be restructured to not construct `ClassElem`s but it will do for now.
   fn test_normalize_basic() {
     let unnormalized = construct_raw_elem_from_strings(
       "16",
@@ -605,11 +602,10 @@ mod tests {
   #[test]
   fn test_op_complex() {
     // 1. Take g^100, g^200, ..., g^1000.
-    // 2. Compute g^* = g^100 * ... * g^1000
-    // 3. For each of g^100, g^200, ..., g^1000
-    //    compute the inverse of that element and
-    //    assert that g^* * current_inverse = product of g^100, g^200, ..., g^1000
-    //    without the inversed-out element.
+    // 2. Compute g^* = g^100 * ... * g^1000.
+    // 3. For each of g^100, g^200, ..., g^1000 compute the inverse of that element and assert that
+    //    g^* * current_inverse = product of g^100, g^200, ..., g^1000 without the inversed-out
+    //    element.
     let g_anchor = ClassGroup::unknown_order_elem();
     let mut g = ClassGroup::id();
 
