@@ -6,14 +6,14 @@ use rug::{Assign, Integer};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ClassGroup {}
 
 // 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
-
-// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1,
-// IQ-MPQS for computing discrete logarithms in class groups with a 2048-bit discriminant is
-// comparable in complexity to GNFS for factoring a 4096-bit integer.
+// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1, IQ-MPQS for computing
+// discrete logarithms in class groups with a 2048-bit discriminant is comparable in complexity to
+// GNFS for factoring a 4096-bit integer.
 const DISCRIMINANT2048_DECIMAL: &str =
   "-30616069034807523947093657516320815215492876376165067902716988657802400037331914448218251590830\
   1102189519215849430413184776658192481976276720778009261808832630304841711366872161223643645001916\
@@ -28,6 +28,7 @@ lazy_static! {
     Integer::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
 }
 
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, Eq)]
 pub struct ClassElem {
   a: Integer,
@@ -35,12 +36,13 @@ pub struct ClassElem {
   c: Integer,
 }
 
-// ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
-//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
-
-impl ClassElem {
+// `ClassElem` and `ClassGroup` ops based on Chia's fantastic doc explaining applied class groups:
+// https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
+impl ClassGroup {
+  /// This fn is public for benchmarking purposes. Prefer `ClassGroup::elem((a, b, c))` for
+  /// constructing `ClassElem`s.
   pub fn normalize(a: Integer, b: Integer, c: Integer) -> (Integer, Integer, Integer) {
-    if ClassElem::is_normal(&a, &b, &c) {
+    if Self::is_normal(&a, &b, &c) {
       return (a, b, c);
     }
     // r = floor_div((a - b), 2a)
@@ -51,8 +53,11 @@ impl ClassElem {
     (a, new_b, new_c)
   }
 
-  pub fn reduce(mut a: Integer, mut b: Integer, mut c: Integer) -> ClassElem {
-    while !ClassElem::is_reduced(&a, &b, &c) {
+  /// Does not return a ClassElem because the output is not guaranteed to be valid for all inputs.
+  /// This fn is public for benchmarking purposes. Prefer ClassGroup::elem((a, b, c)) for
+  /// constructing ClassElems.
+  pub fn reduce(mut a: Integer, mut b: Integer, mut c: Integer) -> (Integer, Integer, Integer) {
+    while !Self::is_reduced(&a, &b, &c) {
       // s = floor_div(c + b, 2c)
       let (s, _) = int(&c + &b).div_rem_floor(int(2 * &c));
 
@@ -63,40 +68,38 @@ impl ClassElem {
       b = -b + 2 * int(&s * &c);
       c = -int(&old_b * &s) + old_a + c * s.square();
     }
-    let (a, b, c) = ClassElem::normalize(a, b, c);
-    ClassElem { a, b, c }
+    Self::normalize(a, b, c)
   }
 
   #[allow(non_snake_case)]
-  pub fn square(&mut self) {
-    // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
-    //
-    let (mu, _) = util::solve_linear_congruence(&self.b, &self.c, &self.a).unwrap();
+  pub fn square(x: &ClassElem) -> ClassElem {
+    // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n.
+    let (mu, _) = util::solve_linear_congruence(&x.b, &x.c, &x.a).unwrap();
 
     // A = a^2
     // B = b - 2a * mu
     // tmp = (b * mu) / a
     // C = mu^2 - tmp
-    let A = int(self.a.square_ref());
-    let B = &self.b - int(2 * &self.a) * &mu;
+    let a = int(x.a.square_ref());
+    let b = &x.b - int(2 * &x.a) * &mu;
     let (tmp, _) = <(Integer, Integer)>::from(
-      int((&self.b * &mu) - &self.c).div_rem_floor_ref(&self.a),
+      int((&x.b * &mu) - &x.c).div_rem_floor_ref(&x.a),
     );
-    let C = mu.square() - tmp;
+    let c = mu.square() - tmp;
 
-    *self = ClassElem::reduce(A, B, C);
+    Self::elem((a, b, c))
   }
 
-  fn discriminant(&self) -> Integer {
-    int(self.b.square_ref()) - int(4) * &self.a * &self.c
+  fn discriminant(a: &Integer, b: &Integer, c: &Integer) -> Integer {
+    int(b.square_ref()) - int(4) * a * c
   }
 
-  fn validate(&self) -> bool {
-    &self.discriminant() == ClassGroup::rep()
+  fn validate(a: &Integer, b: &Integer, c: &Integer) -> bool {
+    Self::discriminant(a, b, c) == *Self::rep()
   }
 
   fn is_reduced(a: &Integer, b: &Integer, c: &Integer) -> bool {
-    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && *b < int(0)))
+    Self::is_normal(a, b, c) && (a <= c && !(a == c && *b < int(0)))
   }
 
   fn is_normal(a: &Integer, b: &Integer, _c: &Integer) -> bool {
@@ -145,7 +148,7 @@ impl Group for ClassGroup {
     // a = tv
     // b = h - t * mu
     // m = s
-    // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
+    // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k.
     let a = int(&t * &v);
     let b = &h - int(&t * &mu);
     m.assign(&s);
@@ -162,12 +165,13 @@ impl Group for ClassGroup {
     // A = st
     // B = ju - kt + ls
     // C = kl - jm
-    let A = int(&s * &t);
-    let B = int(&j * &u) - (int(&k * &t) + int(&l * &s));
-    let C = int(&k * &l) - int(&j * &m);
-    ClassElem::reduce(A, B, C)
+    let a = int(&s * &t);
+    let b = int(&j * &u) - (int(&k * &t) + int(&l * &s));
+    let c = int(&k * &l) - int(&j * &m);
+    Self::elem((a, b, c))
   }
 
+  // Constructs the reduced element directly instead of using `Self::Elem()`.
   fn id_(d: &Integer) -> ClassElem {
     let a = int(1);
     let b = int(1);
@@ -177,6 +181,7 @@ impl Group for ClassGroup {
     ClassElem { a, b, c }
   }
 
+  // Constructs the inverse directly instead of using `Self::Elem()`.
   fn inv_(_: &Integer, x: &ClassElem) -> ClassElem {
     ClassElem {
       a: int(&x.a),
@@ -200,7 +205,7 @@ impl Group for ClassGroup {
       if n.is_odd() {
         val = Self::op(&val, &a);
       }
-      a.square();
+      a = Self::square(&a);
       n >>= 1;
     }
   }
@@ -214,13 +219,13 @@ impl UnknownOrderGroup for ClassGroup {
     let a = int(2);
     let b = int(1);
     let c = int(1 - d) / int(8);
-    ClassElem::reduce(a, b, c)
+    ClassElem { a, b, c }
   }
 }
 
 impl Hash for ClassElem {
-  // Assumes ClassElem is reduced and normalized, which will be the case unless
-  // a struct is insantiated manually in this module.
+  // Assumes `ClassElem` is reduced and normalized, which will be the case unless a struct is
+  // instantiated manually in this module.
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.a.hash(state);
     self.b.hash(state);
@@ -229,11 +234,12 @@ impl Hash for ClassElem {
 }
 
 impl PartialEq for ClassElem {
-  fn eq(&self, other: &ClassElem) -> bool {
+  fn eq(&self, other: &Self) -> bool {
     self.a == other.a && self.b == other.b && self.c == other.c
   }
 }
 
+/// Panics if (a, b, c) cannot be reduced to a valid class element.
 impl<A, B, C> ElemFrom<(A, B, C)> for ClassGroup
 where
   Integer: From<A>,
@@ -241,22 +247,20 @@ where
   Integer: From<C>,
 {
   fn elem(abc: (A, B, C)) -> ClassElem {
-    let class_elem = ClassElem::reduce(int(abc.0), int(abc.1), int(abc.2));
+    let (a, b, c) = Self::reduce(int(abc.0), int(abc.1), int(abc.2));
 
-    // Ideally, this should return an error and the
-    // return type of ElemFrom should be Result<Self::Elem, Self:err>,
-    // but this would require a lot of ugly "unwraps" in the accumulator
-    // library. Besides, users should not need to create new class group
-    // elements, so an invalid ElemFrom here should signal a severe internal error.
-    assert!(class_elem.validate());
+    // Ideally, this should return an error and the return type of `ElemFrom` should be
+    // `Result<Self::Elem, Self:err>`, but this would require a lot of ugly `unwrap`s in the
+    // accumulator library. Besides, users should not need to create new class group elements, so
+    // an invalid `ElemFrom` here should signal a severe internal error.
+    assert!(Self::validate(&a, &b, &c));
 
-    class_elem
+    ClassElem { a, b, c }
   }
 }
 
-// Caveat: tests that use "ground truth" use outputs from
-//  Chia's sample implementation in python:
-//    https://github.com/Chia-Network/vdf-competition/blob/master/inkfish/classgroup.py.
+// Caveat: Tests that use "ground truth" use outputs from Chia's sample implementation in python:
+// https://github.com/Chia-Network/vdf-competition/blob/master/inkfish/classgroup.py.
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -354,8 +358,8 @@ mod tests {
     assert!(not_reduced != diff_elem);
     assert!(reduced_ground_truth != diff_elem);
 
-    let not_reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
-    assert!(not_reduced == reduced_ground_truth);
+    let reduced = ClassGroup::elem((not_reduced.a, not_reduced.b, not_reduced.c));
+    assert!(reduced == reduced_ground_truth);
   }
 
   #[test]
@@ -407,7 +411,7 @@ mod tests {
 
     hasher_lh = DefaultHasher::new();
     hasher_rh = DefaultHasher::new();
-    let reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
+    let reduced = ClassGroup::elem((not_reduced.a, not_reduced.b, not_reduced.c));
     reduced.hash(&mut hasher_lh);
     reduced_ground_truth.hash(&mut hasher_rh);
     assert!(hasher_lh.finish() == hasher_rh.finish());
@@ -422,7 +426,7 @@ mod tests {
   #[test]
   fn test_reduce_basic() {
     // Unreduced element.
-    let mut to_reduce = construct_raw_elem_from_strings(
+    let to_reduce = construct_raw_elem_from_strings(
       "59162244921619725812008939143220718157267937427074598447911241410131470159247784852210767449\
       675610037288729551814191198624164179866076352187405442496568188988272422133088755036699145362\
       385840772236403043664778415471196678638241785773530531198720497580622741709880533724904220122\
@@ -455,16 +459,16 @@ mod tests {
       1564478239095738726823372184204"
     );
 
-    to_reduce = ClassElem::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
-    assert_eq!(to_reduce, reduced_ground_truth);
+    let (a, b, c) = ClassGroup::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
+    assert_eq!(ClassElem {a, b, c}, reduced_ground_truth.clone());
 
-    let mut already_reduced = reduced_ground_truth.clone();
-    already_reduced = ClassElem::reduce(already_reduced.a, already_reduced.b, already_reduced.c);
-    assert_eq!(already_reduced, reduced_ground_truth);
+    let reduced_ground_truth_ = reduced_ground_truth.clone();
+    let (a, b, c) = ClassGroup::reduce(reduced_ground_truth_.a, reduced_ground_truth_.b, reduced_ground_truth_.c);
+    assert_eq!(ClassElem {a, b, c}, reduced_ground_truth);
   }
 
   #[test]
-  // REVIEW: this test should be restructured to not construct ClassElems but it will do for now
+  // REVIEW: This test should be restructured to not construct `ClassElem`s but it will do for now.
   fn test_normalize_basic() {
     let unnormalized = construct_raw_elem_from_strings(
       "16",
@@ -491,17 +495,20 @@ mod tests {
        9945629057462766047140854869124473221137588347335081555186814036",
     );
 
-    let (a, b, c) = ClassElem::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
+    let (a, b, c) = ClassGroup::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
     assert_eq!(normalized_ground_truth, ClassElem {a, b, c});
   }
 
   #[test]
+  // REVIEW: This test should be rewritten, because it may be broken by unknown_order_elem() not
+  // working correctly.
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
-    assert_eq!(&g.discriminant(), ClassGroup::rep());
+    assert_eq!(ClassGroup::discriminant(&g.a, &g.b, &g.c), *ClassGroup::rep());
   }
 
   #[test]
+  // REVIEW: This test should be rewritten. See review for test_discriminant_basic().
   fn test_discriminant_across_ops() {
     let id = ClassGroup::id();
     let g1 = ClassGroup::unknown_order_elem();
@@ -509,11 +516,11 @@ mod tests {
     let g3 = ClassGroup::op(&id, &g2);
     let g3_inv = ClassGroup::inv(&g3);
 
-    assert!(id.validate());
-    assert!(g1.validate());
-    assert!(g2.validate());
-    assert!(g3.validate());
-    assert!(g3_inv.validate());
+    assert!(ClassGroup::validate(&id.a, &id.b, &id.c));
+    assert!(ClassGroup::validate(&g1.a, &g1.b, &g1.c));
+    assert!(ClassGroup::validate(&g2.a, &g2.b, &g2.c));
+    assert!(ClassGroup::validate(&g3.a, &g3.b, &g3.c));
+    assert!(ClassGroup::validate(&g3_inv.a, &g3_inv.b, &g3_inv.c));
   }
 
   #[test]
@@ -595,11 +602,10 @@ mod tests {
   #[test]
   fn test_op_complex() {
     // 1. Take g^100, g^200, ..., g^1000.
-    // 2. Compute g^* = g^100 * ... * g^1000
-    // 3. For each of g^100, g^200, ..., g^1000
-    //    compute the inverse of that element and
-    //    assert that g^* * current_inverse = product of g^100, g^200, ..., g^1000
-    //    without the inversed-out element.
+    // 2. Compute g^* = g^100 * ... * g^1000.
+    // 3. For each of g^100, g^200, ..., g^1000 compute the inverse of that element and assert that
+    //    g^* * current_inverse = product of g^100, g^200, ..., g^1000 without the inversed-out
+    //    element.
     let g_anchor = ClassGroup::unknown_order_elem();
     let mut g = ClassGroup::id();
 
@@ -609,24 +615,24 @@ mod tests {
     let mut g_star = ClassGroup::id();
     for i in 1..=1000 {
       g = ClassGroup::op(&g_anchor, &g);
-      assert!(g.validate());
+      assert!(ClassGroup::validate(&g.a, &g.b, &g.c));
       if i % 100 == 0 {
         gs.push(g.clone());
         gs_invs.push(ClassGroup::inv(&g));
         g_star = ClassGroup::op(&g, &g_star);
-        assert!(g_star.validate());
+        assert!(ClassGroup::validate(&g_star.a, &g_star.b, &g_star.c));
       }
     }
 
     let elems_n_invs = gs.iter().zip(gs_invs.iter());
     for (g_elem, g_inv) in elems_n_invs {
-      assert!(g_elem.validate());
-      assert!(g_inv.validate());
+      assert!(ClassGroup::validate(&g_elem.a, &g_elem.b, &g_elem.c));
+      assert!(ClassGroup::validate(&g_inv.a, &g_inv.b, &g_inv.c));
       let mut curr_prod = ClassGroup::id();
       for elem in &gs {
         if elem != g_elem {
           curr_prod = ClassGroup::op(&curr_prod, &elem);
-          assert!(curr_prod.validate());
+          assert!(ClassGroup::validate(&curr_prod.a, &curr_prod.b, &curr_prod.c));
         }
       }
       assert_eq!(ClassGroup::id(), ClassGroup::op(&g_inv, &g_elem));
@@ -696,7 +702,7 @@ mod tests {
     let mut g2 = ClassGroup::op(&g, &g);
 
     // g^4
-    g2.square();
+    g2 = ClassGroup::square(&g2);
 
     assert_eq!(&g2, &g4);
   }
