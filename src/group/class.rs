@@ -39,39 +39,32 @@ pub struct ClassElem {
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
 impl ClassElem {
-  pub fn normalize(a: Integer, b: Integer, c: Integer) -> ClassElem {
+  pub fn normalize(a: Integer, b: Integer, c: Integer) -> (Integer, Integer, Integer) {
     if ClassElem::is_normal(&a, &b, &c) {
-      return ClassElem { a, b, c };
+      return (a, b, c);
     }
     // r = floor_div((a - b), 2a)
     // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
     let (r, _) = Integer::from(&a - &b).div_rem_floor(Integer::from(2 * &a));
     let new_b = &b + 2 * Integer::from(&r * &a);
     let new_c = c + b * &r + &a * r.square();
-    ClassElem {
-      a: a,
-      b: new_b,
-      c: new_c,
-    }
+    (a, new_b, new_c)
   }
 
-  pub fn reduce(a: Integer, b: Integer, c: Integer) -> ClassElem {
-    let mut elem = ClassElem::normalize(a, b, c);
-    while !ClassElem::is_reduced(&elem.a, &elem.b, &elem.c) {
+  pub fn reduce(mut a: Integer, mut b: Integer, mut c: Integer) -> ClassElem {
+    while !ClassElem::is_reduced(&a, &b, &c) {
       // s = floor_div(c + b, 2c)
-      let (s, _) = Integer::from(&elem.c + &elem.b).div_rem_floor(Integer::from(2 * &elem.c));
+      let (s, _) = Integer::from(&c + &b).div_rem_floor(Integer::from(2 * &c));
 
       // (a, b, c) = (c, −b + 2sc, cs^2 − bs + a)
-      let new_a = elem.c.clone();
-      let new_b = Integer::from(-&elem.b) + 2 * Integer::from(&s * &new_a);
-      let new_c = -elem.b * &s + elem.a + elem.c * s.square();
-      elem = ClassElem {
-        a: new_a,
-        b: new_b,
-        c: new_c,
-      }
+      let old_a = a.clone();
+      let old_b = b.clone();
+      a = c.clone();
+      b = -b + 2 * Integer::from(&s * &c);
+      c = -Integer::from(&old_b * &s) + old_a + c * s.square();
     }
-    ClassElem::normalize(elem.a, elem.b, elem.c)
+    let (a, b, c) = ClassElem::normalize(a, b, c);
+    ClassElem { a, b, c }
   }
 
   #[allow(non_snake_case)]
@@ -469,8 +462,9 @@ mod tests {
   }
 
   #[test]
+  // this test should be restructured to not construct ClassElems but it will do for now
   fn test_normalize_basic() {
-    let mut unnormalized = construct_raw_elem_from_strings(
+    let unnormalized = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -495,8 +489,8 @@ mod tests {
        9945629057462766047140854869124473221137588347335081555186814036",
     );
 
-    unnormalized = ClassElem::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
-    assert_eq!(normalized_ground_truth, unnormalized);
+    let (a, b, c) = ClassElem::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
+    assert_eq!(normalized_ground_truth, ClassElem {a, b, c});
   }
 
   #[test]
