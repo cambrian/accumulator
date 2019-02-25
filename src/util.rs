@@ -45,11 +45,11 @@ pub fn solve_linear_congruence(
   m: &Integer,
 ) -> Option<(Integer, Integer)> {
   // g = gcd(a, m) => da + em = g
-  let (g, d, _) = a.clone().gcd_cofactors(m.clone(), Integer::new());
+  let (g, d, _) = <(Integer, Integer, Integer)>::from(a.gcd_cofactors_ref(m));
 
   // q = floor_div(b, g)
   // r = b % g
-  let (q, r) = b.clone().div_rem_floor(g.clone());
+  let (q, r) = <(Integer, Integer)>::from(b.div_rem_floor_ref(&g));
   if r != 0 {
     return None;
   }
@@ -57,7 +57,7 @@ pub fn solve_linear_congruence(
   // mu = (q * d) % m
   // v = m / g
   let mu = (q * d) % m;
-  let (v, _) = m.clone().div_rem_floor(g);
+  let (v, _) = <(Integer, Integer)>::from(m.div_rem_floor_ref(&g));
   Some((mu, v))
 }
 
