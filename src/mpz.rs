@@ -1,12 +1,16 @@
 use gmp_mpfr_sys::gmp::{
   mpz_add, mpz_addmul, mpz_cmp, mpz_cmp_si, mpz_cmpabs, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr,
-  mpz_gcd, mpz_gcdext, mpz_getlimbn, mpz_init, mpz_mod, mpz_mul, mpz_mul_si, mpz_mul_ui, mpz_neg,
-  mpz_set, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_size, mpz_sub, mpz_submul, mpz_swap, mpz_t,
+  mpz_gcd, mpz_gcdext, mpz_get_str, mpz_getlimbn, mpz_init, mpz_mod, mpz_mul, mpz_mul_si,
+  mpz_mul_ui, mpz_neg, mpz_set, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_size, mpz_sizeinbase,
+  mpz_sub, mpz_submul, mpz_swap, mpz_t,
 };
 use std::cmp::Ordering;
 use std::ffi::CString;
+use std::fmt;
+use std::fmt::Formatter;
 use std::hash::{Hash, Hasher};
 use std::mem::uninitialized;
+use std::os::raw::c_int;
 use std::slice;
 use std::str::FromStr;
 
@@ -14,6 +18,51 @@ use std::str::FromStr;
 #[cfg_attr(repr_transparent, repr(transparent))]
 pub struct Mpz {
   inner: mpz_t,
+}
+
+// From rug Integer type
+fn req_chars(i: &Mpz, radix: i32, extra: usize) -> usize {
+  assert!(radix >= 2 && radix <= 36, "radix out of range");
+  let size = unsafe { mpz_sizeinbase(i.as_raw(), radix) };
+  let size_extra = size.checked_add(extra).expect("overflow");
+  if i.cmp0() == Ordering::Less {
+    size_extra.checked_add(1).expect("overflow")
+  } else {
+    size_extra
+  }
+}
+
+// From rug Integer type
+fn append_to_string(s: &mut String, i: &Mpz, radix: i32, to_upper: bool) {
+  // add 1 for nul
+  let size = req_chars(i, radix, 1);
+  s.reserve(size);
+  let case_radix = if to_upper { -radix } else { radix };
+  let orig_len = s.len();
+  unsafe {
+    let bytes = s.as_mut_vec();
+    let start = bytes.as_mut_ptr().offset(orig_len as isize);
+    mpz_get_str(
+      cast_ptr_mut!(start, c_char),
+      case_radix as c_int,
+      i.as_raw(),
+    );
+    let added = slice::from_raw_parts(start, size);
+    let nul_index = added.iter().position(|&x| x == 0).unwrap();
+    bytes.set_len(orig_len + nul_index);
+  }
+}
+
+// From rug Integer type
+fn fmt_radix(i: &Mpz, f: &mut Formatter, radix: i32, to_upper: bool, prefix: &str) -> fmt::Result {
+  let mut s = String::new();
+  append_to_string(&mut s, i, radix, to_upper);
+  let (neg, buf) = if s.starts_with('-') {
+    (true, &s[1..])
+  } else {
+    (false, &s[..])
+  };
+  f.pad_integral(!neg, prefix, buf)
 }
 
 impl Default for Mpz {
@@ -116,6 +165,7 @@ impl Mpz {
   pub fn cmp(&self, other: &Mpz) -> i32 {
     unsafe { mpz_cmp(&self.inner, &other.inner) }
   }
+  #[inline]
   pub fn cmp_abs(&self, other: &Mpz) -> i32 {
     unsafe { mpz_cmpabs(&self.inner, &other.inner) }
   }
