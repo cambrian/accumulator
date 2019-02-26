@@ -606,12 +606,10 @@ impl Group for ClassGroup {
 
   fn op_(_: &Mpz, x: &ClassElem, y: &ClassElem) -> ClassElem {
     CTX.with(|ctx| ctx.borrow_mut().op(x, y))
-    //  with_context(|ctx| ctx.op(x, y))
   }
 
   fn id_(d: &Mpz) -> ClassElem {
     CTX.with(|ctx| ctx.borrow_mut().id(d))
-    //  with_context(|ctx| ctx.id(d))
   }
 
   fn inv_(_: &Mpz, x: &ClassElem) -> ClassElem {
@@ -641,7 +639,7 @@ impl Group for ClassGroup {
         }
 
         if cfg!(feature = "nudulp") {
-          // NUDULP optimization, optionally using FLINT bindings.
+          // NUDULP optimization, maybe using FLINT bindings.
           ctx.square_nudulp(&mut a);
         } else {
           ctx.square(&mut a);
@@ -938,7 +936,7 @@ mod tests {
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
     let mut d = Mpz::default();
-    &g.discriminant(&mut d);
+    g.discriminant(&mut d);
     assert!(d == *ClassGroup::rep())
   }
 
@@ -1163,5 +1161,4 @@ mod tests {
     }
     assert_eq!(g2, g1024);
   }
-
 }
