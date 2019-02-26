@@ -2,10 +2,10 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::Criterion;
 use accumulator::group::{ElemFrom, Rsa2048, UnknownOrderGroup};
 use accumulator::proof::Poe;
 use accumulator::util::int;
+use criterion::Criterion;
 
 fn bench_poe_rsa() {
   let base = Rsa2048::unknown_order_elem();

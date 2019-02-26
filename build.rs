@@ -26,17 +26,16 @@ fn build_flint(env: &Environment, lib: &Path, header: &Path) {
   println!("$ cd {:?}", src_dir);
 
   // For now, we expect GMP and MPFR to be installed where they normally are.
-  let mut conf = OsString::from("./configure --with-gmp=/usr --prefix=");
+  let mut conf = OsString::from("./configure --disable-shared --with-gmp=/usr --prefix=");
   conf.push(env.out_dir.clone().into_os_string());
   configure(&src_dir, &conf);
   make_and_install(&src_dir);
-  panic!("done");
 }
 
 fn need_compile(
     flint_ah: &(PathBuf, PathBuf),
 ) -> bool {
-    !(flint_ah.0.is_file() && flint_ah.1.is_file())
+    !(flint_ah.0.is_file() && flint_ah.1.is_dir())
 }
 
 fn main() {
@@ -58,21 +57,47 @@ fn main() {
   create_dir_or_panic(&env.lib_dir);
   create_dir_or_panic(&env.include_dir);
 
-  // TODO: is the include dir fmpz.h or flint.h?
-  let flint_ah = (env.lib_dir.join("libflint.a"), env.include_dir.join("fmpz.h"));
+  let flint_ah = (env.lib_dir.join("libflint.a"), env.include_dir.join("flint"));
 
   // If flint needs compilation, compile it.
-  if cfg!(feature = "flint") && need_compile(&flint_ah) {
-    remove_dir_or_panic(&env.build_dir);
-    create_dir_or_panic(&env.build_dir);
-    link_dir(&src_dir.join(FLINT_DIR), &env.build_dir.join("flint-src"));
-    let (ref a, ref h) = flint_ah;
-    build_flint(&env, a, h);
-  }
-
   if cfg!(feature = "flint") {
-    println!("cargo:rustc-link-lib=flint");
+    if need_compile(&flint_ah) {
+        remove_dir_or_panic(&env.build_dir);
+        create_dir_or_panic(&env.build_dir);
+        link_dir(&src_dir.join(FLINT_DIR), &env.build_dir.join("flint-src"));
+        let (ref a, ref h) = flint_ah;
+        build_flint(&env, a, h);
+    }
+    write_link_info(&env);
   }
+}
+
+fn write_link_info(
+    env: &Environment,
+) {
+    let out_str = env.out_dir.to_str().unwrap_or_else(|| {
+        panic!(
+            "Path contains unsupported characters, can only make {}",
+            env.out_dir.display()
+        );
+    });
+    let lib_str = env.lib_dir.to_str().unwrap_or_else(|| {
+        panic!(
+            "Path contains unsupported characters, can only make {}",
+            env.lib_dir.display()
+        )
+    });
+    let include_str = env.include_dir.to_str().unwrap_or_else(|| {
+        panic!(
+            "Path contains unsupported characters, can only make {}",
+            env.include_dir.display()
+        )
+    });
+    println!("cargo:out_dir={}", out_str);
+    println!("cargo:lib_dir={}", lib_str);
+    println!("cargo:include_dir={}", include_str);
+    println!("cargo:rustc-link-search=native={}", lib_str);
+    println!("cargo:rustc-link-lib=static=flint");
 }
 
 fn copy_file(src: &Path, dst: &Path) -> IoResult<u64> {
@@ -111,8 +136,8 @@ fn make_and_install(build_dir: &Path) {
     make.current_dir(build_dir);
     execute(make);
 
-    let mut make_install = Command::new("make install");
-    make_install.current_dir(build_dir);
+    let mut make_install = Command::new("make");
+    make_install.current_dir(build_dir).arg("install");
     execute(make_install);
 }
 
