@@ -183,15 +183,3 @@ fn link_dir(src: &Path, dst: &Path) {
         panic!("Unable to symlink {:?} -> {:?}", src, dst);
     });
 }
-
-// NOTES
-/*
-  - We're gonna need different installation instructions if you want to run Flint
-  - Options: include Flint source code in this package or not.
-  - I like this approach:
-    - Have the source code in the package as an external git submodule. Then we can build and
-      install FLINT from source if it's not already there on the system.
-    - We're gonna require people to have GMP 5.1.1 or later installed, as well as MPFR and
-      an implementation of pthread.
-    -
-*/
