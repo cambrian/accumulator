@@ -2,9 +2,9 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::group::{ClassGroup, Rsa2048, UnknownOrderGroup};
-use accumulator::hash::hash_to_prime;
-use accumulator::util::int;
+use accumulator::internal::group::{ClassGroup, Rsa2048, UnknownOrderGroup};
+use accumulator::internal::hash::hash_to_prime;
+use accumulator::internal::util::int;
 use accumulator::{Accumulator, MembershipProof};
 use criterion::Criterion;
 use rand::Rng;

@@ -1,5 +1,5 @@
 use super::Group;
-use crate::util::{int, TypeRep};
+use crate::internal::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
@@ -81,7 +81,7 @@ impl Group for Ed25519 {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::util::int;
+  use crate::internal::util::int;
   use curve25519_dalek::constants;
 
   #[test]

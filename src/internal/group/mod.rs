@@ -1,4 +1,4 @@
-use crate::util::{int, TypeRep};
+use crate::internal::util::{int, TypeRep};
 use rug::Integer;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -106,7 +106,7 @@ pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::util::int;
+  use crate::internal::util::int;
 
   #[test]
   fn test_multi_exp() {

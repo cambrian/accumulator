@@ -1,6 +1,6 @@
 use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof};
-use crate::group::UnknownOrderGroup;
-use crate::hash::hash_to_prime;
+use crate::internal::group::UnknownOrderGroup;
+use crate::internal::hash::hash_to_prime;
 use rug::Integer;
 use std::collections::HashSet;
 

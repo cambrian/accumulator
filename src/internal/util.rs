@@ -1,4 +1,4 @@
-use crate::group::Group;
+use crate::internal::group::Group;
 use rug::Integer;
 
 /// Poor man's type-level programming.
@@ -92,8 +92,8 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{Group, Rsa2048, UnknownOrderGroup};
-  use crate::util::int;
+  use crate::internal::group::{Group, Rsa2048, UnknownOrderGroup};
+  use crate::internal::util::int;
 
   #[derive(Debug)]
   enum Never {}

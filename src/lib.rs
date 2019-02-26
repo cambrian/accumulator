@@ -10,10 +10,7 @@ extern crate arrayref;
 
 mod accumulator;
 pub use crate::accumulator::*;
-pub mod group;
-pub mod hash;
-pub mod proof;
-pub mod util;
+pub mod internal;
 mod vector_commitment;
 pub use vector_commitment::*;
 mod uint;

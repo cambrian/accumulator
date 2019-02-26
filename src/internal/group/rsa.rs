@@ -1,6 +1,6 @@
 //! RSA (2048) group using rug's GMP integers.
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::util::{int, TypeRep};
+use crate::internal::util::{int, TypeRep};
 use rug::Integer;
 use std::str::FromStr;
 

@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::group::{ClassGroup, ElemFrom, Group, UnknownOrderGroup};
+use accumulator::internal::group::{ClassGroup, ElemFrom, Group, UnknownOrderGroup};
 use criterion::Criterion;
 use rug::Integer;
 use std::str::FromStr;
@@ -71,16 +71,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     b.iter(|| ClassGroup::inv(&g_inv))
   });
   c.bench_function("group_class_normalize", move |b| {
-    b.iter_with_setup(
-      || g_norm.clone(),
-      |g| ClassGroup::normalize(g.0, g.1, g.2),
-    )
+    b.iter_with_setup(|| g_norm.clone(), |g| ClassGroup::normalize(g.0, g.1, g.2))
   });
   c.bench_function("group_class_reduce", move |b| {
-    b.iter_with_setup(
-      || g_red.clone(),
-      |g| ClassGroup::reduce(g.0, g.1, g.2),
-    )
+    b.iter_with_setup(|| g_red.clone(), |g| ClassGroup::reduce(g.0, g.1, g.2))
   });
   c.bench_function("group_class_square", move |b| {
     b.iter_with_setup(|| g_sq.clone(), |g| ClassGroup::square(&g))

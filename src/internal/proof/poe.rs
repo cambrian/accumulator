@@ -1,6 +1,6 @@
-use crate::group::Group;
-use crate::hash::hash_to_prime;
-use crate::util::int;
+use crate::internal::group::Group;
+use crate::internal::hash::hash_to_prime;
+use crate::internal::util::int;
 use rug::Integer;
 
 #[allow(non_snake_case)]
@@ -32,8 +32,8 @@ impl<G: Group> Poe<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ElemFrom, Rsa2048, UnknownOrderGroup};
-  use crate::util::int;
+  use crate::internal::group::{ElemFrom, Rsa2048, UnknownOrderGroup};
+  use crate::internal::util::int;
 
   #[test]
   fn test_poe_small_exp() {

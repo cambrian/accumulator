@@ -1,7 +1,7 @@
 //! Class Group implementation
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::util;
-use crate::util::{int, TypeRep};
+use crate::internal::util;
+use crate::internal::util::{int, TypeRep};
 use rug::{Assign, Integer};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -82,9 +82,7 @@ impl ClassGroup {
     // C = mu^2 - tmp
     let a = int(x.a.square_ref());
     let b = &x.b - int(2 * &x.a) * &mu;
-    let (tmp, _) = <(Integer, Integer)>::from(
-      int((&x.b * &mu) - &x.c).div_rem_floor_ref(&x.a),
-    );
+    let (tmp, _) = <(Integer, Integer)>::from(int((&x.b * &mu) - &x.c).div_rem_floor_ref(&x.a));
     let c = mu.square() - tmp;
 
     Self::elem((a, b, c))
@@ -159,8 +157,7 @@ impl Group for ClassGroup {
     // m = (tuk - hu - cs) / st
     let k = &mu + int(&v * &lambda);
     let (l, _) = <(Integer, Integer)>::from((int(&k * &t) - &h).div_rem_floor_ref(&s));
-    let (m, _) =
-      (int(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(int(&s * &t));
+    let (m, _) = (int(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(int(&s * &t));
 
     // A = st
     // B = ju - kt + ls
@@ -460,11 +457,15 @@ mod tests {
     );
 
     let (a, b, c) = ClassGroup::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
-    assert_eq!(ClassElem {a, b, c}, reduced_ground_truth.clone());
+    assert_eq!(ClassElem { a, b, c }, reduced_ground_truth.clone());
 
     let reduced_ground_truth_ = reduced_ground_truth.clone();
-    let (a, b, c) = ClassGroup::reduce(reduced_ground_truth_.a, reduced_ground_truth_.b, reduced_ground_truth_.c);
-    assert_eq!(ClassElem {a, b, c}, reduced_ground_truth);
+    let (a, b, c) = ClassGroup::reduce(
+      reduced_ground_truth_.a,
+      reduced_ground_truth_.b,
+      reduced_ground_truth_.c,
+    );
+    assert_eq!(ClassElem { a, b, c }, reduced_ground_truth);
   }
 
   #[test]
@@ -496,7 +497,7 @@ mod tests {
     );
 
     let (a, b, c) = ClassGroup::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
-    assert_eq!(normalized_ground_truth, ClassElem {a, b, c});
+    assert_eq!(normalized_ground_truth, ClassElem { a, b, c });
   }
 
   #[test]
@@ -504,7 +505,10 @@ mod tests {
   // working correctly.
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
-    assert_eq!(ClassGroup::discriminant(&g.a, &g.b, &g.c), *ClassGroup::rep());
+    assert_eq!(
+      ClassGroup::discriminant(&g.a, &g.b, &g.c),
+      *ClassGroup::rep()
+    );
   }
 
   #[test]
@@ -632,7 +636,11 @@ mod tests {
       for elem in &gs {
         if elem != g_elem {
           curr_prod = ClassGroup::op(&curr_prod, &elem);
-          assert!(ClassGroup::validate(&curr_prod.a, &curr_prod.b, &curr_prod.c));
+          assert!(ClassGroup::validate(
+            &curr_prod.a,
+            &curr_prod.b,
+            &curr_prod.c
+          ));
         }
       }
       assert_eq!(ClassGroup::id(), ClassGroup::op(&g_inv, &g_elem));

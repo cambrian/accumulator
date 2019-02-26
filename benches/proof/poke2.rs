@@ -2,10 +2,10 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::group::Rsa2048;
-use accumulator::group::{ElemFrom, UnknownOrderGroup};
-use accumulator::proof::Poke2;
-use accumulator::util::int;
+use accumulator::internal::group::Rsa2048;
+use accumulator::internal::group::{ElemFrom, UnknownOrderGroup};
+use accumulator::internal::proof::Poke2;
+use accumulator::internal::util::int;
 use criterion::Criterion;
 
 fn bench_poke2_rsa() {

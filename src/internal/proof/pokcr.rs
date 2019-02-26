@@ -1,4 +1,4 @@
-use crate::group::{multi_exp, Group};
+use crate::internal::group::{multi_exp, Group};
 use rug::Integer;
 
 #[allow(non_snake_case)]
@@ -24,8 +24,8 @@ impl<G: Group> Pokcr<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ElemFrom, Rsa2048};
-  use crate::util::int;
+  use crate::internal::group::{ElemFrom, Rsa2048};
+  use crate::internal::util::int;
 
   #[test]
   fn test_pokcr() {

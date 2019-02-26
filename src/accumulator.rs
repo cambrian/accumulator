@@ -2,9 +2,9 @@
 //!
 //! Operations that "mutate" the accumulator (`add`, `delete`) use moves instead of references so
 //! that you don't accidentally use the old accumulator state.
-use crate::group::UnknownOrderGroup;
-use crate::proof::{Poe, Poke2};
-use crate::util::{divide_and_conquer, int, shamir_trick};
+use crate::internal::group::UnknownOrderGroup;
+use crate::internal::proof::{Poe, Poke2};
+use crate::internal::util::{divide_and_conquer, int, shamir_trick};
 use rug::Integer;
 
 #[derive(Debug)]
@@ -233,9 +233,9 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ClassGroup, Rsa2048};
-  use crate::hash;
-  use crate::util::int;
+  use crate::internal::group::{ClassGroup, Rsa2048};
+  use crate::internal::hash;
+  use crate::internal::util::int;
 
   macro_rules! test_all_groups {
     ($test_func:ident, $func_name_rsa:ident, $func_name_class:ident, $($attr:meta)*) => {

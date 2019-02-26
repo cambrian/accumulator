@@ -2,9 +2,9 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::group::{ElemFrom, Rsa2048};
-use accumulator::proof::Pokcr;
-use accumulator::util::int;
+use accumulator::internal::group::{ElemFrom, Rsa2048};
+use accumulator::internal::proof::Pokcr;
+use accumulator::internal::util::int;
 use criterion::Criterion;
 
 fn bench_pokcr_rsa() {

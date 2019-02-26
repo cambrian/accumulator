@@ -1,5 +1,5 @@
-use crate::group::UnknownOrderGroup;
-use crate::hash::{blake2b, hash_to_prime};
+use crate::internal::group::UnknownOrderGroup;
+use crate::internal::hash::{blake2b, hash_to_prime};
 use rug::Integer;
 
 #[allow(non_snake_case)]
@@ -41,8 +41,8 @@ impl<G: UnknownOrderGroup> Poke2<G> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ElemFrom, Group, Rsa2048};
-  use crate::util::int;
+  use crate::internal::group::{ElemFrom, Group, Rsa2048};
+  use crate::internal::util::int;
 
   #[test]
   fn test_poke2() {

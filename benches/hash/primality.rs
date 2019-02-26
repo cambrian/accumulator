@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate criterion;
 
-use accumulator::hash::primality::{passes_lucas, passes_miller_rabin_base_2};
+use accumulator::internal::hash::primality::{passes_lucas, passes_miller_rabin_base_2};
 use accumulator::u256;
 use criterion::Criterion;
 use rand::Rng;

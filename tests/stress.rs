@@ -1,5 +1,5 @@
-use accumulator::group::Rsa2048;
-use accumulator::hash::hash_to_prime;
+use accumulator::internal::group::Rsa2048;
+use accumulator::internal::hash::hash_to_prime;
 use accumulator::Accumulator;
 use rand::Rng;
 
