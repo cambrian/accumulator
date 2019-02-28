@@ -34,6 +34,10 @@ thread_local! {
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
+// ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
+//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf
+//  (Binary Quadratic Forms)
+
 #[derive(Debug)]
 pub struct ClassElem {
   a: Mpz,
@@ -70,7 +74,6 @@ impl PartialEq for ClassElem {
 }
 
 impl Eq for ClassElem {}
-
 unsafe impl Send for ClassElem {}
 unsafe impl Sync for ClassElem {}
 
@@ -96,6 +99,7 @@ impl Default for LinCongruenceCtx {
 
 impl LinCongruenceCtx {
   pub fn solve_linear_congruence(&mut self, mu: &mut Mpz, v: &mut Mpz, a: &Mpz, b: &Mpz, m: &Mpz) {
+    // Binary Quadratic Forms, 7.4.1
     self.g.gcd_cofactors(&mut self.d, &mut self.e, a, m);
     self.q.floor_div_qrem(&mut self.r, b, &self.g);
     mu.mul(&self.q, &self.d);
@@ -128,24 +132,24 @@ pub struct ClassCtx {
   t: Mpz,
   l: Mpz,
   j: Mpz,
+  G_sq_op: Mpz,
+  x_sq_op: Mpz,
+  y_sq_op: Mpz,
+  z_sq_op: Mpz,
+  By_sq_op: Mpz,
+  Dy_sq_op: Mpz,
+  bx_sq_op: Mpz,
+  by_sq_op: Mpz,
+  L_sq_op: Mpz,
+  dx_sq_op: Mpz,
+  dy_sq_op: Mpz,
+  t_sq_op: Mpz,
+  q_sq_op: Mpz,
+  ax_sq_op: Mpz,
+  ay_sq_op: Mpz,
+  Q1_sq_op: Mpz,
+  unused_sq_op: Mpz,
   sctx: LinCongruenceCtx,
-  G_square_opt: Mpz,
-  x_square_opt: Mpz,
-  y_square_opt: Mpz,
-  z_square_opt: Mpz,
-  By_square_opt: Mpz,
-  Dy_square_opt: Mpz,
-  bx_square_opt: Mpz,
-  by_square_opt: Mpz,
-  L_square_opt: Mpz,
-  dx_square_opt: Mpz,
-  dy_square_opt: Mpz,
-  t_square_opt: Mpz,
-  q_square_opt: Mpz,
-  ax_square_opt: Mpz,
-  ay_square_opt: Mpz,
-  Q1_square_opt: Mpz,
-  unused_square_opt: Mpz,
 }
 
 impl Default for ClassCtx {
@@ -173,35 +177,39 @@ impl Default for ClassCtx {
       t: Mpz::default(),
       l: Mpz::default(),
       j: Mpz::default(),
-      sctx: LinCongruenceCtx::default(),
 
-      // Variables for squaring.
-      G_square_opt: Mpz::default(),
-      x_square_opt: Mpz::default(),
-      y_square_opt: Mpz::default(),
-      z_square_opt: Mpz::default(),
-      By_square_opt: Mpz::default(),
-      Dy_square_opt: Mpz::default(),
-      bx_square_opt: Mpz::default(),
-      by_square_opt: Mpz::default(),
-      L_square_opt: Mpz::default(),
-      dx_square_opt: Mpz::default(),
-      dy_square_opt: Mpz::default(),
-      t_square_opt: Mpz::default(),
-      q_square_opt: Mpz::default(),
-      ax_square_opt: Mpz::default(),
-      ay_square_opt: Mpz::default(),
-      Q1_square_opt: Mpz::default(),
-      unused_square_opt: Mpz::default(),
+      // Used in squaring ops
+      G_sq_op: Mpz::default(),
+      x_sq_op: Mpz::default(),
+      y_sq_op: Mpz::default(),
+      z_sq_op: Mpz::default(),
+      By_sq_op: Mpz::default(),
+      Dy_sq_op: Mpz::default(),
+      bx_sq_op: Mpz::default(),
+      by_sq_op: Mpz::default(),
+      L_sq_op: Mpz::default(),
+      dx_sq_op: Mpz::default(),
+      dy_sq_op: Mpz::default(),
+      t_sq_op: Mpz::default(),
+      q_sq_op: Mpz::default(),
+      ax_sq_op: Mpz::default(),
+      ay_sq_op: Mpz::default(),
+      Q1_sq_op: Mpz::default(),
+      unused_sq_op: Mpz::default(),
+
+      sctx: LinCongruenceCtx::default(),
     };
-    s.L_square_opt.abs(&CLASS_GROUP_DISCRIMINANT.clone());
-    s.L_square_opt.root_mut(4);
+
+    // Precomputation needed for NUDULP squaring.
+    s.L_sq_op.abs(&CLASS_GROUP_DISCRIMINANT.clone());
+    s.L_sq_op.root_mut(4);
     s
   }
 }
 
 impl ClassCtx {
   fn normalize_(&mut self, a: &mut Mpz, b: &mut Mpz, c: &mut Mpz) {
+    // Binary Quadratic Forms, 5.1.1
     self.r.sub(&a, &b);
     self.denom.mul_ui(&a, 2);
     self.r.floor_div_mut(&self.denom);
@@ -236,6 +244,7 @@ impl ClassCtx {
   }
 
   fn reduce_(&mut self, elem: &mut ClassElem) {
+    // Binary Quadratic Forms, 5.2.1
     while !ClassElem::is_reduced(&elem.a, &elem.b, &elem.c) {
       self.s.add(&elem.c, &elem.b);
       self.x.mul_ui(&elem.c, 2);
@@ -269,6 +278,7 @@ impl ClassCtx {
   }
 
   fn square(&mut self, x: &mut ClassElem) {
+    // Binary Quadratic Forms, 6.3.1
     self
       .sctx
       .solve_linear_congruence(&mut self.mu, &mut self.v, &x.b, &x.c, &x.a);
@@ -291,7 +301,7 @@ impl ClassCtx {
   }
 
   #[allow(non_snake_case)]
-  fn square_help_flint(ctx: &mut ClassCtx) {
+  fn square_nudulp_help_flint(ctx: &mut ClassCtx) {
     unsafe {
       let mut fy: fmpz = 0;
       let mut fx: fmpz = 0;
@@ -299,11 +309,11 @@ impl ClassCtx {
       let mut fbx: fmpz = 0;
       let mut fL: fmpz = 0;
 
-      let mut y_square_clone = flint_mpz_struct::from(&ctx.y_square_opt);
-      let mut x_square_clone = flint_mpz_struct::from(&ctx.x_square_opt);
-      let mut by_square_clone = flint_mpz_struct::from(&ctx.by_square_opt);
-      let mut bx_square_clone = flint_mpz_struct::from(&ctx.bx_square_opt);
-      let mut L_square_clone = flint_mpz_struct::from(&ctx.L_square_opt);
+      let mut y_square_clone = flint_mpz_struct::from(&ctx.y_sq_op);
+      let mut x_square_clone = flint_mpz_struct::from(&ctx.x_sq_op);
+      let mut by_square_clone = flint_mpz_struct::from(&ctx.by_sq_op);
+      let mut bx_square_clone = flint_mpz_struct::from(&ctx.bx_sq_op);
+      let mut L_square_clone = flint_mpz_struct::from(&ctx.L_sq_op);
 
       flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
       flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);
@@ -319,124 +329,109 @@ impl ClassCtx {
       flint::fmpz_get_mpz(&mut by_square_clone, &mut fby);
       flint::fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
 
-      ctx.y_square_opt = Mpz::from(y_square_clone);
-      ctx.x_square_opt = Mpz::from(x_square_clone);
-      ctx.by_square_opt = Mpz::from(by_square_clone);
-      ctx.bx_square_opt = Mpz::from(bx_square_clone);
+      ctx.y_sq_op = Mpz::from(y_square_clone);
+      ctx.x_sq_op = Mpz::from(x_square_clone);
+      ctx.by_sq_op = Mpz::from(by_square_clone);
+      ctx.bx_sq_op = Mpz::from(bx_square_clone);
     }
 
-    ctx.x_square_opt.neg_mut();
-    if ctx.x_square_opt.sgn() > 0 {
-      ctx.y_square_opt.neg_mut();
+    ctx.x_sq_op.neg_mut();
+    if ctx.x_sq_op.sgn() > 0 {
+      ctx.y_sq_op.neg_mut();
     } else {
-      ctx.by_square_opt.neg_mut();
+      ctx.by_sq_op.neg_mut();
     }
   }
 
-  fn square_help(ctx: &mut ClassCtx) {
-    ctx.x_square_opt.set_ui(1);
-    ctx.y_square_opt.set_ui(0);
-    while ctx.by_square_opt.cmp_abs(&ctx.L_square_opt) > 0 && ctx.bx_square_opt.sgn() == 0 {
-      ctx
-        .q_square_opt
-        .floor_div(&ctx.by_square_opt, &ctx.bx_square_opt);
-      ctx
-        .t_square_opt
-        .floor_div_rem(&ctx.by_square_opt, &ctx.bx_square_opt);
+  fn square_nudulp_help(ctx: &mut ClassCtx) {
+    ctx.x_sq_op.set_ui(1);
+    ctx.y_sq_op.set_ui(0);
+    while ctx.by_sq_op.cmp_abs(&ctx.L_sq_op) > 0 && ctx.bx_sq_op.sgn() == 0 {
+      ctx.q_sq_op.floor_div(&ctx.by_sq_op, &ctx.bx_sq_op);
+      ctx.t_sq_op.floor_div_rem(&ctx.by_sq_op, &ctx.bx_sq_op);
 
-      ctx.by_square_opt.set(&ctx.bx_square_opt);
-      ctx.bx_square_opt.set(&ctx.t_square_opt);
-      ctx
-        .y_square_opt
-        .sub_mul(&ctx.q_square_opt, &ctx.x_square_opt);
-      ctx.t_square_opt.set(&ctx.y_square_opt);
-      ctx.y_square_opt.set(&ctx.x_square_opt);
-      ctx.x_square_opt.set(&ctx.t_square_opt);
-      ctx.z_square_opt.add_mut_ui(1);
+      ctx.by_sq_op.set(&ctx.bx_sq_op);
+      ctx.bx_sq_op.set(&ctx.t_sq_op);
+      ctx.y_sq_op.sub_mul(&ctx.q_sq_op, &ctx.x_sq_op);
+      ctx.t_sq_op.set(&ctx.y_sq_op);
+      ctx.y_sq_op.set(&ctx.x_sq_op);
+      ctx.x_sq_op.set(&ctx.t_sq_op);
+      ctx.z_sq_op.add_mut_ui(1);
     }
 
-    if ctx.z_square_opt.odd() != 0 {
-      ctx.by_square_opt.neg_mut();
-      ctx.y_square_opt.neg_mut();
+    if ctx.z_sq_op.odd() != 0 {
+      ctx.by_sq_op.neg_mut();
+      ctx.y_sq_op.neg_mut();
     }
   }
 
   fn square_nudulp(&mut self, x: &mut ClassElem) {
-    self.G_square_opt.gcd_cofactors(
-      &mut self.y_square_opt,
-      &mut self.unused_square_opt,
-      &x.b,
-      &x.a,
-    );
-    self.By_square_opt.div_exact(&x.a, &self.G_square_opt);
-    self.Dy_square_opt.div_exact(&x.b, &self.G_square_opt);
-    self.bx_square_opt.mul(&self.y_square_opt, &x.c);
-    self.bx_square_opt.modulo_mut(&self.By_square_opt);
-    self.by_square_opt.set(&self.By_square_opt);
-    if self.by_square_opt.cmp_abs(&self.L_square_opt) <= 0 {
-      self
-        .dx_square_opt
-        .mul(&self.bx_square_opt, &self.Dy_square_opt);
-      self.dx_square_opt.sub_mut(&x.c);
-      self.dx_square_opt.div_exact_mut(&self.By_square_opt);
-      x.a.mul(&self.by_square_opt, &self.by_square_opt);
-      x.c.mul(&self.bx_square_opt, &self.bx_square_opt);
-      self
-        .t_square_opt
-        .add(&self.bx_square_opt, &self.by_square_opt);
-      self.t_square_opt.square_mut();
-      x.b.sub_mut(&self.t_square_opt);
+    // Jacobson, Michael J., and Alfred J. Van Der Poorten. "Computational aspects of NUCOMP."
+    // Algorithm 2 (Alg 2).
+
+    // Step 1 in Alg 2.
+    self
+      .G_sq_op
+      .gcd_cofactors(&mut self.y_sq_op, &mut self.unused_sq_op, &x.b, &x.a);
+    self.By_sq_op.div_exact(&x.a, &self.G_sq_op);
+    self.Dy_sq_op.div_exact(&x.b, &self.G_sq_op);
+
+    // Step 2 in Alg 2.
+    self.bx_sq_op.mul(&self.y_sq_op, &x.c);
+    self.bx_sq_op.modulo_mut(&self.By_sq_op);
+    self.by_sq_op.set(&self.By_sq_op);
+
+    if self.by_sq_op.cmp_abs(&self.L_sq_op) <= 0 {
+      // Step 4 in Alg 2.
+      self.dx_sq_op.mul(&self.bx_sq_op, &self.Dy_sq_op);
+      self.dx_sq_op.sub_mut(&x.c);
+      self.dx_sq_op.div_exact_mut(&self.By_sq_op);
+      x.a.mul(&self.by_sq_op, &self.by_sq_op);
+      x.c.mul(&self.bx_sq_op, &self.bx_sq_op);
+      self.t_sq_op.add(&self.bx_sq_op, &self.by_sq_op);
+      self.t_sq_op.square_mut();
+      x.b.sub_mut(&self.t_sq_op);
       x.b.add_mut(&x.a);
       x.b.add_mut(&x.c);
-      self
-        .t_square_opt
-        .mul(&self.G_square_opt, &self.dx_square_opt);
-      x.c.sub_mut(&self.t_square_opt);
+      self.t_sq_op.mul(&self.G_sq_op, &self.dx_sq_op);
+      x.c.sub_mut(&self.t_sq_op);
       return;
     }
 
+    // Most of Step 3 in Alg 2.
     if cfg!(feature = "flint") {
-      ClassCtx::square_help_flint(self);
+      // Subroutine as handled by top entry to the Chia VDF competition "bulaiden."
+      ClassCtx::square_nudulp_help_flint(self);
     } else {
-      ClassCtx::square_help(self);
+      // Subroutine as presented in "Computational aspects of NUCOMP.", Algorithm 2, most of step 3.
+      ClassCtx::square_nudulp_help(self);
     }
 
-    self
-      .ax_square_opt
-      .mul(&self.G_square_opt, &self.x_square_opt);
-    self
-      .ay_square_opt
-      .mul(&self.G_square_opt, &self.y_square_opt);
-    self
-      .t_square_opt
-      .mul(&self.Dy_square_opt, &self.bx_square_opt);
-    self.t_square_opt.sub_mul(&x.c, &self.x_square_opt);
-    self
-      .dx_square_opt
-      .div_exact(&self.t_square_opt, &self.By_square_opt);
-    self
-      .Q1_square_opt
-      .mul(&self.y_square_opt, &self.dx_square_opt);
-    self
-      .dy_square_opt
-      .add(&self.Q1_square_opt, &self.Dy_square_opt);
-    x.b.add(&self.dy_square_opt, &self.Q1_square_opt);
-    x.b.mul_mut(&self.G_square_opt);
-    self.dy_square_opt.div_exact_mut(&self.x_square_opt);
-    x.a.mul(&self.by_square_opt, &self.by_square_opt);
-    x.c.mul(&self.bx_square_opt, &self.bx_square_opt);
-    self
-      .t_square_opt
-      .add(&self.bx_square_opt, &self.by_square_opt);
-    x.b.sub_mul(&self.t_square_opt, &self.t_square_opt);
+    self.ax_sq_op.mul(&self.G_sq_op, &self.x_sq_op);
+    self.ay_sq_op.mul(&self.G_sq_op, &self.y_sq_op);
+
+    // Step 5 in Alg 2.
+    self.t_sq_op.mul(&self.Dy_sq_op, &self.bx_sq_op);
+    self.t_sq_op.sub_mul(&x.c, &self.x_sq_op);
+    self.dx_sq_op.div_exact(&self.t_sq_op, &self.By_sq_op);
+    self.Q1_sq_op.mul(&self.y_sq_op, &self.dx_sq_op);
+    self.dy_sq_op.add(&self.Q1_sq_op, &self.Dy_sq_op);
+    x.b.add(&self.dy_sq_op, &self.Q1_sq_op);
+    x.b.mul_mut(&self.G_sq_op);
+    self.dy_sq_op.div_exact_mut(&self.x_sq_op);
+    x.a.mul(&self.by_sq_op, &self.by_sq_op);
+    x.c.mul(&self.bx_sq_op, &self.bx_sq_op);
+    self.t_sq_op.add(&self.bx_sq_op, &self.by_sq_op);
+    x.b.sub_mul(&self.t_sq_op, &self.t_sq_op);
     x.b.add_mut(&x.a);
     x.b.add_mut(&x.c);
-    x.a.sub_mul(&self.ay_square_opt, &self.dy_square_opt);
-    x.c.sub_mul(&self.ax_square_opt, &self.dx_square_opt);
+    x.a.sub_mul(&self.ay_sq_op, &self.dy_sq_op);
+    x.c.sub_mul(&self.ax_sq_op, &self.dx_sq_op);
     self.reduce_mut(x);
   }
 
   fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
+    // Binary Quadratic Forms, 6.1.1
     self.g.add(&x.b, &y.b);
     self.g.floor_div_ui_mut(2);
     self.h.sub(&y.b, &x.b);
@@ -501,6 +496,7 @@ impl ClassCtx {
   }
 
   fn id(&mut self, d: &Mpz) -> ClassElem {
+    // Binary Quadratic Forms, Definition 5.4
     let mut ret = ClassElem::default();
     ret.a.set_ui(1);
     ret.b.set_ui(1);
@@ -509,9 +505,6 @@ impl ClassCtx {
     ret
   }
 }
-
-// ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
-//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 
 impl ClassElem {
   pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> ClassElem {
@@ -611,9 +604,7 @@ impl Group for ClassGroup {
 
 impl UnknownOrderGroup for ClassGroup {
   fn unknown_order_elem_(d: &Mpz) -> ClassElem {
-    // a = 2
-    // b = 1
-    // c = (b * b - d) / 4a
+    // Binary Quadratic Forms, Definition 5.4
     let mut ret = ClassElem::default();
     ret.a.set_ui(2);
     ret.b.set_ui(1);
