@@ -96,15 +96,10 @@ impl Default for LinCongruenceCtx {
 
 impl LinCongruenceCtx {
   pub fn solve_linear_congruence(&mut self, mu: &mut Mpz, v: &mut Mpz, a: &Mpz, b: &Mpz, m: &Mpz) {
-    // g = gcd(a, m) => da + em = g
     self.g.gcd_cofactors(&mut self.d, &mut self.e, a, m);
-    // q = floor_div(b, g)
-    // r = b % g
     self.q.floor_div_qrem(&mut self.r, b, &self.g);
-    // mu = (q * d) % m
     mu.mul(&self.q, &self.d);
     mu.modulo_mut(m);
-    // v = m / g
     v.floor_div(m, &self.g);
   }
 }
@@ -207,8 +202,6 @@ impl Default for ClassCtx {
 
 impl ClassCtx {
   fn normalize_(&mut self, a: &mut Mpz, b: &mut Mpz, c: &mut Mpz) {
-    // r = floor_div((a - b), 2a)
-    // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
     self.r.sub(&a, &b);
     self.denom.mul_ui(&a, 2);
     self.r.floor_div_mut(&self.denom);
@@ -244,29 +237,21 @@ impl ClassCtx {
 
   fn reduce_(&mut self, elem: &mut ClassElem) {
     while !ClassElem::is_reduced(&elem.a, &elem.b, &elem.c) {
-      // s = floor_div(c + b, 2c)
       self.s.add(&elem.c, &elem.b);
-      // x = 2c
       self.x.mul_ui(&elem.c, 2);
       self.s.floor_div_mut(&self.x);
       self.old_a.set(&elem.a);
       self.old_b.set(&elem.b);
       elem.a.set(&elem.c);
       elem.b.neg_mut();
-      // x = 2sc
       self.x.mul(&self.s, &elem.c);
       self.x.mul_ui_mut(2);
-      // b = 2sc - b
       elem.b.add_mut(&self.x);
 
-      // c = cs^2
       elem.c.mul_mut(&self.s);
       elem.c.mul_mut(&self.s);
-      // x = bs
       self.x.mul(&self.old_b, &self.s);
-      // c -= bs
       elem.c.sub_mut(&self.x);
-      // c += a
       elem.c.add_mut(&self.old_a);
     }
   }
@@ -284,26 +269,21 @@ impl ClassCtx {
   }
 
   fn square(&mut self, x: &mut ClassElem) {
-    // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n
     self
       .sctx
       .solve_linear_congruence(&mut self.mu, &mut self.v, &x.b, &x.c, &x.a);
 
-    // tmp = (b * mu) / a
     self.m.mul(&x.b, &self.mu);
     self.m.sub_mut(&x.c);
     self.m.floor_div_mut(&x.a);
 
-    // A = a^2
     self.old_a.set(&x.a);
     x.a.square_mut();
 
-    // B = b - 2a * mu
     self.a.mul(&self.mu, &self.old_a);
     self.a.mul_ui_mut(2);
     x.b.sub_mut(&self.a);
 
-    // C = mu^2 - tmp
     x.c.mul(&self.mu, &self.mu);
     x.c.sub_mut(&self.m);
 
@@ -457,58 +437,39 @@ impl ClassCtx {
   }
 
   fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    // g = (b1 + b2) / 2
     self.g.add(&x.b, &y.b);
     self.g.floor_div_ui_mut(2);
-    // h = (b2 - b1) / 2
     self.h.sub(&y.b, &x.b);
     self.h.floor_div_ui_mut(2);
-    // w = gcd(a1, a2, g)
     self.w.gcd(&x.a, &y.a);
     self.w.gcd_mut(&self.g);
-    // j = w
     self.j.set(&self.w);
-    // r = 0
     self.r.set_ui(0);
-    // s = a1 / w
     self.s.floor_div(&x.a, &self.w);
-    // t = a2 / w
     self.t.floor_div(&y.a, &self.w);
-    // u = g / w
     self.u.floor_div(&self.g, &self.w);
-    // a = tu
     self.a.mul(&self.t, &self.u);
-    // b = hu + sc
     self.b.mul(&self.h, &self.u);
     self.m.mul(&self.s, &x.c);
     self.b.add_mut(&self.m);
-    // m = st
     self.m.mul(&self.s, &self.t);
-    // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
     self
       .sctx
       .solve_linear_congruence(&mut self.mu, &mut self.v, &self.a, &self.b, &self.m);
 
-    // a = tv
     self.a.mul(&self.t, &self.v);
-    // b = h - t * mu
     self.m.mul(&self.t, &self.mu);
     self.b.sub(&self.h, &self.m);
-    // m = s
     self.m.set(&self.s);
-    // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k
     self
       .sctx
       .solve_linear_congruence(&mut self.lambda, &mut self.sigma, &self.a, &self.b, &self.m);
 
-    // k = mu + v * lambda
     self.a.mul(&self.v, &self.lambda);
     self.k.add(&self.mu, &self.a);
-    // l = (k * t - h) / s
     self.l.mul(&self.k, &self.t);
     self.l.sub_mut(&self.h);
     self.l.floor_div_mut(&self.s);
-    // m = (tuk - hu - c1s) / st
     self.m.mul(&self.t, &self.u);
     self.m.mul_mut(&self.k);
     self.a.mul(&self.h, &self.u);
@@ -519,12 +480,11 @@ impl ClassCtx {
     self.m.floor_div_mut(&self.a);
 
     let mut ret = ClassElem::default();
-    // A = st - ru
+
     ret.a.mul(&self.s, &self.t);
     self.a.mul(&self.r, &self.u);
     ret.a.sub_mut(&self.a);
 
-    // B = ju - kt + ls
     ret.b.mul(&self.j, &self.u);
     self.a.mul(&self.m, &self.r);
     ret.b.add_mut(&self.a);
@@ -533,7 +493,6 @@ impl ClassCtx {
     self.a.mul(&self.l, &self.s);
     ret.b.sub_mut(&self.a);
 
-    // C = kl - jm
     ret.c.mul(&self.k, &self.l);
     self.a.mul(&self.j, &self.m);
     ret.c.sub_mut(&self.a);
@@ -545,8 +504,7 @@ impl ClassCtx {
     let mut ret = ClassElem::default();
     ret.a.set_ui(1);
     ret.b.set_ui(1);
-    // c = (b * b - d) / 4a
-    self.a.sub(&ret.b, &d); // b == b*b
+    self.a.sub(&ret.b, &d);
     ret.c.floor_div_ui(&self.a, 4);
     ret
   }
