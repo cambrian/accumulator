@@ -1,3 +1,4 @@
+//! Rust wrappers for gmp_mpfr_sys, for better control over memory allocation.
 use gmp_mpfr_sys::gmp::{
   mpz_abs, mpz_add, mpz_add_ui, mpz_cdiv_q, mpz_cdiv_r, mpz_cmp, mpz_cmp_si, mpz_cmpabs,
   mpz_divexact, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_fdiv_r, mpz_fits_slong_p, mpz_gcd,
@@ -18,9 +19,9 @@ pub type mp_limb_t = ::std::os::raw::c_ulong;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct flint_mpz_struct {
-  pub _mp_alloc: ::std::os::raw::c_int,
-  pub _mp_size: ::std::os::raw::c_int,
-  pub _mp_d: *mut mp_limb_t,
+  pub mp_alloc: ::std::os::raw::c_int,
+  pub mp_size: ::std::os::raw::c_int,
+  pub mp_d: *mut mp_limb_t,
 }
 
 #[derive(Debug)]
@@ -50,7 +51,7 @@ impl Clone for Mpz {
 
 impl PartialEq for Mpz {
   fn eq(&self, other: &Mpz) -> bool {
-    self.cmp(&other) == 0
+    self.cmp_mpz(&other) == 0
   }
 }
 
@@ -58,7 +59,7 @@ impl Eq for Mpz {}
 
 impl PartialOrd for Mpz {
   fn partial_cmp(&self, other: &Mpz) -> Option<Ordering> {
-    match self.cmp(&other) {
+    match self.cmp_mpz(&other) {
       x if x < 0 => Some(Ordering::Less),
       0 => Some(Ordering::Equal),
       _ => Some(Ordering::Greater),
@@ -68,7 +69,7 @@ impl PartialOrd for Mpz {
 
 impl Ord for Mpz {
   fn cmp(&self, other: &Mpz) -> Ordering {
-    match self.cmp(&other) {
+    match self.cmp_mpz(&other) {
       x if x < 0 => Ordering::Less,
       0 => Ordering::Equal,
       _ => Ordering::Greater,
@@ -99,9 +100,9 @@ impl From<u64> for Mpz {
 impl From<&Mpz> for flint_mpz_struct {
   fn from(x: &Mpz) -> Self {
     flint_mpz_struct {
-      _mp_alloc: x.inner.alloc,
-      _mp_size: x.inner.size,
-      _mp_d: x.inner.d,
+      mp_alloc: x.inner.alloc,
+      mp_size: x.inner.size,
+      mp_d: x.inner.d,
     }
   }
 }
@@ -109,9 +110,9 @@ impl From<&Mpz> for flint_mpz_struct {
 impl From<flint_mpz_struct> for Mpz {
   fn from(x: flint_mpz_struct) -> Self {
     let mut ret = Mpz::default();
-    ret.inner.alloc = x._mp_alloc;
-    ret.inner.size = x._mp_size;
-    ret.inner.d = x._mp_d;
+    ret.inner.alloc = x.mp_alloc;
+    ret.inner.size = x.mp_size;
+    ret.inner.d = x.mp_d;
     ret
   }
 }
@@ -147,7 +148,7 @@ impl Mpz {
     unsafe { mpz_add(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
-  pub fn cmp(&self, other: &Mpz) -> i32 {
+  pub fn cmp_mpz(&self, other: &Mpz) -> i32 {
     unsafe { mpz_cmp(&self.inner, &other.inner) }
   }
   #[inline]
@@ -195,8 +196,8 @@ impl Mpz {
     }
   }
   #[inline]
-  pub fn get_si(&mut self) -> i64 {
-    unsafe { mpz_get_si(&mut self.inner) }
+  pub fn get_si(&self) -> i64 {
+    unsafe { mpz_get_si(&self.inner) }
   }
   #[inline]
   pub fn div_exact(&mut self, n: &Mpz, d: &Mpz) {
@@ -209,8 +210,8 @@ impl Mpz {
     }
   }
   #[inline]
-  pub fn fits_slong_p(&mut self) -> i32 {
-    unsafe { mpz_fits_slong_p(&mut self.inner) }
+  pub fn fits_slong_p(&self) -> i32 {
+    unsafe { mpz_fits_slong_p(&self.inner) }
   }
   #[inline]
   pub fn floor_div_ui_mut(&mut self, val: u64) {
@@ -271,8 +272,8 @@ impl Mpz {
     unsafe { mpz_neg(&mut self.inner, &self.inner) }
   }
   #[inline]
-  pub fn odd(&mut self) -> i32 {
-    unsafe { mpz_odd_p(&mut self.inner) }
+  pub fn odd(&self) -> i32 {
+    unsafe { mpz_odd_p(&self.inner) }
   }
   #[inline]
   pub fn root_mut(&mut self, x: u64) -> i32 {

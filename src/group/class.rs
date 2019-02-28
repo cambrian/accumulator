@@ -1,8 +1,8 @@
 //! Class Group implementation
-use super::ffi::flint;
-use super::ffi::flint::fmpz;
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::mpz::{flint_mpz_struct, Mpz};
+use crate::num::flint;
+use crate::num::flint::fmpz;
+use crate::num::mpz::{flint_mpz_struct, Mpz};
 use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;

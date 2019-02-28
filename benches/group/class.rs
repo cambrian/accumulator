@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use accumulator::group::{ClassGroup, ElemFrom, Group, UnknownOrderGroup};
-use accumulator::mpz::Mpz;
+use accumulator::num::mpz::Mpz;
 use criterion::Criterion;
 use rug::Integer;
 use std::str::FromStr;
