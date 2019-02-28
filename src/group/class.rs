@@ -179,7 +179,7 @@ impl Default for ClassCtx {
       j: Mpz::default(),
       sctx: LinCongruenceCtx::default(),
 
-      // Alan's additions for squaring.
+      // Variables for squaring.
       G_square_opt: Mpz::default(),
       x_square_opt: Mpz::default(),
       y_square_opt: Mpz::default(),
@@ -352,7 +352,7 @@ impl ClassCtx {
     }
   }
 
-  fn square_help_regular(ctx: &mut ClassCtx) {
+  fn square_help(ctx: &mut ClassCtx) {
     ctx.x_square_opt.set_ui(1);
     ctx.y_square_opt.set_ui(0);
     while ctx.by_square_opt.cmp_abs(&ctx.L_square_opt) > 0 && ctx.bx_square_opt.sgn() == 0 {
@@ -417,7 +417,7 @@ impl ClassCtx {
     if cfg!(feature = "flint") {
       ClassCtx::square_help_flint(self);
     } else {
-      ClassCtx::square_help_regular(self);
+      ClassCtx::square_help(self);
     }
 
     self

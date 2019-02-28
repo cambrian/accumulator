@@ -10,70 +10,81 @@ use std::os::unix::fs as unix_fs;
 #[cfg(linux)]
 use std::os::linux::fs as linux_fs;
 
-// Adapted from gmp-mpfr-sys/build.rs.
 const FLINT_DIR: &'static str = "ext/flint-2.5.2";
 
-struct Environment {
+struct BuildEnvironment {
     out_dir: PathBuf,
     lib_dir: PathBuf,
     include_dir: PathBuf,
-    build_dir: PathBuf
+    build_dir: PathBuf,
+    headers_dir: PathBuf,
+    archive_file: PathBuf,
 }
 
-fn build_flint(env: &Environment, lib: &Path, header: &Path) {
-  let src_dir = env.build_dir.join("flint-src");
-  create_dir_or_panic(&src_dir);
-  println!("$ cd {:?}", src_dir);
+// Adapted from the build script from gmp-mpfr-sys.  We currently only care
+// about building Flint.
+fn main() {
+    if !cfg!(feature = "flint") {
+        return;
+    }
 
-  // For now, we expect GMP and MPFR to be installed where they normally are.
-  let mut conf = OsString::from("./configure --disable-shared --with-gmp=/usr --prefix=");
-  conf.push(env.out_dir.clone().into_os_string());
-  configure(&src_dir, &conf);
-  make_and_install(&src_dir);
+    let host = cargo_env_or_panic("HOST");
+    let target = cargo_env_or_panic("TARGET");
+    assert_eq!(host, target, "Cross compilation is not supported with this feature.");
+
+    let flint_src_dir = PathBuf::from(cargo_env_or_panic("CARGO_MANIFEST_DIR")).join(FLINT_DIR);
+    let out_dir = PathBuf::from(cargo_env_or_panic("OUT_DIR"));
+
+    let flint_out_dir = out_dir.join("flint");
+    let flint_archive_file = flint_out_dir.join("lib").join("libflint.a");
+    let flint_headers_dir = flint_out_dir.join("include").join("flint");
+
+    let flint_env = BuildEnvironment {
+        out_dir: flint_out_dir.clone(),
+        lib_dir: flint_out_dir.join("lib"),
+        include_dir: flint_out_dir.join("include"),
+        build_dir: flint_out_dir.join("build"),
+        archive_file: flint_archive_file,
+        headers_dir: flint_headers_dir,
+    };
+
+    // Create target directories for Flint.
+    create_dir_or_panic(&flint_env.out_dir);
+    create_dir_or_panic(&flint_env.lib_dir);
+    create_dir_or_panic(&flint_env.include_dir);
+
+    if need_compile(&flint_env) {
+        remove_dir_or_panic(&flint_env.build_dir);
+        create_dir_or_panic(&flint_env.build_dir);
+        link_dir(&flint_src_dir, &flint_env.build_dir.join("flint-src"));
+        build_flint(&flint_env);
+    }
+
+    write_cargo_cmds(&flint_env);
+}
+
+fn build_flint(flint_env: &BuildEnvironment) {
+    let src_dir = flint_env.build_dir.join("flint-src");
+    create_dir_or_panic(&src_dir);
+    println!("$ cd {:?}", src_dir);
+
+    // For now, we expect GMP and MPFR to be installed on the target system. On MACOS they
+    // can be installed with brew.  On linux with apt.
+    let mut conf = OsString::from("./configure --disable-shared --with-gmp=/usr --prefix=");
+
+    conf.push(flint_env.out_dir.clone().into_os_string());
+    configure(&src_dir, &conf);
+    make_and_install(&src_dir);
 }
 
 fn need_compile(
-    flint_ah: &(PathBuf, PathBuf),
+    env: &BuildEnvironment
 ) -> bool {
-    !(flint_ah.0.is_file() && flint_ah.1.is_dir())
+    !(env.archive_file.is_file() && env.headers_dir.join("flint.h").is_file())
 }
 
-fn main() {
-  let src_dir = PathBuf::from(cargo_env("CARGO_MANIFEST_DIR"));
-  let out_dir = PathBuf::from(cargo_env("OUT_DIR"));
-
-  let host = cargo_env("HOST");
-  let target = cargo_env("TARGET");
-  assert_eq!(host, target, "cross compilation is not supported");
-
-  let env = Environment {
-      out_dir: out_dir.clone(),
-      lib_dir: out_dir.join("lib"),
-      include_dir: out_dir.join("include"),
-      build_dir: out_dir.join("build")
-  };
-
-  // Make sure we have target directories
-  create_dir_or_panic(&env.lib_dir);
-  create_dir_or_panic(&env.include_dir);
-
-  let flint_ah = (env.lib_dir.join("libflint.a"), env.include_dir.join("flint"));
-
-  // If flint needs compilation, compile it.
-  if cfg!(feature = "flint") {
-    if need_compile(&flint_ah) {
-        remove_dir_or_panic(&env.build_dir);
-        create_dir_or_panic(&env.build_dir);
-        link_dir(&src_dir.join(FLINT_DIR), &env.build_dir.join("flint-src"));
-        let (ref a, ref h) = flint_ah;
-        build_flint(&env, a, h);
-    }
-    write_link_info(&env);
-  }
-}
-
-fn write_link_info(
-    env: &Environment,
+fn write_cargo_cmds(
+    env: &BuildEnvironment,
 ) {
     let out_str = env.out_dir.to_str().unwrap_or_else(|| {
         panic!(
@@ -100,24 +111,23 @@ fn write_link_info(
     println!("cargo:rustc-link-lib=static=flint");
 }
 
-fn copy_file(src: &Path, dst: &Path) -> IoResult<u64> {
-    println!("$ cp {:?} {:?}", src, dst);
-    fs::copy(src, dst)
-}
+fn make_and_install(build_dir: &Path) {
+    let mut make = Command::new("make");
+    make.current_dir(build_dir);
+    exec(make);
 
-fn copy_file_or_panic(src: &Path, dst: &Path) {
-    copy_file(src, dst).unwrap_or_else(|_| {
-        panic!("Unable to copy {:?} -> {:?}", src, dst);
-    });
+    let mut make_install = Command::new("make");
+    make_install.current_dir(build_dir).arg("install");
+    exec(make_install);
 }
 
 fn configure(build_dir: &Path, conf_line: &OsStr) {
     let mut conf = Command::new("sh");
     conf.current_dir(build_dir).arg("-c").arg(conf_line);
-    execute(conf);
+    exec(conf);
 }
 
-fn execute(mut command: Command) {
+fn exec(mut command: Command) {
     println!("$ {:?}", command);
     let status = command
         .status()
@@ -131,14 +141,22 @@ fn execute(mut command: Command) {
     }
 }
 
-fn make_and_install(build_dir: &Path) {
-    let mut make = Command::new("make");
-    make.current_dir(build_dir);
-    execute(make);
+// Filesys utility functions
 
-    let mut make_install = Command::new("make");
-    make_install.current_dir(build_dir).arg("install");
-    execute(make_install);
+fn copy_file(src: &Path, dst: &Path) -> IoResult<u64> {
+    println!("$ cp {:?} {:?}", src, dst);
+    fs::copy(src, dst)
+}
+
+fn copy_file_or_panic(src: &Path, dst: &Path) {
+    copy_file(src, dst).unwrap_or_else(|_| {
+        panic!("Unable to copy {:?} -> {:?}", src, dst);
+    });
+}
+
+fn cargo_env_or_panic(name: &str) -> OsString {
+    env::var_os(name)
+        .unwrap_or_else(|| panic!("Environment variable not found: {}, please use cargo.", name))
 }
 
 fn create_dir(dir: &Path) -> IoResult<()> {
@@ -148,11 +166,6 @@ fn create_dir(dir: &Path) -> IoResult<()> {
 
 fn create_dir_or_panic(dir: &Path) {
     create_dir(dir).unwrap_or_else(|_| panic!("Unable to create directory: {:?}", dir));
-}
-
-fn cargo_env(name: &str) -> OsString {
-    env::var_os(name)
-        .unwrap_or_else(|| panic!("Environment variable not found: {}, please use cargo.", name))
 }
 
 fn remove_dir(dir: &Path) -> IoResult<()> {
