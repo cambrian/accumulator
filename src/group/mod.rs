@@ -6,7 +6,7 @@ use std::marker::Sized;
 
 mod class;
 mod ecc;
-mod ffi_flint;
+mod ffi;
 mod rsa;
 pub use class::ClassGroup;
 pub use rsa::{Rsa2048, Rsa2048Elem};

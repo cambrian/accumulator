@@ -1,5 +1,6 @@
 //! Class Group implementation
-use super::ffi_flint;
+use super::ffi::flint;
+use super::ffi::flint::fmpz;
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::mpz::{flint_mpz_struct, Mpz};
 use crate::util::{int, TypeRep};
@@ -312,11 +313,11 @@ impl ClassCtx {
   #[allow(non_snake_case)]
   fn square_help_flint(ctx: &mut ClassCtx) {
     unsafe {
-      let mut fy: ffi_flint::fmpz = 0;
-      let mut fx: ffi_flint::fmpz = 0;
-      let mut fby: ffi_flint::fmpz = 0;
-      let mut fbx: ffi_flint::fmpz = 0;
-      let mut fL: ffi_flint::fmpz = 0;
+      let mut fy: fmpz = 0;
+      let mut fx: fmpz = 0;
+      let mut fby: fmpz = 0;
+      let mut fbx: fmpz = 0;
+      let mut fL: fmpz = 0;
 
       let mut y_square_clone = flint_mpz_struct::from(&ctx.y_square_opt);
       let mut x_square_clone = flint_mpz_struct::from(&ctx.x_square_opt);
@@ -324,19 +325,19 @@ impl ClassCtx {
       let mut bx_square_clone = flint_mpz_struct::from(&ctx.bx_square_opt);
       let mut L_square_clone = flint_mpz_struct::from(&ctx.L_square_opt);
 
-      ffi_flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
-      ffi_flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);
-      ffi_flint::fmpz_set_mpz(&mut fby, &mut by_square_clone);
-      ffi_flint::fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
-      ffi_flint::fmpz_set_mpz(&mut fL, &mut L_square_clone);
+      flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
+      flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);
+      flint::fmpz_set_mpz(&mut fby, &mut by_square_clone);
+      flint::fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
+      flint::fmpz_set_mpz(&mut fL, &mut L_square_clone);
 
       // Flint Lehmer partial extended GCD.
-      ffi_flint::fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
+      flint::fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
 
-      ffi_flint::fmpz_get_mpz(&mut y_square_clone, &mut fy);
-      ffi_flint::fmpz_get_mpz(&mut x_square_clone, &mut fx);
-      ffi_flint::fmpz_get_mpz(&mut by_square_clone, &mut fby);
-      ffi_flint::fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
+      flint::fmpz_get_mpz(&mut y_square_clone, &mut fy);
+      flint::fmpz_get_mpz(&mut x_square_clone, &mut fx);
+      flint::fmpz_get_mpz(&mut by_square_clone, &mut fby);
+      flint::fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
 
       ctx.y_square_opt = Mpz::from(y_square_clone);
       ctx.x_square_opt = Mpz::from(x_square_clone);
