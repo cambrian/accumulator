@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use std::ffi::{OsStr, OsString};
 use std::io::{Result as IoResult};
 use std::path::{Path, PathBuf};
@@ -142,17 +142,6 @@ fn exec(mut command: Command) {
 }
 
 // Filesys utility functions
-
-fn copy_file(src: &Path, dst: &Path) -> IoResult<u64> {
-    println!("$ cp {:?} {:?}", src, dst);
-    fs::copy(src, dst)
-}
-
-fn copy_file_or_panic(src: &Path, dst: &Path) {
-    copy_file(src, dst).unwrap_or_else(|_| {
-        panic!("Unable to copy {:?} -> {:?}", src, dst);
-    });
-}
 
 fn cargo_env_or_panic(name: &str) -> OsString {
     env::var_os(name)
