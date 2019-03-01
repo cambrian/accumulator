@@ -1,3 +1,17 @@
+//! Cryptographic accumulator and vector commitment library, written and maintained by Cambrian
+//! Labs.
+//!
+//! Most users will simply need to write
+//!
+//! `use accumulator::{Accumulator, VectorCommitment};`
+//!
+//! or similar to use the library. However, internal modules are exported as well in case you would
+//! like to use them.
+//!
+//! We have spent significant time optimizing performance. Most accumulator or vector-commitment
+//! functions will bottleneck in hashing to large primes. To alleviate this, we created a
+//! zero-allocation U256 type that uses the low-level `mpn_` functions in GMP, which is used in
+//! `hash_to_prime`. TODO: benchmark our U256 vs 256-but rug::Integer vs parity U256.
 #![allow(clippy::unknown_clippy_lints)]
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::empty_enum)]
