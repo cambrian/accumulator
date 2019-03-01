@@ -1,3 +1,5 @@
+//! Proof of Exponentiation. See page 16 of B&B. Allows efficient verification of group
+//! exponentiation.
 use crate::group::Group;
 use crate::hash::hash_to_prime;
 use crate::util::int;

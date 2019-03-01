@@ -9,12 +9,12 @@ extern crate lazy_static;
 extern crate arrayref;
 
 mod accumulator;
-pub use crate::accumulator::*;
+pub use accumulator::*;
+mod vector_commitment;
+pub use vector_commitment::*;
+
 pub mod group;
 pub mod hash;
 pub mod proof;
+pub mod uint;
 pub mod util;
-mod vector_commitment;
-pub use vector_commitment::*;
-mod uint;
-pub use uint::*;

@@ -1,3 +1,4 @@
+//! Proof of Knowledge of Common Roots.
 use crate::group::{multi_exp, Group};
 use rug::Integer;
 

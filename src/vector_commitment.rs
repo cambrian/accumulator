@@ -1,3 +1,4 @@
+//! Vector commitment library, built on a generic group interface.
 use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof};
 use crate::group::UnknownOrderGroup;
 use crate::hash::hash_to_prime;
@@ -42,6 +43,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     VectorCommitment(Accumulator::<G>::new())
   }
 
+  // Uses a move instead of a `&self` reference to prevent accidental use of the old vc state.
   pub fn update(
     vc: Self,
     vc_acc_set: &[Integer],
