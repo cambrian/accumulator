@@ -117,52 +117,6 @@ mod tests {
   }
 
   #[test]
-  fn test_linear_congruence_solver() {
-    assert_eq!(
-      (Integer::from(-2), Integer::from(4)),
-      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4)).unwrap()
-    );
-
-    assert_eq!(
-      (Integer::from(-2), Integer::from(4)),
-      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4)).unwrap()
-    );
-
-    assert_eq!(
-      (Integer::from(1), Integer::from(2)),
-      solve_linear_congruence(&Integer::from(5), &Integer::from(1), &Integer::from(2)).unwrap()
-    );
-
-    assert_eq!(
-      (Integer::from(-3), Integer::from(5)),
-      solve_linear_congruence(&Integer::from(2), &Integer::from(4), &Integer::from(5)).unwrap()
-    );
-
-    assert_eq!(
-      (Integer::from(2491), Integer::from(529)),
-      solve_linear_congruence(
-        &Integer::from(230),
-        &Integer::from(1081),
-        &Integer::from(12167)
-      )
-      .unwrap()
-    );
-  }
-
-  #[test]
-  fn test_linear_congruence_solver_no_solution() {
-    // Let g = gcd(a, m). If b is not divisible by g, there are no solutions. If b is divisible by
-    // g, there are g solutions.
-    let result =
-      solve_linear_congruence(&Integer::from(33), &Integer::from(7), &Integer::from(143));
-    assert!(result.is_err());
-
-    let result =
-      solve_linear_congruence(&Integer::from(13), &Integer::from(14), &Integer::from(39));
-    assert!(result.is_err());
-  }
-
-  #[test]
   fn test_shamir_trick() {
     let (x, y, z) = (&int(13), &int(17), &int(19));
     let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z));

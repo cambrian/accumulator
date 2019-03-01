@@ -38,6 +38,7 @@ thread_local! {
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf
 //  (Binary Quadratic Forms)
 
+#[allow(clippy::stutter)]
 #[derive(Debug)]
 pub struct ClassElem {
   a: Mpz,
@@ -98,13 +99,27 @@ impl Default for LinCongruenceCtx {
 }
 
 impl LinCongruenceCtx {
-  pub fn solve_linear_congruence(&mut self, mu: &mut Mpz, v: &mut Mpz, a: &Mpz, b: &Mpz, m: &Mpz) {
+  pub fn solve_linear_congruence(
+    &mut self,
+    mu: &mut Mpz,
+    v: &mut Mpz,
+    a: &Mpz,
+    b: &Mpz,
+    m: &Mpz,
+  ) -> Option<()> {
     // Binary Quadratic Forms, 7.4.1
     self.g.gcd_cofactors(&mut self.d, &mut self.e, a, m);
     self.q.floor_div_qrem(&mut self.r, b, &self.g);
+
+    if self.r.sgn() != 0 {
+      // No solution.
+      return None;
+    }
+
     mu.mul(&self.q, &self.d);
     mu.modulo_mut(m);
     v.floor_div(m, &self.g);
+    Some(())
   }
 }
 
@@ -148,7 +163,7 @@ pub struct ClassCtx {
   ax_sq_op: Mpz,
   ay_sq_op: Mpz,
   Q1_sq_op: Mpz,
-  unused_sq_op: Mpz,
+  scratch: Mpz,
   sctx: LinCongruenceCtx,
 }
 
@@ -195,7 +210,7 @@ impl Default for ClassCtx {
       ax_sq_op: Mpz::default(),
       ay_sq_op: Mpz::default(),
       Q1_sq_op: Mpz::default(),
-      unused_sq_op: Mpz::default(),
+      scratch: Mpz::default(),
 
       sctx: LinCongruenceCtx::default(),
     };
@@ -281,7 +296,8 @@ impl ClassCtx {
     // Binary Quadratic Forms, 6.3.1
     self
       .sctx
-      .solve_linear_congruence(&mut self.mu, &mut self.v, &x.b, &x.c, &x.a);
+      .solve_linear_congruence(&mut self.mu, &mut self.v, &x.b, &x.c, &x.a)
+      .unwrap();
 
     self.m.mul(&x.b, &self.mu);
     self.m.sub_mut(&x.c);
@@ -372,7 +388,7 @@ impl ClassCtx {
     // Step 1 in Alg 2.
     self
       .G_sq_op
-      .gcd_cofactors(&mut self.y_sq_op, &mut self.unused_sq_op, &x.b, &x.a);
+      .gcd_cofactors(&mut self.y_sq_op, &mut self.scratch, &x.b, &x.a);
     self.By_sq_op.div_exact(&x.a, &self.G_sq_op);
     self.Dy_sq_op.div_exact(&x.b, &self.G_sq_op);
 
@@ -450,7 +466,8 @@ impl ClassCtx {
     self.m.mul(&self.s, &self.t);
     self
       .sctx
-      .solve_linear_congruence(&mut self.mu, &mut self.v, &self.a, &self.b, &self.m);
+      .solve_linear_congruence(&mut self.mu, &mut self.v, &self.a, &self.b, &self.m)
+      .unwrap();
 
     self.a.mul(&self.t, &self.v);
     self.m.mul(&self.t, &self.mu);
@@ -458,7 +475,8 @@ impl ClassCtx {
     self.m.set(&self.s);
     self
       .sctx
-      .solve_linear_congruence(&mut self.lambda, &mut self.sigma, &self.a, &self.b, &self.m);
+      .solve_linear_congruence(&mut self.lambda, &mut self.sigma, &self.a, &self.b, &self.m)
+      .unwrap();
 
     self.a.mul(&self.v, &self.lambda);
     self.k.add(&self.mu, &self.a);
@@ -608,7 +626,6 @@ impl UnknownOrderGroup for ClassGroup {
     let mut ret = ClassElem::default();
     ret.a.set_ui(2);
     ret.b.set_ui(1);
-
     ret.c.set_ui(1);
     ret.c.sub_mut(&d);
     ret.c.floor_div_ui_mut(8);
@@ -627,12 +644,14 @@ impl Hash for ClassElem {
   }
 }
 
-impl<T> ElemFrom<(T, T, T)> for ClassGroup
+impl<A, B, C> ElemFrom<(A, B, C)> for ClassGroup
 where
-  Mpz: From<T>,
+  Mpz: From<A>,
+  Mpz: From<B>,
+  Mpz: From<C>,
 {
-  fn elem(t: (T, T, T)) -> ClassElem {
-    let class_elem = ClassElem::reduce(Mpz::from(t.0), Mpz::from(t.1), Mpz::from(t.2));
+  fn elem(abc: (A, B, C)) -> ClassElem {
+    let class_elem = ClassElem::reduce(Mpz::from(abc.0), Mpz::from(abc.1), Mpz::from(abc.2));
 
     // Ideally, this should return an error and the
     // return type of ElemFrom should be Result<Self::Elem, Self:err>,
@@ -852,6 +871,7 @@ mod tests {
   }
 
   #[test]
+  // REVIEW: this test should be restructured to not construct ClassElems but it will do for now
   fn test_normalize_basic() {
     let mut unnormalized = construct_raw_elem_from_strings(
       "16",
@@ -1069,7 +1089,7 @@ mod tests {
 
     for i in 1..=1000 {
       g = ClassGroup::op(&g, &g_anchor);
-      assert_eq!(&g, &ClassGroup::exp(&g_anchor, &Integer::from(i)));
+      assert_eq!(&g, &ClassGroup::exp(&g_anchor, &int(i)));
     }
   }
 
@@ -1111,4 +1131,53 @@ mod tests {
     }
     assert_eq!(g2, g1024);
   }
+
+  #[test]
+  fn test_linear_congruence_solver() {
+    fn test_congruence_problem_w_solution(x: i64, y: i64, z: i64, mu_i64: u64, v_i64: u64) {
+      let mut ctx: LinCongruenceCtx = LinCongruenceCtx::default();
+      let (mut a, mut b, mut c) = (Mpz::default(), Mpz::default(), Mpz::default());
+      let (mut mu, mut v) = (Mpz::default(), Mpz::default());
+      let (mut mu_truth, mut v_truth) = (Mpz::default(), Mpz::default());
+
+      a.set_si(x);
+      b.set_si(y);
+      c.set_si(z);
+
+      mu_truth.set_ui(mu_i64);
+      v_truth.set_ui(v_i64);
+
+      ctx
+        .solve_linear_congruence(&mut mu, &mut v, &a, &b, &c)
+        .unwrap();
+      assert_eq!((mu_truth, v_truth), (mu, v));
+    }
+
+    test_congruence_problem_w_solution(3, 2, 4, 2, 4);
+    test_congruence_problem_w_solution(5, 1, 2, 1, 2);
+    test_congruence_problem_w_solution(2, 4, 5, 2, 5);
+    test_congruence_problem_w_solution(230, 1081, 12167, 2491, 529);
+  }
+
+  #[test]
+  fn test_linear_congruence_solver_no_solution() {
+    fn test_congruence_problem_no_solution(x: i64, y: i64, z: i64) {
+      let mut ctx: LinCongruenceCtx = LinCongruenceCtx::default();
+      let (mut a, mut b, mut c) = (Mpz::default(), Mpz::default(), Mpz::default());
+      let (mut mu, mut v) = (Mpz::default(), Mpz::default());
+
+      a.set_si(x);
+      b.set_si(y);
+      c.set_si(z);
+
+      // Let g = gcd(a, m). If b is not divisible by g, there are no solutions. If b is divisible by
+      // g, there are g solutions.
+      let result = ctx.solve_linear_congruence(&mut mu, &mut v, &a, &b, &c);
+      assert!(result.is_none());
+    }
+
+    test_congruence_problem_no_solution(33, 7, 143);
+    test_congruence_problem_no_solution(13, 14, 39);
+  }
+
 }
