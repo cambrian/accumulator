@@ -244,23 +244,23 @@ impl ClassCtx {
   }
 
   fn normalize_mut(&mut self, x: &mut ClassElem) {
-    if ClassElem::is_normal(&x.a, &x.b, &x.c) {
+    if ClassGroup::is_normal(&x.a, &x.b, &x.c) {
       return;
     }
     self.normalize_(&mut x.a, &mut x.b, &mut x.c);
   }
 
-  fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> ClassElem {
-    if ClassElem::is_normal(&a, &b, &c) {
-      return ClassElem { a, b, c };
+  fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
+    if ClassGroup::is_normal(&a, &b, &c) {
+      return (a, b, c);
     }
     self.normalize_(&mut a, &mut b, &mut c);
-    ClassElem { a, b, c }
+    (a, b, c)
   }
 
   fn reduce_(&mut self, elem: &mut ClassElem) {
     // Binary Quadratic Forms, 5.2.1
-    while !ClassElem::is_reduced(&elem.a, &elem.b, &elem.c) {
+    while !ClassGroup::is_reduced(&elem.a, &elem.b, &elem.c) {
       self.s.add(&elem.c, &elem.b);
       self.x.mul_ui(&elem.c, 2);
       self.s.floor_div_mut(&self.x);
@@ -280,8 +280,9 @@ impl ClassCtx {
     }
   }
 
-  fn reduce(&mut self, a: Mpz, b: Mpz, c: Mpz) -> ClassElem {
-    let mut elem = self.normalize(a, b, c);
+  fn reduce(&mut self, a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
+    let (a, b, c) = self.normalize(a, b, c);
+    let mut elem = ClassElem { a, b, c };
     self.reduce_(&mut elem);
     self.normalize(elem.a, elem.b, elem.c)
   }
@@ -509,8 +510,8 @@ impl ClassCtx {
     ret.c.mul(&self.k, &self.l);
     self.a.mul(&self.j, &self.m);
     ret.c.sub_mut(&self.a);
-    ret = self.reduce(ret.a, ret.b, ret.c);
-    ret
+    let (a, b, c) = self.reduce(ret.a, ret.b, ret.c);
+    ClassElem { a, b, c }
   }
 
   fn id(&mut self, d: &Mpz) -> ClassElem {
@@ -525,18 +526,6 @@ impl ClassCtx {
 }
 
 impl ClassElem {
-  pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().normalize(a, b, c))
-  }
-
-  pub fn reduce(a: Mpz, b: Mpz, c: Mpz) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().reduce(a, b, c))
-  }
-
-  pub fn square(&mut self) {
-    CTX.with(|ctx| ctx.borrow_mut().square(self))
-  }
-
   fn discriminant(&self, d: &mut Mpz) -> Mpz {
     let mut tmp = Mpz::default();
     d.mul(&self.b, &self.b);
@@ -551,23 +540,37 @@ impl ClassElem {
     self.discriminant(&mut d);
     d == *ClassGroup::rep()
   }
-
-  // expects normalized element
-  fn is_reduced(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    ClassElem::is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
-  }
-
-  fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
-    let mut neg_a = Mpz::default();
-    neg_a.neg(a);
-    neg_a < *b && b <= a
-  }
 }
 
 impl TypeRep for ClassGroup {
   type Rep = Mpz;
   fn rep() -> &'static Self::Rep {
     &CLASS_GROUP_DISCRIMINANT
+  }
+}
+
+impl ClassGroup {
+  pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
+    CTX.with(|ctx| ctx.borrow_mut().normalize(a, b, c))
+  }
+
+  pub fn reduce(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
+    CTX.with(|ctx| ctx.borrow_mut().reduce(a, b, c))
+  }
+
+  pub fn square(x: &mut ClassElem) {
+    CTX.with(|ctx| ctx.borrow_mut().square(x))
+  }
+
+  // expects normalized element
+  fn is_reduced(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    ClassGroup::is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
+  }
+
+  fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
+    let mut neg_a = Mpz::default();
+    neg_a.neg(a);
+    neg_a < *b && b <= a
   }
 }
 
@@ -630,7 +633,8 @@ impl UnknownOrderGroup for ClassGroup {
     ret.c.sub_mut(&d);
     ret.c.floor_div_ui_mut(8);
 
-    ClassElem::reduce(ret.a, ret.b, ret.c)
+    let (a, b, c) = ClassGroup::reduce(ret.a, ret.b, ret.c);
+    ClassElem { a, b, c }
   }
 }
 
@@ -651,7 +655,8 @@ where
   Mpz: From<C>,
 {
   fn elem(abc: (A, B, C)) -> ClassElem {
-    let class_elem = ClassElem::reduce(Mpz::from(abc.0), Mpz::from(abc.1), Mpz::from(abc.2));
+    let (a, b, c) = ClassGroup::reduce(Mpz::from(abc.0), Mpz::from(abc.1), Mpz::from(abc.2));
+    let class_elem = ClassElem { a, b, c };
 
     // Ideally, this should return an error and the
     // return type of ElemFrom should be Result<Self::Elem, Self:err>,
@@ -763,8 +768,15 @@ mod tests {
     assert!(not_reduced != diff_elem);
     assert!(reduced_ground_truth != diff_elem);
 
-    let not_reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
-    assert!(not_reduced == reduced_ground_truth);
+    let not_reduced = ClassGroup::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
+    assert!(
+      not_reduced
+        == (
+          reduced_ground_truth.a,
+          reduced_ground_truth.b,
+          reduced_ground_truth.c
+        )
+    );
   }
 
   #[test]
@@ -816,7 +828,7 @@ mod tests {
 
     hasher_lh = DefaultHasher::new();
     hasher_rh = DefaultHasher::new();
-    let reduced = ClassElem::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
+    let reduced = ClassGroup::reduce(not_reduced.a, not_reduced.b, not_reduced.c);
     reduced.hash(&mut hasher_lh);
     reduced_ground_truth.hash(&mut hasher_rh);
     assert!(hasher_lh.finish() == hasher_rh.finish());
@@ -863,17 +875,25 @@ mod tests {
       1564478239095738726823372184204"
     );
 
-    assert_ne!(to_reduce, reduced_ground_truth);
-    let reduced = ClassElem::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
-    assert_eq!(reduced, reduced_ground_truth);
     let already_reduced = reduced_ground_truth.clone();
     assert_eq!(already_reduced, reduced_ground_truth);
+
+    assert_ne!(to_reduce, reduced_ground_truth);
+    let reduced = ClassGroup::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
+    assert_eq!(
+      reduced,
+      (
+        reduced_ground_truth.a,
+        reduced_ground_truth.b,
+        reduced_ground_truth.c
+      )
+    );
   }
 
   #[test]
   // REVIEW: this test should be restructured to not construct ClassElems but it will do for now
   fn test_normalize_basic() {
-    let mut unnormalized = construct_raw_elem_from_strings(
+    let unnormalized = construct_raw_elem_from_strings(
       "16",
       "105",
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
@@ -898,8 +918,15 @@ mod tests {
        9945629057462766047140854869124473221137588347335081555186814036",
     );
 
-    unnormalized = ClassElem::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
-    assert_eq!(normalized_ground_truth, unnormalized);
+    let elem_tuple = ClassGroup::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
+    assert_eq!(
+      (
+        normalized_ground_truth.a,
+        normalized_ground_truth.b,
+        normalized_ground_truth.c
+      ),
+      elem_tuple
+    );
   }
 
   #[test]
@@ -1106,8 +1133,8 @@ mod tests {
     // g^2
     let mut g2 = g.clone();
     // g^4
-    g2.square();
-    g2.square();
+    ClassGroup::square(&mut g2);
+    ClassGroup::square(&mut g2);
 
     assert_eq!(&g2, &g4);
   }
@@ -1127,7 +1154,7 @@ mod tests {
 
     // g^1024
     for _ in 0..12 {
-      g2.square();
+      ClassGroup::square(&mut g2);
     }
     assert_eq!(g2, g1024);
   }
