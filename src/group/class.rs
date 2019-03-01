@@ -13,10 +13,9 @@ use std::str::FromStr;
 pub enum ClassGroup {}
 
 // 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
-
-// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1,
-// IQ-MPQS for computing discrete logarithms in class groups with a 2048-bit discriminant is
-// comparable in complexity to GNFS for factoring a 4096-bit integer.
+// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1, IQ-MPQS for computing
+// discrete logarithms in class groups with a 2048-bit discriminant is comparable in complexity to
+// GNFS for factoring a 4096-bit integer.
 const DISCRIMINANT2048_DECIMAL: &str =
   "-30616069034807523947093657516320815215492876376165067902716988657802400037331914448218251590830\
   1102189519215849430413184776658192481976276720778009261808832630304841711366872161223643645001916\
@@ -639,8 +638,8 @@ impl UnknownOrderGroup for ClassGroup {
 }
 
 impl Hash for ClassElem {
-  // Assumes ClassElem is reduced and normalized, which will be the case unless
-  // a struct is insantiated manually in this module.
+  // Assumes `ClassElem` is reduced and normalized, which will be the case unless a struct is
+  // instantiated manually in this module.
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.a.hash(state);
     self.b.hash(state);
@@ -724,6 +723,7 @@ mod tests {
     let also_reduced_elem = ClassGroup::elem((a2, b2, c2));
     assert_eq!(reduced_elem, also_reduced_elem);
   }
+
   #[test]
   fn test_equality() {
     let not_reduced = construct_raw_elem_from_strings(
@@ -990,9 +990,7 @@ mod tests {
       07264365691511785213717281118305284397086833770388796703509"
     );
 
-    let x = ClassGroup::op(&a, &b);
-
-    assert_eq!(x, ground_truth);
+    assert_eq!(ClassGroup::op(&a, &b), ground_truth);
   }
 
   #[test]
@@ -1033,11 +1031,10 @@ mod tests {
   #[test]
   fn test_op_complex() {
     // 1. Take g^100, g^200, ..., g^1000.
-    // 2. Compute g^* = g^100 * ... * g^1000
-    // 3. For each of g^100, g^200, ..., g^1000
-    //    compute the inverse of that element and
-    //    assert that g^* * current_inverse = product of g^100, g^200, ..., g^1000
-    //    without the inversed-out element.
+    // 2. Compute g^* = g^100 * ... * g^1000.
+    // 3. For each of g^100, g^200, ..., g^1000 compute the inverse of that element and assert that
+    //    g^* * current_inverse = product of g^100, g^200, ..., g^1000 without the inversed-out
+    //    element.
     let g_anchor = ClassGroup::unknown_order_elem();
     let mut g = ClassGroup::id();
 

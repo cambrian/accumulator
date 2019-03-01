@@ -16,11 +16,12 @@ readme = "README.md"
 repository = "https://github.com/1protocol/accumulator"
 
 [dependencies]
+arrayref = "0.3.5"
 blake2-rfc = "0.2.18"
-curve25519-dalek = "1.1.2"
+curve25519-dalek = "1.1.3"
+gmp-mpfr-sys = "1.1.11"
 lazy_static = "1.2.0"
 rug = "1.3.0"
-gmp-mpfr-sys = "1.1"
 
 [dev-dependencies]
 criterion = "0.2.10"
@@ -70,6 +71,11 @@ harness = false
 [[bench]]
 name = "poke2"
 path = "benches/proof/poke2.rs"
+harness = false
+
+[[bench]]
+name = "uint"
+path = "benches/uint.rs"
 harness = false
 
 [profile.bench]

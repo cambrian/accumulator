@@ -431,13 +431,8 @@ mod tests {
   }
 
   #[test]
-  fn test_root_factor_rsa() {
+  fn test_root_factor_rsa2048() {
+    // Class version takes too long for a unit test.
     test_root_factor::<Rsa2048>();
-  }
-
-  #[test]
-  #[ignore] // Ignoring for now, too slow for a unit test.
-  fn test_root_factor_class() {
-    test_root_factor::<ClassGroup>();
   }
 }

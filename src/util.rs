@@ -8,11 +8,6 @@ pub trait TypeRep: 'static {
   fn rep() -> &'static Self::Rep;
 }
 
-#[derive(Debug)]
-pub enum UtilityError {
-  NoSolutionToLinearCongruence,
-}
-
 pub fn int<T>(val: T) -> Integer
 where
   Integer: From<T>,
@@ -40,30 +35,6 @@ pub fn shamir_trick<G: Group>(
   }
 
   Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
-}
-
-// Solve a linear congruence of form `ax = b mod m` for the set of solutions x,
-// characterized by integers mu and v such that x = mu + vn where n is any integer.
-pub fn solve_linear_congruence(
-  a: &Integer,
-  b: &Integer,
-  m: &Integer,
-) -> Result<(Integer, Integer), UtilityError> {
-  // g = gcd(a, m) => da + em = g
-  let (g, d, _) = a.clone().gcd_cofactors(m.clone(), Integer::new());
-
-  // q = floor_div(b, g)
-  // r = b % g
-  let (q, r) = b.clone().div_rem_floor(g.clone());
-  if r != Integer::from(0) {
-    return Err(UtilityError::NoSolutionToLinearCongruence);
-  }
-
-  // mu = (q * d) % m
-  // v = m / g
-  let mu = (q * d) % m;
-  let (v, _) = m.clone().div_rem_floor(g);
-  Ok((mu, v))
 }
 
 /// Folds over `xs` but in a divide-and-conquer fashion: Instead of `F(F(F(F(acc, a), b), c), d))`
