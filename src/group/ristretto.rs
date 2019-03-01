@@ -9,6 +9,7 @@ use rug::ops::Pow;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Ristretto {}
 
@@ -31,6 +32,7 @@ impl Ristretto {
 /// be implemented for arbitrary types. How to fix without wrapping?
 ///
 /// It may make sense to fork curve25519-dalek to add the `Hash` impl. Then we won't need to wrap.
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RistrettoElem(RistrettoPoint);
 
