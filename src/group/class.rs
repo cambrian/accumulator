@@ -36,6 +36,8 @@ thread_local! {
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
 //  hereafter refered to as "Binary Quadratic Forms"
+//
+// A ClassElem is a tuple of three Mpz integers.
 
 #[allow(clippy::stutter)]
 #[derive(Debug)]
@@ -73,9 +75,36 @@ impl PartialEq for ClassElem {
   }
 }
 
+impl Hash for ClassElem {
+  // Assumes `ClassElem` is reduced and normalized, which will be the case unless a struct is
+  // instantiated manually in this module.
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.a.hash(state);
+    self.b.hash(state);
+    self.c.hash(state);
+  }
+}
+
 impl Eq for ClassElem {}
 unsafe impl Send for ClassElem {}
 unsafe impl Sync for ClassElem {}
+
+impl ClassElem {
+  fn discriminant(&self, d: &mut Mpz) -> Mpz {
+    let mut tmp = Mpz::default();
+    d.mul(&self.b, &self.b);
+    tmp.mul(&self.a, &self.c);
+    tmp.mul_ui_mut(4);
+    d.sub_mut(&tmp);
+    d.clone()
+  }
+
+  fn validate(&self) -> bool {
+    let mut d = Mpz::default();
+    self.discriminant(&mut d);
+    d == *ClassGroup::rep()
+  }
+}
 
 #[allow(non_snake_case)]
 pub struct ClassCtx {
@@ -479,52 +508,10 @@ impl ClassCtx {
   }
 }
 
-impl ClassElem {
-  fn discriminant(&self, d: &mut Mpz) -> Mpz {
-    let mut tmp = Mpz::default();
-    d.mul(&self.b, &self.b);
-    tmp.mul(&self.a, &self.c);
-    tmp.mul_ui_mut(4);
-    d.sub_mut(&tmp);
-    d.clone()
-  }
-
-  fn validate(&self) -> bool {
-    let mut d = Mpz::default();
-    self.discriminant(&mut d);
-    d == *ClassGroup::rep()
-  }
-}
-
 impl TypeRep for ClassGroup {
   type Rep = Mpz;
   fn rep() -> &'static Self::Rep {
     &CLASS_GROUP_DISCRIMINANT
-  }
-}
-
-impl ClassGroup {
-  pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
-    CTX.with(|ctx| ctx.borrow_mut().normalize(a, b, c))
-  }
-
-  pub fn reduce(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
-    CTX.with(|ctx| ctx.borrow_mut().reduce(a, b, c))
-  }
-
-  pub fn square(x: &mut ClassElem) {
-    CTX.with(|ctx| ctx.borrow_mut().square(x))
-  }
-
-  // expects normalized element
-  fn is_reduced(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    ClassGroup::is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
-  }
-
-  fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
-    let mut neg_a = Mpz::default();
-    neg_a.neg(a);
-    neg_a < *b && b <= a
   }
 }
 
@@ -592,16 +579,6 @@ impl UnknownOrderGroup for ClassGroup {
   }
 }
 
-impl Hash for ClassElem {
-  // Assumes `ClassElem` is reduced and normalized, which will be the case unless a struct is
-  // instantiated manually in this module.
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.a.hash(state);
-    self.b.hash(state);
-    self.c.hash(state);
-  }
-}
-
 impl<A, B, C> ElemFrom<(A, B, C)> for ClassGroup
 where
   Mpz: From<A>,
@@ -620,6 +597,31 @@ where
     assert!(class_elem.validate());
 
     class_elem
+  }
+}
+
+impl ClassGroup {
+  pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
+    CTX.with(|ctx| ctx.borrow_mut().normalize(a, b, c))
+  }
+
+  pub fn reduce(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
+    CTX.with(|ctx| ctx.borrow_mut().reduce(a, b, c))
+  }
+
+  pub fn square(x: &mut ClassElem) {
+    CTX.with(|ctx| ctx.borrow_mut().square(x))
+  }
+
+  // expects normalized element
+  fn is_reduced(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    ClassGroup::is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
+  }
+
+  fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
+    let mut neg_a = Mpz::default();
+    neg_a.neg(a);
+    neg_a < *b && b <= a
   }
 }
 
