@@ -107,8 +107,8 @@ impl LinCongruenceCtx {
     m: &Mpz,
   ) -> Option<()> {
     // Binary Quadratic Forms, 7.4.1
-    self.g.gcd_cofactors(&mut self.d, &mut self.e, a, m);
-    self.q.floor_div_qrem(&mut self.r, b, &self.g);
+    self.g.gcdext(&mut self.d, &mut self.e, a, m);
+    self.q.fdiv_qr(&mut self.r, b, &self.g);
 
     if self.r.sgn() != 0 {
       // No solution.
@@ -117,7 +117,7 @@ impl LinCongruenceCtx {
 
     mu.mul(&self.q, &self.d);
     mu.modulo_mut(m);
-    v.floor_div(m, &self.g);
+    v.fdiv_q(m, &self.g);
     Some(())
   }
 }
@@ -226,7 +226,7 @@ impl ClassCtx {
     // Binary Quadratic Forms, 5.1.1
     self.r.sub(&a, &b);
     self.denom.mul_ui(&a, 2);
-    self.r.floor_div_mut(&self.denom);
+    self.r.fdiv_q_mut(&self.denom);
 
     self.old_b.set(&b);
 
@@ -262,7 +262,7 @@ impl ClassCtx {
     while !ClassGroup::is_reduced(&elem.a, &elem.b, &elem.c) {
       self.s.add(&elem.c, &elem.b);
       self.x.mul_ui(&elem.c, 2);
-      self.s.floor_div_mut(&self.x);
+      self.s.fdiv_q_mut(&self.x);
       self.old_a.set(&elem.a);
       self.old_b.set(&elem.b);
       elem.a.set(&elem.c);
@@ -301,7 +301,7 @@ impl ClassCtx {
 
     self.m.mul(&x.b, &self.mu);
     self.m.sub_mut(&x.c);
-    self.m.floor_div_mut(&x.a);
+    self.m.fdiv_q_mut(&x.a);
 
     self.old_a.set(&x.a);
     x.a.square_mut();
@@ -362,17 +362,17 @@ impl ClassCtx {
   fn square_nudulp_help(ctx: &mut ClassCtx) {
     ctx.x_sq_op.set_ui(1);
     ctx.y_sq_op.set_ui(0);
-    while ctx.by_sq_op.cmp_abs(&ctx.L_sq_op) > 0 && ctx.bx_sq_op.sgn() == 0 {
-      ctx.q_sq_op.floor_div(&ctx.by_sq_op, &ctx.bx_sq_op);
-      ctx.t_sq_op.floor_div_rem(&ctx.by_sq_op, &ctx.bx_sq_op);
+    while ctx.by_sq_op.cmpabs(&ctx.L_sq_op) > 0 && ctx.bx_sq_op.sgn() == 0 {
+      ctx.q_sq_op.fdiv_q(&ctx.by_sq_op, &ctx.bx_sq_op);
+      ctx.t_sq_op.fdiv_r(&ctx.by_sq_op, &ctx.bx_sq_op);
 
       ctx.by_sq_op.set(&ctx.bx_sq_op);
       ctx.bx_sq_op.set(&ctx.t_sq_op);
-      ctx.y_sq_op.sub_mul(&ctx.q_sq_op, &ctx.x_sq_op);
+      ctx.y_sq_op.submul(&ctx.q_sq_op, &ctx.x_sq_op);
       ctx.t_sq_op.set(&ctx.y_sq_op);
       ctx.y_sq_op.set(&ctx.x_sq_op);
       ctx.x_sq_op.set(&ctx.t_sq_op);
-      ctx.z_sq_op.add_mut_ui(1);
+      ctx.z_sq_op.add_ui_mut(1);
     }
 
     if ctx.z_sq_op.odd() != 0 {
@@ -388,20 +388,20 @@ impl ClassCtx {
     // Step 1 in Alg 2.
     self
       .G_sq_op
-      .gcd_cofactors(&mut self.y_sq_op, &mut self.scratch, &x.b, &x.a);
-    self.By_sq_op.div_exact(&x.a, &self.G_sq_op);
-    self.Dy_sq_op.div_exact(&x.b, &self.G_sq_op);
+      .gcdext(&mut self.y_sq_op, &mut self.scratch, &x.b, &x.a);
+    self.By_sq_op.divexact(&x.a, &self.G_sq_op);
+    self.Dy_sq_op.divexact(&x.b, &self.G_sq_op);
 
     // Step 2 in Alg 2.
     self.bx_sq_op.mul(&self.y_sq_op, &x.c);
     self.bx_sq_op.modulo_mut(&self.By_sq_op);
     self.by_sq_op.set(&self.By_sq_op);
 
-    if self.by_sq_op.cmp_abs(&self.L_sq_op) <= 0 {
+    if self.by_sq_op.cmpabs(&self.L_sq_op) <= 0 {
       // Step 4 in Alg 2.
       self.dx_sq_op.mul(&self.bx_sq_op, &self.Dy_sq_op);
       self.dx_sq_op.sub_mut(&x.c);
-      self.dx_sq_op.div_exact_mut(&self.By_sq_op);
+      self.dx_sq_op.divexact_mut(&self.By_sq_op);
       x.a.mul(&self.by_sq_op, &self.by_sq_op);
       x.c.mul(&self.bx_sq_op, &self.bx_sq_op);
       self.t_sq_op.add(&self.bx_sq_op, &self.by_sq_op);
@@ -428,37 +428,37 @@ impl ClassCtx {
 
     // Step 5 in Alg 2.
     self.t_sq_op.mul(&self.Dy_sq_op, &self.bx_sq_op);
-    self.t_sq_op.sub_mul(&x.c, &self.x_sq_op);
-    self.dx_sq_op.div_exact(&self.t_sq_op, &self.By_sq_op);
+    self.t_sq_op.submul(&x.c, &self.x_sq_op);
+    self.dx_sq_op.divexact(&self.t_sq_op, &self.By_sq_op);
     self.Q1_sq_op.mul(&self.y_sq_op, &self.dx_sq_op);
     self.dy_sq_op.add(&self.Q1_sq_op, &self.Dy_sq_op);
     x.b.add(&self.dy_sq_op, &self.Q1_sq_op);
     x.b.mul_mut(&self.G_sq_op);
-    self.dy_sq_op.div_exact_mut(&self.x_sq_op);
+    self.dy_sq_op.divexact_mut(&self.x_sq_op);
     x.a.mul(&self.by_sq_op, &self.by_sq_op);
     x.c.mul(&self.bx_sq_op, &self.bx_sq_op);
     self.t_sq_op.add(&self.bx_sq_op, &self.by_sq_op);
-    x.b.sub_mul(&self.t_sq_op, &self.t_sq_op);
+    x.b.submul(&self.t_sq_op, &self.t_sq_op);
     x.b.add_mut(&x.a);
     x.b.add_mut(&x.c);
-    x.a.sub_mul(&self.ay_sq_op, &self.dy_sq_op);
-    x.c.sub_mul(&self.ax_sq_op, &self.dx_sq_op);
+    x.a.submul(&self.ay_sq_op, &self.dy_sq_op);
+    x.c.submul(&self.ax_sq_op, &self.dx_sq_op);
     self.reduce_mut(x);
   }
 
   fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
     // Binary Quadratic Forms, 6.1.1
     self.g.add(&x.b, &y.b);
-    self.g.floor_div_ui_mut(2);
+    self.g.fdiv_q_ui_mut(2);
     self.h.sub(&y.b, &x.b);
-    self.h.floor_div_ui_mut(2);
+    self.h.fdiv_q_ui_mut(2);
     self.w.gcd(&x.a, &y.a);
     self.w.gcd_mut(&self.g);
     self.j.set(&self.w);
     self.r.set_ui(0);
-    self.s.floor_div(&x.a, &self.w);
-    self.t.floor_div(&y.a, &self.w);
-    self.u.floor_div(&self.g, &self.w);
+    self.s.fdiv_q(&x.a, &self.w);
+    self.t.fdiv_q(&y.a, &self.w);
+    self.u.fdiv_q(&self.g, &self.w);
     self.a.mul(&self.t, &self.u);
     self.b.mul(&self.h, &self.u);
     self.m.mul(&self.s, &x.c);
@@ -482,7 +482,7 @@ impl ClassCtx {
     self.k.add(&self.mu, &self.a);
     self.l.mul(&self.k, &self.t);
     self.l.sub_mut(&self.h);
-    self.l.floor_div_mut(&self.s);
+    self.l.fdiv_q_mut(&self.s);
     self.m.mul(&self.t, &self.u);
     self.m.mul_mut(&self.k);
     self.a.mul(&self.h, &self.u);
@@ -490,7 +490,7 @@ impl ClassCtx {
     self.a.mul(&x.c, &self.s);
     self.m.sub_mut(&self.a);
     self.a.mul(&self.s, &self.t);
-    self.m.floor_div_mut(&self.a);
+    self.m.fdiv_q_mut(&self.a);
 
     let mut ret = ClassElem::default();
 
@@ -519,7 +519,7 @@ impl ClassCtx {
     ret.a.set_ui(1);
     ret.b.set_ui(1);
     self.a.sub(&ret.b, &d);
-    ret.c.floor_div_ui(&self.a, 4);
+    ret.c.fdiv_q_ui(&self.a, 4);
     ret
   }
 }
@@ -630,7 +630,7 @@ impl UnknownOrderGroup for ClassGroup {
     ret.b.set_ui(1);
     ret.c.set_ui(1);
     ret.c.sub_mut(&d);
-    ret.c.floor_div_ui_mut(8);
+    ret.c.fdiv_q_ui_mut(8);
 
     let (a, b, c) = ClassGroup::reduce(ret.a, ret.b, ret.c);
     ClassElem { a, b, c }

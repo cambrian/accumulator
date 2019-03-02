@@ -49,7 +49,7 @@ impl Clone for Mpz {
 
 impl PartialEq for Mpz {
   fn eq(&self, other: &Mpz) -> bool {
-    self.cmp_mpz(&other) == 0
+    self.cmp(&other) == 0
   }
 }
 
@@ -57,7 +57,7 @@ impl Eq for Mpz {}
 
 impl PartialOrd for Mpz {
   fn partial_cmp(&self, other: &Mpz) -> Option<Ordering> {
-    match self.cmp_mpz(&other) {
+    match self.cmp(&other) {
       x if x < 0 => Some(Ordering::Less),
       0 => Some(Ordering::Equal),
       _ => Some(Ordering::Greater),
@@ -67,7 +67,7 @@ impl PartialOrd for Mpz {
 
 impl Ord for Mpz {
   fn cmp(&self, other: &Mpz) -> Ordering {
-    match self.cmp_mpz(&other) {
+    match self.cmp(&other) {
       x if x < 0 => Ordering::Less,
       0 => Ordering::Equal,
       _ => Ordering::Greater,
@@ -126,107 +126,127 @@ impl FromStr for Mpz {
   }
 }
 
+// Defines wrappers around gmp_mpfr_sys.  Functions ending
+// with `_mut` correspond to giving the underlying GMP function
+// the same Mpz variable for the first two arguments, e.g.
+// to provide an interface for operations like x += y or x /= y.
 impl Mpz {
   #[inline]
   pub fn abs(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_abs(&mut self.inner, &x.inner) }
   }
+
   #[inline]
   pub fn add(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
       gmp::mpz_add(&mut self.inner, &x.inner, &y.inner);
     }
   }
-  #[inline]
-  pub fn add_mut_ui(&mut self, x: u64) {
-    unsafe { gmp::mpz_add_ui(&mut self.inner, &self.inner, x) }
-  }
+
   #[inline]
   pub fn add_mut(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_add(&mut self.inner, &self.inner, &x.inner) }
   }
+
   #[inline]
-  pub fn cmp_mpz(&self, other: &Mpz) -> i32 {
+  pub fn add_ui_mut(&mut self, x: u64) {
+    unsafe { gmp::mpz_add_ui(&mut self.inner, &self.inner, x) }
+  }
+
+  #[inline]
+  pub fn cmp(&self, other: &Mpz) -> i32 {
     unsafe { gmp::mpz_cmp(&self.inner, &other.inner) }
   }
+
   #[inline]
-  pub fn cmp_abs(&self, other: &Mpz) -> i32 {
+  pub fn cmpabs(&self, other: &Mpz) -> i32 {
     unsafe { gmp::mpz_cmpabs(&self.inner, &other.inner) }
   }
+
   #[inline]
   pub fn cmp_si(&self, val: i64) -> i32 {
     unsafe { gmp::mpz_cmp_si(&self.inner, val) }
   }
+
   #[inline]
-  pub fn ceil_div(&mut self, x: &Mpz, y: &Mpz) {
+  pub fn cdiv_q(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
       gmp::mpz_cdiv_q(&mut self.inner, &x.inner, &y.inner);
     }
   }
+
   #[inline]
-  pub fn ceil_div_rem(&mut self, x: &Mpz, y: &Mpz) {
+  pub fn cdiv_r(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
       gmp::mpz_cdiv_r(&mut self.inner, &x.inner, &y.inner);
     }
   }
+
   #[inline]
-  pub fn floor_div(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe {
-      gmp::mpz_fdiv_q(&mut self.inner, &x.inner, &y.inner);
-    }
-  }
-  #[inline]
-  pub fn floor_div_mut(&mut self, x: &Mpz) {
-    unsafe { gmp::mpz_fdiv_q(&mut self.inner, &self.inner, &x.inner) }
-  }
-  #[inline]
-  pub fn floor_div_rem(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe { gmp::mpz_fdiv_r(&mut self.inner, &x.inner, &y.inner) }
-  }
-  #[inline]
-  pub fn floor_div_qrem(&mut self, r: &mut Mpz, x: &Mpz, y: &Mpz) {
-    unsafe { gmp::mpz_fdiv_qr(&mut self.inner, &mut r.inner, &x.inner, &y.inner) }
-  }
-  #[inline]
-  pub fn floor_div_ui(&mut self, x: &Mpz, val: u64) {
-    unsafe {
-      gmp::mpz_fdiv_q_ui(&mut self.inner, &x.inner, val);
-    }
-  }
-  #[inline]
-  pub fn get_si(&self) -> i64 {
-    unsafe { gmp::mpz_get_si(&self.inner) }
-  }
-  #[inline]
-  pub fn div_exact(&mut self, n: &Mpz, d: &Mpz) {
+  pub fn divexact(&mut self, n: &Mpz, d: &Mpz) {
     unsafe { gmp::mpz_divexact(&mut self.inner, &n.inner, &d.inner) }
   }
+
   #[inline]
-  pub fn div_exact_mut(&mut self, d: &Mpz) {
+  pub fn divexact_mut(&mut self, d: &Mpz) {
     unsafe {
       gmp::mpz_divexact(&mut self.inner, &self.inner, &d.inner);
     }
   }
+
   #[inline]
-  pub fn fits_slong_p(&self) -> i32 {
-    unsafe { gmp::mpz_fits_slong_p(&self.inner) }
+  pub fn fdiv_q(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe {
+      gmp::mpz_fdiv_q(&mut self.inner, &x.inner, &y.inner);
+    }
   }
+
   #[inline]
-  pub fn floor_div_ui_mut(&mut self, val: u64) {
+  pub fn fdiv_q_mut(&mut self, x: &Mpz) {
+    unsafe { gmp::mpz_fdiv_q(&mut self.inner, &self.inner, &x.inner) }
+  }
+
+  #[inline]
+  pub fn fdiv_r(&mut self, x: &Mpz, y: &Mpz) {
+    unsafe { gmp::mpz_fdiv_r(&mut self.inner, &x.inner, &y.inner) }
+  }
+
+  #[inline]
+  pub fn fdiv_qr(&mut self, r: &mut Mpz, x: &Mpz, y: &Mpz) {
+    unsafe { gmp::mpz_fdiv_qr(&mut self.inner, &mut r.inner, &x.inner, &y.inner) }
+  }
+
+  #[inline]
+  pub fn fdiv_q_ui(&mut self, x: &Mpz, val: u64) {
+    unsafe {
+      gmp::mpz_fdiv_q_ui(&mut self.inner, &x.inner, val);
+    }
+  }
+
+  #[inline]
+  pub fn fdiv_q_ui_mut(&mut self, val: u64) {
     unsafe {
       gmp::mpz_fdiv_q_ui(&mut self.inner, &self.inner, val);
     }
   }
+
+  #[inline]
+  pub fn fits_slong_p(&self) -> i32 {
+    unsafe { gmp::mpz_fits_slong_p(&self.inner) }
+  }
+
   #[inline]
   pub fn gcd(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { gmp::mpz_gcd(&mut self.inner, &x.inner, &y.inner) }
   }
+
   #[inline]
   pub fn gcd_mut(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_gcd(&mut self.inner, &self.inner, &x.inner) }
   }
+
   #[inline]
-  pub fn gcd_cofactors(&mut self, d: &mut Mpz, e: &mut Mpz, a: &Mpz, m: &Mpz) {
+  pub fn gcdext(&mut self, d: &mut Mpz, e: &mut Mpz, a: &Mpz, m: &Mpz) {
     unsafe {
       gmp::mpz_gcdext(
         &mut self.inner,
@@ -237,22 +257,32 @@ impl Mpz {
       )
     }
   }
+
+  #[inline]
+  pub fn get_si(&self) -> i64 {
+    unsafe { gmp::mpz_get_si(&self.inner) }
+  }
+
   #[inline]
   pub fn modulo(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { gmp::mpz_mod(&mut self.inner, &x.inner, &y.inner) }
   }
+
   #[inline]
   pub fn modulo_mut(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_mod(&mut self.inner, &self.inner, &x.inner) }
   }
+
   #[inline]
   pub fn mul(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { gmp::mpz_mul(&mut self.inner, &x.inner, &y.inner) }
   }
+
   #[inline]
   pub fn mul_mut(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_mul(&mut self.inner, &self.inner, &x.inner) }
   }
+
   #[inline]
   pub fn mul_ui(&mut self, x: &Mpz, val: u64) {
     unsafe { gmp::mpz_mul_ui(&mut self.inner, &x.inner, val) }
@@ -261,6 +291,7 @@ impl Mpz {
   pub fn mul_ui_mut(&mut self, val: u64) {
     unsafe { gmp::mpz_mul_ui(&mut self.inner, &self.inner, val) }
   }
+
   #[inline]
   pub fn neg(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_neg(&mut self.inner, &x.inner) }
@@ -269,50 +300,61 @@ impl Mpz {
   pub fn neg_mut(&mut self) {
     unsafe { gmp::mpz_neg(&mut self.inner, &self.inner) }
   }
+
   #[inline]
   pub fn odd(&self) -> i32 {
     unsafe { gmp::mpz_odd_p(&self.inner) }
   }
+
   #[inline]
   pub fn root_mut(&mut self, x: u64) -> i32 {
     unsafe { gmp::mpz_root(&mut self.inner, &self.inner, x) }
   }
+
   #[inline]
   pub fn set(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_set(&mut self.inner, &x.inner) }
   }
+
   #[inline]
   pub fn set_cstr(&mut self, cs: &CString) {
     unsafe {
       gmp::mpz_set_str(&mut self.inner, cs.as_ptr(), 10);
     }
   }
-  #[inline]
-  pub fn set_ui(&mut self, val: u64) {
-    unsafe { gmp::mpz_set_ui(&mut self.inner, val) }
-  }
+
   #[inline]
   pub fn set_si(&mut self, val: i64) {
     unsafe { gmp::mpz_set_si(&mut self.inner, val) }
   }
+
+  #[inline]
+  pub fn set_ui(&mut self, val: u64) {
+    unsafe { gmp::mpz_set_ui(&mut self.inner, val) }
+  }
+
   #[inline]
   pub fn sgn(&self) -> i32 {
     unsafe { gmp::mpz_sgn(&self.inner) }
   }
+
+  #[inline]
+  pub fn square_mut(&mut self) {
+    unsafe { gmp::mpz_mul(&mut self.inner, &self.inner, &self.inner) }
+  }
+
   #[inline]
   pub fn sub(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { gmp::mpz_sub(&mut self.inner, &x.inner, &y.inner) }
   }
+
   #[inline]
-  pub fn sub_mul(&mut self, x: &Mpz, y: &Mpz) {
+  pub fn submul(&mut self, x: &Mpz, y: &Mpz) {
     unsafe { gmp::mpz_submul(&mut self.inner, &x.inner, &y.inner) }
   }
+
   #[inline]
   pub fn sub_mut(&mut self, x: &Mpz) {
     unsafe { gmp::mpz_sub(&mut self.inner, &self.inner, &x.inner) }
-  }
-  #[inline]
-  pub fn square_mut(&mut self) {
-    unsafe { gmp::mpz_mul(&mut self.inner, &self.inner, &self.inner) }
   }
 }
