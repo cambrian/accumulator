@@ -10,9 +10,9 @@ use std::str::FromStr;
 
 fn criterion_benchmark(c: &mut Criterion) {
   let left = ClassGroup::elem((
-    Integer::from_str("16").unwrap(),
-    Integer::from_str("9").unwrap(),
-    Integer::from_str(
+    Mpz::from_str("16").unwrap(),
+    Mpz::from_str("9").unwrap(),
+    Mpz::from_str(
       "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110\
       672047217112377476473502060121352842575308793237621563947157630098485131517401073775191194319\
       531549483898334742144138601661120476425524333273122132151927833887323969998955713328783526854\
@@ -80,7 +80,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     b.iter_with_setup(|| g_red.clone(), |g| ClassGroup::reduce(g.0, g.1, g.2))
   });
   c.bench_function("group_class_square", move |b| {
-    b.iter_with_setup(|| g_sq.clone(), |mut g| ClassGroup::square(&g))
+    b.iter_with_setup(|| g_sq.clone(), |mut g| ClassGroup::square(&mut g))
   });
 }
 
