@@ -1,4 +1,5 @@
 use crate::group::Group;
+use crate::num::mpz::Mpz;
 use rug::Integer;
 
 /// Poor man's type-level programming.
@@ -67,6 +68,52 @@ where
   )?)
 }
 
+// Linear Congruence Mpz context, default implementation, and solver.
+pub struct LinCongruenceCtx {
+  g: Mpz,
+  d: Mpz,
+  e: Mpz,
+  q: Mpz,
+  r: Mpz,
+}
+
+impl Default for LinCongruenceCtx {
+  fn default() -> Self {
+    Self {
+      g: Mpz::default(),
+      d: Mpz::default(),
+      e: Mpz::default(),
+      q: Mpz::default(),
+      r: Mpz::default(),
+    }
+  }
+}
+
+impl LinCongruenceCtx {
+  pub fn solve_linear_congruence(
+    &mut self,
+    mu: &mut Mpz,
+    v: &mut Mpz,
+    a: &Mpz,
+    b: &Mpz,
+    m: &Mpz,
+  ) -> Option<()> {
+    // Binary Quadratic Forms, 7.4.1
+    self.g.gcdext(&mut self.d, &mut self.e, a, m);
+    self.q.fdiv_qr(&mut self.r, b, &self.g);
+
+    if self.r.sgn() != 0 {
+      // No solution.
+      return None;
+    }
+
+    mu.mul(&self.q, &self.d);
+    mu.modulo_mut(m);
+    v.fdiv_q(m, &self.g);
+    Some(())
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -108,5 +155,53 @@ mod tests {
   fn test_merge_product() {
     let ints = vec![int(3), int(5), int(7), int(9), int(11)];
     assert!(merge_product(&ints) == int(10395));
+  }
+
+  #[test]
+  fn test_linear_congruence_solver() {
+    fn test_congruence_problem_w_solution(x: i64, y: i64, z: i64, mu_i64: u64, v_i64: u64) {
+      let mut ctx: LinCongruenceCtx = LinCongruenceCtx::default();
+      let (mut a, mut b, mut c) = (Mpz::default(), Mpz::default(), Mpz::default());
+      let (mut mu, mut v) = (Mpz::default(), Mpz::default());
+      let (mut mu_truth, mut v_truth) = (Mpz::default(), Mpz::default());
+
+      a.set_si(x);
+      b.set_si(y);
+      c.set_si(z);
+
+      mu_truth.set_ui(mu_i64);
+      v_truth.set_ui(v_i64);
+
+      ctx
+        .solve_linear_congruence(&mut mu, &mut v, &a, &b, &c)
+        .unwrap();
+      assert_eq!((mu_truth, v_truth), (mu, v));
+    }
+
+    test_congruence_problem_w_solution(3, 2, 4, 2, 4);
+    test_congruence_problem_w_solution(5, 1, 2, 1, 2);
+    test_congruence_problem_w_solution(2, 4, 5, 2, 5);
+    test_congruence_problem_w_solution(230, 1081, 12167, 2491, 529);
+  }
+
+  #[test]
+  fn test_linear_congruence_solver_no_solution() {
+    fn test_congruence_problem_no_solution(x: i64, y: i64, z: i64) {
+      let mut ctx: LinCongruenceCtx = LinCongruenceCtx::default();
+      let (mut a, mut b, mut c) = (Mpz::default(), Mpz::default(), Mpz::default());
+      let (mut mu, mut v) = (Mpz::default(), Mpz::default());
+
+      a.set_si(x);
+      b.set_si(y);
+      c.set_si(z);
+
+      // Let g = gcd(a, m). If b is not divisible by g, there are no solutions. If b is divisible by
+      // g, there are g solutions.
+      let result = ctx.solve_linear_congruence(&mut mu, &mut v, &a, &b, &c);
+      assert!(result.is_none());
+    }
+
+    test_congruence_problem_no_solution(33, 7, 143);
+    test_congruence_problem_no_solution(13, 14, 39);
   }
 }
