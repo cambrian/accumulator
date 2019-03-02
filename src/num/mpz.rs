@@ -1,11 +1,6 @@
 //! Rust wrappers for gmp_mpfr_sys, for better control over memory allocation.
-use gmp_mpfr_sys::gmp::{
-  mpz_abs, mpz_add, mpz_add_ui, mpz_cdiv_q, mpz_cdiv_r, mpz_cmp, mpz_cmp_si, mpz_cmpabs,
-  mpz_divexact, mpz_fdiv_q, mpz_fdiv_q_ui, mpz_fdiv_qr, mpz_fdiv_r, mpz_fits_slong_p, mpz_gcd,
-  mpz_gcdext, mpz_get_si, mpz_init, mpz_mod, mpz_mul, mpz_mul_ui, mpz_neg, mpz_odd_p, mpz_root,
-  mpz_set, mpz_set_si, mpz_set_str, mpz_set_ui, mpz_sgn, mpz_sub, mpz_submul, mpz_t,
-};
-
+use gmp_mpfr_sys::gmp;
+use gmp_mpfr_sys::gmp::mpz_t;
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
@@ -30,11 +25,14 @@ pub struct Mpz {
   pub inner: mpz_t,
 }
 
+unsafe impl Send for Mpz {}
+unsafe impl Sync for Mpz {}
+
 impl Default for Mpz {
   fn default() -> Self {
     let inner = unsafe {
       let mut ret = uninitialized();
-      mpz_init(&mut ret);
+      gmp::mpz_init(&mut ret);
       ret
     };
     Self { inner }
@@ -92,7 +90,7 @@ impl Hash for Mpz {
 impl From<u64> for Mpz {
   fn from(x: u64) -> Self {
     let mut ret = Mpz::default();
-    unsafe { mpz_set_ui(&mut ret.inner, x) };
+    unsafe { gmp::mpz_set_ui(&mut ret.inner, x) };
     ret
   }
 }
@@ -131,106 +129,106 @@ impl FromStr for Mpz {
 impl Mpz {
   #[inline]
   pub fn abs(&mut self, x: &Mpz) {
-    unsafe { mpz_abs(&mut self.inner, &x.inner) }
+    unsafe { gmp::mpz_abs(&mut self.inner, &x.inner) }
   }
   #[inline]
   pub fn add(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
-      mpz_add(&mut self.inner, &x.inner, &y.inner);
+      gmp::mpz_add(&mut self.inner, &x.inner, &y.inner);
     }
   }
   #[inline]
   pub fn add_mut_ui(&mut self, x: u64) {
-    unsafe { mpz_add_ui(&mut self.inner, &self.inner, x) }
+    unsafe { gmp::mpz_add_ui(&mut self.inner, &self.inner, x) }
   }
   #[inline]
   pub fn add_mut(&mut self, x: &Mpz) {
-    unsafe { mpz_add(&mut self.inner, &self.inner, &x.inner) }
+    unsafe { gmp::mpz_add(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
   pub fn cmp_mpz(&self, other: &Mpz) -> i32 {
-    unsafe { mpz_cmp(&self.inner, &other.inner) }
+    unsafe { gmp::mpz_cmp(&self.inner, &other.inner) }
   }
   #[inline]
   pub fn cmp_abs(&self, other: &Mpz) -> i32 {
-    unsafe { mpz_cmpabs(&self.inner, &other.inner) }
+    unsafe { gmp::mpz_cmpabs(&self.inner, &other.inner) }
   }
   #[inline]
   pub fn cmp_si(&self, val: i64) -> i32 {
-    unsafe { mpz_cmp_si(&self.inner, val) }
+    unsafe { gmp::mpz_cmp_si(&self.inner, val) }
   }
   #[inline]
   pub fn ceil_div(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
-      mpz_cdiv_q(&mut self.inner, &x.inner, &y.inner);
+      gmp::mpz_cdiv_q(&mut self.inner, &x.inner, &y.inner);
     }
   }
   #[inline]
   pub fn ceil_div_rem(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
-      mpz_cdiv_r(&mut self.inner, &x.inner, &y.inner);
+      gmp::mpz_cdiv_r(&mut self.inner, &x.inner, &y.inner);
     }
   }
   #[inline]
   pub fn floor_div(&mut self, x: &Mpz, y: &Mpz) {
     unsafe {
-      mpz_fdiv_q(&mut self.inner, &x.inner, &y.inner);
+      gmp::mpz_fdiv_q(&mut self.inner, &x.inner, &y.inner);
     }
   }
   #[inline]
   pub fn floor_div_mut(&mut self, x: &Mpz) {
-    unsafe { mpz_fdiv_q(&mut self.inner, &self.inner, &x.inner) }
+    unsafe { gmp::mpz_fdiv_q(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
   pub fn floor_div_rem(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe { mpz_fdiv_r(&mut self.inner, &x.inner, &y.inner) }
+    unsafe { gmp::mpz_fdiv_r(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn floor_div_qrem(&mut self, r: &mut Mpz, x: &Mpz, y: &Mpz) {
-    unsafe { mpz_fdiv_qr(&mut self.inner, &mut r.inner, &x.inner, &y.inner) }
+    unsafe { gmp::mpz_fdiv_qr(&mut self.inner, &mut r.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn floor_div_ui(&mut self, x: &Mpz, val: u64) {
     unsafe {
-      mpz_fdiv_q_ui(&mut self.inner, &x.inner, val);
+      gmp::mpz_fdiv_q_ui(&mut self.inner, &x.inner, val);
     }
   }
   #[inline]
   pub fn get_si(&self) -> i64 {
-    unsafe { mpz_get_si(&self.inner) }
+    unsafe { gmp::mpz_get_si(&self.inner) }
   }
   #[inline]
   pub fn div_exact(&mut self, n: &Mpz, d: &Mpz) {
-    unsafe { mpz_divexact(&mut self.inner, &n.inner, &d.inner) }
+    unsafe { gmp::mpz_divexact(&mut self.inner, &n.inner, &d.inner) }
   }
   #[inline]
   pub fn div_exact_mut(&mut self, d: &Mpz) {
     unsafe {
-      mpz_divexact(&mut self.inner, &self.inner, &d.inner);
+      gmp::mpz_divexact(&mut self.inner, &self.inner, &d.inner);
     }
   }
   #[inline]
   pub fn fits_slong_p(&self) -> i32 {
-    unsafe { mpz_fits_slong_p(&self.inner) }
+    unsafe { gmp::mpz_fits_slong_p(&self.inner) }
   }
   #[inline]
   pub fn floor_div_ui_mut(&mut self, val: u64) {
     unsafe {
-      mpz_fdiv_q_ui(&mut self.inner, &self.inner, val);
+      gmp::mpz_fdiv_q_ui(&mut self.inner, &self.inner, val);
     }
   }
   #[inline]
   pub fn gcd(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe { mpz_gcd(&mut self.inner, &x.inner, &y.inner) }
+    unsafe { gmp::mpz_gcd(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn gcd_mut(&mut self, x: &Mpz) {
-    unsafe { mpz_gcd(&mut self.inner, &self.inner, &x.inner) }
+    unsafe { gmp::mpz_gcd(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
   pub fn gcd_cofactors(&mut self, d: &mut Mpz, e: &mut Mpz, a: &Mpz, m: &Mpz) {
     unsafe {
-      mpz_gcdext(
+      gmp::mpz_gcdext(
         &mut self.inner,
         &mut d.inner,
         &mut e.inner,
@@ -241,83 +239,80 @@ impl Mpz {
   }
   #[inline]
   pub fn modulo(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe { mpz_mod(&mut self.inner, &x.inner, &y.inner) }
+    unsafe { gmp::mpz_mod(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn modulo_mut(&mut self, x: &Mpz) {
-    unsafe { mpz_mod(&mut self.inner, &self.inner, &x.inner) }
+    unsafe { gmp::mpz_mod(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
   pub fn mul(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe { mpz_mul(&mut self.inner, &x.inner, &y.inner) }
+    unsafe { gmp::mpz_mul(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn mul_mut(&mut self, x: &Mpz) {
-    unsafe { mpz_mul(&mut self.inner, &self.inner, &x.inner) }
+    unsafe { gmp::mpz_mul(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
   pub fn mul_ui(&mut self, x: &Mpz, val: u64) {
-    unsafe { mpz_mul_ui(&mut self.inner, &x.inner, val) }
+    unsafe { gmp::mpz_mul_ui(&mut self.inner, &x.inner, val) }
   }
   #[inline]
   pub fn mul_ui_mut(&mut self, val: u64) {
-    unsafe { mpz_mul_ui(&mut self.inner, &self.inner, val) }
+    unsafe { gmp::mpz_mul_ui(&mut self.inner, &self.inner, val) }
   }
   #[inline]
   pub fn neg(&mut self, x: &Mpz) {
-    unsafe { mpz_neg(&mut self.inner, &x.inner) }
+    unsafe { gmp::mpz_neg(&mut self.inner, &x.inner) }
   }
   #[inline]
   pub fn neg_mut(&mut self) {
-    unsafe { mpz_neg(&mut self.inner, &self.inner) }
+    unsafe { gmp::mpz_neg(&mut self.inner, &self.inner) }
   }
   #[inline]
   pub fn odd(&self) -> i32 {
-    unsafe { mpz_odd_p(&self.inner) }
+    unsafe { gmp::mpz_odd_p(&self.inner) }
   }
   #[inline]
   pub fn root_mut(&mut self, x: u64) -> i32 {
-    unsafe { mpz_root(&mut self.inner, &self.inner, x) }
+    unsafe { gmp::mpz_root(&mut self.inner, &self.inner, x) }
   }
   #[inline]
   pub fn set(&mut self, x: &Mpz) {
-    unsafe { mpz_set(&mut self.inner, &x.inner) }
+    unsafe { gmp::mpz_set(&mut self.inner, &x.inner) }
   }
   #[inline]
   pub fn set_cstr(&mut self, cs: &CString) {
     unsafe {
-      mpz_set_str(&mut self.inner, cs.as_ptr(), 10);
+      gmp::mpz_set_str(&mut self.inner, cs.as_ptr(), 10);
     }
   }
   #[inline]
   pub fn set_ui(&mut self, val: u64) {
-    unsafe { mpz_set_ui(&mut self.inner, val) }
+    unsafe { gmp::mpz_set_ui(&mut self.inner, val) }
   }
   #[inline]
   pub fn set_si(&mut self, val: i64) {
-    unsafe { mpz_set_si(&mut self.inner, val) }
+    unsafe { gmp::mpz_set_si(&mut self.inner, val) }
   }
   #[inline]
   pub fn sgn(&self) -> i32 {
-    unsafe { mpz_sgn(&self.inner) }
+    unsafe { gmp::mpz_sgn(&self.inner) }
   }
   #[inline]
   pub fn sub(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe { mpz_sub(&mut self.inner, &x.inner, &y.inner) }
+    unsafe { gmp::mpz_sub(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn sub_mul(&mut self, x: &Mpz, y: &Mpz) {
-    unsafe { mpz_submul(&mut self.inner, &x.inner, &y.inner) }
+    unsafe { gmp::mpz_submul(&mut self.inner, &x.inner, &y.inner) }
   }
   #[inline]
   pub fn sub_mut(&mut self, x: &Mpz) {
-    unsafe { mpz_sub(&mut self.inner, &self.inner, &x.inner) }
+    unsafe { gmp::mpz_sub(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
   pub fn square_mut(&mut self) {
-    unsafe { mpz_mul(&mut self.inner, &self.inner, &self.inner) }
+    unsafe { gmp::mpz_mul(&mut self.inner, &self.inner, &self.inner) }
   }
 }
-
-unsafe impl Send for Mpz {}
-unsafe impl Sync for Mpz {}
