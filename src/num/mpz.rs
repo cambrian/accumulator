@@ -58,13 +58,13 @@ impl Clone for Mpz {
 
 impl PartialEq for Mpz {
   fn eq(&self, other: &Mpz) -> bool {
-    self.cmp(&other) == 0
+    self.cmp_mpz(&other) == 0
   }
 }
 
 impl PartialOrd for Mpz {
   fn partial_cmp(&self, other: &Mpz) -> Option<Ordering> {
-    match self.cmp(&other) {
+    match self.cmp_mpz(&other) {
       x if x < 0 => Some(Ordering::Less),
       0 => Some(Ordering::Equal),
       _ => Some(Ordering::Greater),
@@ -74,7 +74,7 @@ impl PartialOrd for Mpz {
 
 impl Ord for Mpz {
   fn cmp(&self, other: &Mpz) -> Ordering {
-    match self.cmp(&other) {
+    match self.cmp_mpz(&other) {
       x if x < 0 => Ordering::Less,
       0 => Ordering::Equal,
       _ => Ordering::Greater,
@@ -151,7 +151,7 @@ impl Mpz {
   }
 
   #[inline]
-  pub fn cmp(&self, other: &Mpz) -> i32 {
+  pub fn cmp_mpz(&self, other: &Mpz) -> i32 {
     unsafe { gmp::mpz_cmp(&self.inner, &other.inner) }
   }
 
