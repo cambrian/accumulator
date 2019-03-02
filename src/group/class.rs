@@ -1,4 +1,4 @@
-//! Class Group implementation
+//! Class Group implementation, with optimizations.
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::num::flint;
 use crate::num::flint::fmpz;

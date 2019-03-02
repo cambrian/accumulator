@@ -1,4 +1,5 @@
-//! Rust wrappers for gmp_mpfr_sys, for better control over memory allocation.
+//! Mpz wrappers.  Wrappers around gmp_mpfr_sys for better control over memory allocation,
+//! and struct definitions for the Flint Mpz type.
 use gmp_mpfr_sys::gmp;
 use gmp_mpfr_sys::gmp::mpz_t;
 use std::cmp::Ordering;
@@ -8,15 +9,22 @@ use std::mem::uninitialized;
 use std::slice;
 use std::str::FromStr;
 
-#[allow(non_camel_case_types)]
-pub type mp_limb_t = ::std::os::raw::c_ulong;
-
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct flint_mpz_struct {
   pub mp_alloc: ::std::os::raw::c_int,
   pub mp_size: ::std::os::raw::c_int,
-  pub mp_d: *mut mp_limb_t,
+  pub mp_d: *mut ::std::os::raw::c_ulong,
+}
+
+impl From<&Mpz> for flint_mpz_struct {
+  fn from(x: &Mpz) -> Self {
+    flint_mpz_struct {
+      mp_alloc: x.inner.alloc,
+      mp_size: x.inner.size,
+      mp_d: x.inner.d,
+    }
+  }
 }
 
 #[derive(Debug)]
@@ -27,6 +35,7 @@ pub struct Mpz {
 
 unsafe impl Send for Mpz {}
 unsafe impl Sync for Mpz {}
+impl Eq for Mpz {}
 
 impl Default for Mpz {
   fn default() -> Self {
@@ -52,8 +61,6 @@ impl PartialEq for Mpz {
     self.cmp(&other) == 0
   }
 }
-
-impl Eq for Mpz {}
 
 impl PartialOrd for Mpz {
   fn partial_cmp(&self, other: &Mpz) -> Option<Ordering> {
@@ -92,16 +99,6 @@ impl From<u64> for Mpz {
     let mut ret = Mpz::default();
     unsafe { gmp::mpz_set_ui(&mut ret.inner, x) };
     ret
-  }
-}
-
-impl From<&Mpz> for flint_mpz_struct {
-  fn from(x: &Mpz) -> Self {
-    flint_mpz_struct {
-      mp_alloc: x.inner.alloc,
-      mp_size: x.inner.size,
-      mp_d: x.inner.d,
-    }
   }
 }
 
