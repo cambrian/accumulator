@@ -43,30 +43,17 @@ impl Group for ClassGroup {
   }
 
   fn inv_(_: &Mpz, x: &ClassElem) -> ClassElem {
-    let mut ret = ClassElem::default();
-    ret.a.set(&x.a);
-    ret.b.neg(&x.b);
-    ret.c.set(&x.c);
-    ret
+    CTX.with(|ctx| ctx.borrow_mut().inv(x))
   }
 
   fn exp_(d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().exp(d, a, n, Self::inv))
+    CTX.with(|ctx| ctx.borrow_mut().exp(d, a, n))
   }
 }
 
 impl UnknownOrderGroup for ClassGroup {
   fn unknown_order_elem_(d: &Mpz) -> ClassElem {
-    // Binary Quadratic Forms, Definition 5.4
-    let mut ret = ClassElem::default();
-    ret.a.set_ui(2);
-    ret.b.set_ui(1);
-    ret.c.set_ui(1);
-    ret.c.sub_mut(&d);
-    ret.c.fdiv_q_ui_mut(8);
-
-    let (a, b, c) = ClassGroup::reduce(ret.a, ret.b, ret.c);
-    ClassElem { a, b, c }
+    CTX.with(|ctx| ctx.borrow_mut().generator(d))
   }
 }
 

@@ -443,16 +443,10 @@ impl ClassCtx {
     c.add_mut(&self.ra);
   }
 
-  pub fn exp(
-    &mut self,
-    d: &Mpz,
-    a: &ClassElem,
-    n: &Integer,
-    inv: fn(&ClassElem) -> ClassElem,
-  ) -> ClassElem {
+  pub fn exp(&mut self, d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
     let (mut val, mut a, mut n) = {
       if *n < int(0) {
-        (self.id(d), inv(&a), int(-n))
+        (self.id(d), self.inv(&a), int(-n))
       } else {
         (self.id(d), a.clone(), n.clone())
       }
@@ -468,5 +462,26 @@ impl ClassCtx {
       self.square(&mut a);
       n >>= 1;
     }
+  }
+
+  pub fn inv(&mut self, x: &ClassElem) -> ClassElem {
+    let mut ret = ClassElem::default();
+    ret.a.set(&x.a);
+    ret.b.neg(&x.b);
+    ret.c.set(&x.c);
+    ret
+  }
+
+  pub fn generator(&mut self, d: &Mpz) -> ClassElem {
+    // Binary Quadratic Forms, Definition 5.4
+    let mut ret = ClassElem::default();
+    ret.a.set_ui(2);
+    ret.b.set_ui(1);
+    ret.c.set_ui(1);
+    ret.c.sub_mut(&d);
+    ret.c.fdiv_q_ui_mut(8);
+
+    let (a, b, c) = self.reduce(ret.a, ret.b, ret.c);
+    ClassElem { a, b, c }
   }
 }
