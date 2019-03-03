@@ -131,23 +131,19 @@ impl ClassGroup {
 
   // expects normalized element
   fn is_reduced(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    ClassGroup::is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
+    CTX.with(|ctx| ctx.borrow_mut().is_reduced(a, b, c))
   }
 
   fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
-    let mut neg_a = Mpz::default();
-    neg_a.neg(a);
-    neg_a < *b && b <= a
+    CTX.with(|ctx| ctx.borrow_mut().is_normal(a, b, _c))
   }
 
   fn validate(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    let mut d = Mpz::default();
-    Self::discriminant(&a, &b, &c, &mut d);
-    d == *ClassGroup::rep()
+    CTX.with(|ctx| ctx.borrow_mut().validate(a, b, c))
   }
 
-  fn discriminant(a: &Mpz, b: &Mpz, c: &Mpz, d: &mut Mpz) -> Mpz {
-    CTX.with(|ctx| ctx.borrow_mut().discriminant(a, b, c, d))
+  fn discriminant(a: &Mpz, b: &Mpz, c: &Mpz) -> Mpz {
+    CTX.with(|ctx| ctx.borrow_mut().discriminant(a, b, c))
   }
 }
 
@@ -417,9 +413,7 @@ mod tests {
   #[test]
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
-    let mut d = Mpz::default();
-    ClassGroup::discriminant(&g.a, &g.b, &g.c, &mut d);
-    assert!(d == *ClassGroup::rep())
+    assert!(ClassGroup::discriminant(&g.a, &g.b, &g.c) == *ClassGroup::rep())
   }
 
   #[test]

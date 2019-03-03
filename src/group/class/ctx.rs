@@ -5,7 +5,7 @@ use super::CLASS_GROUP_DISCRIMINANT;
 use crate::num::flint;
 use crate::num::flint::fmpz;
 use crate::num::mpz::{flint_mpz_struct, Mpz};
-use crate::util::LinCongruenceCtx;
+use crate::util::{LinCongruenceCtx, TypeRep};
 
 #[allow(non_snake_case)]
 pub struct ClassCtx {
@@ -107,16 +107,30 @@ impl Default for ClassCtx {
 }
 
 impl ClassCtx {
-  pub fn discriminant(&mut self, a: &Mpz, b: &Mpz, c: &Mpz, d: &mut Mpz) -> Mpz {
+  pub fn is_reduced(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    self.is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
+  }
+
+  pub fn is_normal(&mut self, a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
+    self.scratch.neg(&a);
+    self.scratch < *b && b <= a
+  }
+
+  pub fn validate(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    self.discriminant(a, b, c) == *ClassGroup::rep()
+  }
+
+  pub fn discriminant(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> Mpz {
+    let mut d = Mpz::default();
     d.mul(&b, &b);
     self.scratch.mul(&a, &c);
     self.scratch.mul_ui_mut(4);
     d.sub_mut(&self.scratch);
-    d.clone()
+    d
   }
 
   pub fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
-    if ClassGroup::is_normal(&a, &b, &c) {
+    if self.is_normal(&a, &b, &c) {
       return (a, b, c);
     }
     self.normalize_(&mut a, &mut b, &mut c);
@@ -363,7 +377,7 @@ impl ClassCtx {
 
   fn reduce_(&mut self, elem: &mut ClassElem) {
     // Binary Quadratic Forms, 5.2.1
-    while !ClassGroup::is_reduced(&elem.a, &elem.b, &elem.c) {
+    while !self.is_reduced(&elem.a, &elem.b, &elem.c) {
       self.s.add(&elem.c, &elem.b);
       self.x.mul_ui(&elem.c, 2);
       self.s.fdiv_q_mut(&self.x);
@@ -390,7 +404,7 @@ impl ClassCtx {
   }
 
   fn normalize_mut(&mut self, x: &mut ClassElem) {
-    if ClassGroup::is_normal(&x.a, &x.b, &x.c) {
+    if self.is_normal(&x.a, &x.b, &x.c) {
       return;
     }
     self.normalize_(&mut x.a, &mut x.b, &mut x.c);
