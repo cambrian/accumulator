@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 #[allow(clippy::stutter)]
 #[derive(Debug)]
 pub struct ClassElem {
-  pub a: Mpz, // TODO: CAN WE MAKE THIS PRIVATE?
+  pub a: Mpz,
   pub b: Mpz,
   pub c: Mpz,
 }

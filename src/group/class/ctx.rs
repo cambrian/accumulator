@@ -109,11 +109,11 @@ impl Default for ClassCtx {
 }
 
 impl ClassCtx {
-  pub fn is_reduced(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    self.is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
+  pub fn elem_is_reduced(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    self.elem_is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
   }
 
-  pub fn is_normal(&mut self, a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
+  pub fn elem_is_normal(&mut self, a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
     self.scratch.neg(&a);
     self.scratch < *b && b <= a
   }
@@ -132,7 +132,7 @@ impl ClassCtx {
   }
 
   pub fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
-    if self.is_normal(&a, &b, &c) {
+    if self.elem_is_normal(&a, &b, &c) {
       return (a, b, c);
     }
     self.normalize_(&mut a, &mut b, &mut c);
@@ -390,7 +390,7 @@ impl ClassCtx {
 
   fn reduce_(&mut self, elem: &mut ClassElem) {
     // Binary Quadratic Forms, 5.2.1
-    while !self.is_reduced(&elem.a, &elem.b, &elem.c) {
+    while !self.elem_is_reduced(&elem.a, &elem.b, &elem.c) {
       self.s.add(&elem.c, &elem.b);
       self.x.mul_ui(&elem.c, 2);
       self.s.fdiv_q_mut(&self.x);
@@ -417,7 +417,7 @@ impl ClassCtx {
   }
 
   fn normalize_mut(&mut self, x: &mut ClassElem) {
-    if self.is_normal(&x.a, &x.b, &x.c) {
+    if self.elem_is_normal(&x.a, &x.b, &x.c) {
       return;
     }
     self.normalize_(&mut x.a, &mut x.b, &mut x.c);
