@@ -17,6 +17,18 @@ thread_local! {
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
+macro_rules! with_context {
+  ($ctx_func:ident, $($arg:expr),*) => {
+    CTX.with(
+      |ctx| ctx.borrow_mut().$ctx_func(
+        $(
+          $arg,
+        )*
+      )
+    )
+  };
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ClassGroup {}
 
@@ -31,25 +43,25 @@ impl Group for ClassGroup {
   type Elem = ClassElem;
 
   fn op_(_: &Mpz, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().op(x, y))
+    with_context!(op, x, y)
   }
 
   fn id_(d: &Mpz) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().id(d))
+    with_context!(id, d)
   }
 
   fn inv_(_: &Mpz, x: &ClassElem) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().inv(x))
+    with_context!(inv, x)
   }
 
   fn exp_(d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().exp(d, a, n))
+    with_context!(exp, d, a, n)
   }
 }
 
 impl UnknownOrderGroup for ClassGroup {
   fn unknown_order_elem_(d: &Mpz) -> ClassElem {
-    CTX.with(|ctx| ctx.borrow_mut().generator(d))
+    with_context!(generator, d)
   }
 }
 
@@ -73,23 +85,22 @@ where
   }
 }
 
-// TODO: write a macro for using the context.
 impl ClassGroup {
   // Normalize, reduce, and square are public for benchmarking.
   pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
-    CTX.with(|ctx| ctx.borrow_mut().normalize(a, b, c))
+    with_context!(normalize, a, b, c)
   }
 
   pub fn reduce(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
-    CTX.with(|ctx| ctx.borrow_mut().reduce(a, b, c))
+    with_context!(reduce, a, b, c)
   }
 
   pub fn square(x: &mut ClassElem) {
-    CTX.with(|ctx| ctx.borrow_mut().square(x))
+    with_context!(square, x)
   }
 
   fn validate(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    CTX.with(|ctx| ctx.borrow_mut().validate(a, b, c))
+    with_context!(validate, a, b, c)
   }
 }
 
