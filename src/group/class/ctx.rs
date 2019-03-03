@@ -108,29 +108,12 @@ impl Default for ClassCtx {
   }
 }
 
+//  Class group operations based on Chia's fantastic doc explaining applied class groups:
+//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
+//  hereafter refered to as "Binary Quadratic Forms".  Includes optimizations from Chia's VDF
+//  competition and from Jacobson, Michael J., and Alfred J. Van Der Poorten.
+//  "Computational aspects of NUCOMP."
 impl ClassCtx {
-  pub fn elem_is_reduced(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    self.elem_is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
-  }
-
-  pub fn elem_is_normal(&mut self, a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
-    self.scratch.neg(&a);
-    self.scratch < *b && b <= a
-  }
-
-  pub fn validate(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    self.discriminant(a, b, c) == *ClassGroup::rep()
-  }
-
-  pub fn discriminant(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> Mpz {
-    let mut d = Mpz::default();
-    d.mul(&b, &b);
-    self.scratch.mul(&a, &c);
-    self.scratch.mul_ui_mut(4);
-    d.sub_mut(&self.scratch);
-    d
-  }
-
   pub fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
     if self.elem_is_normal(&a, &b, &c) {
       return (a, b, c);
@@ -146,6 +129,10 @@ impl ClassCtx {
     self.normalize(elem.a, elem.b, elem.c)
   }
 
+  pub fn validate(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    self.discriminant(a, b, c) == *ClassGroup::rep()
+  }
+
   pub fn square(&mut self, x: &mut ClassElem) {
     if cfg!(feature = "nudulp") {
       // NUDULP optimization, maybe using FLINT bindings.
@@ -153,6 +140,136 @@ impl ClassCtx {
     } else {
       self.square_regular(x);
     }
+  }
+
+  pub fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
+    // Binary Quadratic Forms, 6.1.1
+    self.g.add(&x.b, &y.b);
+    self.g.fdiv_q_ui_mut(2);
+    self.h.sub(&y.b, &x.b);
+    self.h.fdiv_q_ui_mut(2);
+    self.w.gcd(&x.a, &y.a);
+    self.w.gcd_mut(&self.g);
+    self.j.set(&self.w);
+    self.r.set_ui(0);
+    self.s.fdiv_q(&x.a, &self.w);
+    self.t.fdiv_q(&y.a, &self.w);
+    self.u.fdiv_q(&self.g, &self.w);
+    self.a.mul(&self.t, &self.u);
+    self.b.mul(&self.h, &self.u);
+    self.m.mul(&self.s, &x.c);
+    self.b.add_mut(&self.m);
+    self.m.mul(&self.s, &self.t);
+    self
+      .sctx
+      .solve_linear_congruence(&mut self.mu, &mut self.v, &self.a, &self.b, &self.m)
+      .unwrap();
+
+    self.a.mul(&self.t, &self.v);
+    self.m.mul(&self.t, &self.mu);
+    self.b.sub(&self.h, &self.m);
+    self.m.set(&self.s);
+    self
+      .sctx
+      .solve_linear_congruence(&mut self.lambda, &mut self.sigma, &self.a, &self.b, &self.m)
+      .unwrap();
+
+    self.a.mul(&self.v, &self.lambda);
+    self.k.add(&self.mu, &self.a);
+    self.l.mul(&self.k, &self.t);
+    self.l.sub_mut(&self.h);
+    self.l.fdiv_q_mut(&self.s);
+    self.m.mul(&self.t, &self.u);
+    self.m.mul_mut(&self.k);
+    self.a.mul(&self.h, &self.u);
+    self.m.sub_mut(&self.a);
+    self.a.mul(&x.c, &self.s);
+    self.m.sub_mut(&self.a);
+    self.a.mul(&self.s, &self.t);
+    self.m.fdiv_q_mut(&self.a);
+
+    let mut ret = ClassElem::default();
+
+    ret.a.mul(&self.s, &self.t);
+    self.a.mul(&self.r, &self.u);
+    ret.a.sub_mut(&self.a);
+
+    ret.b.mul(&self.j, &self.u);
+    self.a.mul(&self.m, &self.r);
+    ret.b.add_mut(&self.a);
+    self.a.mul(&self.k, &self.t);
+    ret.b.sub_mut(&self.a);
+    self.a.mul(&self.l, &self.s);
+    ret.b.sub_mut(&self.a);
+
+    ret.c.mul(&self.k, &self.l);
+    self.a.mul(&self.j, &self.m);
+    ret.c.sub_mut(&self.a);
+    let (a, b, c) = self.reduce(ret.a, ret.b, ret.c);
+    ClassElem { a, b, c }
+  }
+
+  pub fn id(&mut self, d: &Mpz) -> ClassElem {
+    // Binary Quadratic Forms, Definition 5.4
+    let mut ret = ClassElem::default();
+    ret.a.set_ui(1);
+    ret.b.set_ui(1);
+    self.a.sub(&ret.b, &d);
+    ret.c.fdiv_q_ui(&self.a, 4);
+    ret
+  }
+
+  pub fn exp(&mut self, d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
+    let (mut val, mut a, mut n) = {
+      if *n < int(0) {
+        (self.id(d), self.inv(&a), int(-n))
+      } else {
+        (self.id(d), a.clone(), n.clone())
+      }
+    };
+    loop {
+      if n == int(0) {
+        return val;
+      }
+      if n.is_odd() {
+        val = self.op(&val, &a);
+      }
+
+      self.square(&mut a);
+      n >>= 1;
+    }
+  }
+
+  pub fn inv(&mut self, x: &ClassElem) -> ClassElem {
+    let mut ret = ClassElem::default();
+    ret.a.set(&x.a);
+    ret.b.neg(&x.b);
+    ret.c.set(&x.c);
+    ret
+  }
+
+  pub fn generator(&mut self, d: &Mpz) -> ClassElem {
+    // Binary Quadratic Forms, Definition 5.4
+    let mut ret = ClassElem::default();
+    ret.a.set_ui(2);
+    ret.b.set_ui(1);
+    ret.c.set_ui(1);
+    ret.c.sub_mut(&d);
+    ret.c.fdiv_q_ui_mut(8);
+
+    let (a, b, c) = self.reduce(ret.a, ret.b, ret.c);
+    ClassElem { a, b, c }
+  }
+
+  // Private functions
+
+  fn discriminant(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> Mpz {
+    let mut d = Mpz::default();
+    d.mul(&b, &b);
+    self.scratch.mul(&a, &c);
+    self.scratch.mul_ui_mut(4);
+    d.sub_mut(&self.scratch);
+    d
   }
 
   fn square_regular(&mut self, x: &mut ClassElem) {
@@ -246,81 +363,13 @@ impl ClassCtx {
     self.reduce_mut(x);
   }
 
-  pub fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    // Binary Quadratic Forms, 6.1.1
-    self.g.add(&x.b, &y.b);
-    self.g.fdiv_q_ui_mut(2);
-    self.h.sub(&y.b, &x.b);
-    self.h.fdiv_q_ui_mut(2);
-    self.w.gcd(&x.a, &y.a);
-    self.w.gcd_mut(&self.g);
-    self.j.set(&self.w);
-    self.r.set_ui(0);
-    self.s.fdiv_q(&x.a, &self.w);
-    self.t.fdiv_q(&y.a, &self.w);
-    self.u.fdiv_q(&self.g, &self.w);
-    self.a.mul(&self.t, &self.u);
-    self.b.mul(&self.h, &self.u);
-    self.m.mul(&self.s, &x.c);
-    self.b.add_mut(&self.m);
-    self.m.mul(&self.s, &self.t);
-    self
-      .sctx
-      .solve_linear_congruence(&mut self.mu, &mut self.v, &self.a, &self.b, &self.m)
-      .unwrap();
-
-    self.a.mul(&self.t, &self.v);
-    self.m.mul(&self.t, &self.mu);
-    self.b.sub(&self.h, &self.m);
-    self.m.set(&self.s);
-    self
-      .sctx
-      .solve_linear_congruence(&mut self.lambda, &mut self.sigma, &self.a, &self.b, &self.m)
-      .unwrap();
-
-    self.a.mul(&self.v, &self.lambda);
-    self.k.add(&self.mu, &self.a);
-    self.l.mul(&self.k, &self.t);
-    self.l.sub_mut(&self.h);
-    self.l.fdiv_q_mut(&self.s);
-    self.m.mul(&self.t, &self.u);
-    self.m.mul_mut(&self.k);
-    self.a.mul(&self.h, &self.u);
-    self.m.sub_mut(&self.a);
-    self.a.mul(&x.c, &self.s);
-    self.m.sub_mut(&self.a);
-    self.a.mul(&self.s, &self.t);
-    self.m.fdiv_q_mut(&self.a);
-
-    let mut ret = ClassElem::default();
-
-    ret.a.mul(&self.s, &self.t);
-    self.a.mul(&self.r, &self.u);
-    ret.a.sub_mut(&self.a);
-
-    ret.b.mul(&self.j, &self.u);
-    self.a.mul(&self.m, &self.r);
-    ret.b.add_mut(&self.a);
-    self.a.mul(&self.k, &self.t);
-    ret.b.sub_mut(&self.a);
-    self.a.mul(&self.l, &self.s);
-    ret.b.sub_mut(&self.a);
-
-    ret.c.mul(&self.k, &self.l);
-    self.a.mul(&self.j, &self.m);
-    ret.c.sub_mut(&self.a);
-    let (a, b, c) = self.reduce(ret.a, ret.b, ret.c);
-    ClassElem { a, b, c }
+  fn elem_is_reduced(&mut self, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    self.elem_is_normal(a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
   }
 
-  pub fn id(&mut self, d: &Mpz) -> ClassElem {
-    // Binary Quadratic Forms, Definition 5.4
-    let mut ret = ClassElem::default();
-    ret.a.set_ui(1);
-    ret.b.set_ui(1);
-    self.a.sub(&ret.b, &d);
-    ret.c.fdiv_q_ui(&self.a, 4);
-    ret
+  fn elem_is_normal(&mut self, a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
+    self.scratch.neg(&a);
+    self.scratch < *b && b <= a
   }
 
   #[allow(non_snake_case)]
@@ -441,47 +490,5 @@ impl ClassCtx {
     self.ra.set(&self.r);
     self.ra.mul_mut(&self.old_b);
     c.add_mut(&self.ra);
-  }
-
-  pub fn exp(&mut self, d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
-    let (mut val, mut a, mut n) = {
-      if *n < int(0) {
-        (self.id(d), self.inv(&a), int(-n))
-      } else {
-        (self.id(d), a.clone(), n.clone())
-      }
-    };
-    loop {
-      if n == int(0) {
-        return val;
-      }
-      if n.is_odd() {
-        val = self.op(&val, &a);
-      }
-
-      self.square(&mut a);
-      n >>= 1;
-    }
-  }
-
-  pub fn inv(&mut self, x: &ClassElem) -> ClassElem {
-    let mut ret = ClassElem::default();
-    ret.a.set(&x.a);
-    ret.b.neg(&x.b);
-    ret.c.set(&x.c);
-    ret
-  }
-
-  pub fn generator(&mut self, d: &Mpz) -> ClassElem {
-    // Binary Quadratic Forms, Definition 5.4
-    let mut ret = ClassElem::default();
-    ret.a.set_ui(2);
-    ret.b.set_ui(1);
-    ret.c.set_ui(1);
-    ret.c.sub_mut(&d);
-    ret.c.fdiv_q_ui_mut(8);
-
-    let (a, b, c) = self.reduce(ret.a, ret.b, ret.c);
-    ClassElem { a, b, c }
   }
 }

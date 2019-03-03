@@ -27,10 +27,6 @@ impl TypeRep for ClassGroup {
   }
 }
 
-// ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
-//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
-//  hereafter refered to as "Binary Quadratic Forms"
-
 impl Group for ClassGroup {
   type Elem = ClassElem;
 
