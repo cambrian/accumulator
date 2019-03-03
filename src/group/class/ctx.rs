@@ -1,4 +1,4 @@
-//! Defines mpz context struct used for no-rellocation class group computations.
+//! Defines Mpz context struct used for no-reallocation class group computations.
 use super::ClassElem;
 use super::ClassGroup;
 use super::CLASS_GROUP_DISCRIMINANT;
