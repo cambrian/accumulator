@@ -1,512 +1,25 @@
 //! Class Group implementation, with optimizations.
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::num::flint;
-use crate::num::flint::fmpz;
-use crate::num::mpz::{flint_mpz_struct, Mpz};
-use crate::util::{int, LinCongruenceCtx, TypeRep};
+use crate::num::mpz::Mpz;
+use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
-use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ClassGroup {}
+mod ctx;
+mod discriminant;
+mod elem;
 
-// 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
-// According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1, IQ-MPQS for computing
-// discrete logarithms in class groups with a 2048-bit discriminant is comparable in complexity to
-// GNFS for factoring a 4096-bit integer.
-const DISCRIMINANT2048_DECIMAL: &str =
-  "-30616069034807523947093657516320815215492876376165067902716988657802400037331914448218251590830\
-  1102189519215849430413184776658192481976276720778009261808832630304841711366872161223643645001916\
-  6969493423497224870506311710491233557329479816457723381368788734079933165653042145718668727765268\
-  0575673207678516369650123480826989387975548598309959486361425021860161020248607833276306314923730\
-  9854570972702350567411779734372573754840570138310317754359137013512655926325773048926718050691092\
-  9453371727344087286361426404588335160385998280988603297435639020911295652025967761702701701471162\
-  3966286152805654229445219531956098223";
-
-lazy_static! {
-  pub static ref CLASS_GROUP_DISCRIMINANT: Mpz = Mpz::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
-}
+use ctx::ClassCtx;
+use discriminant::CLASS_GROUP_DISCRIMINANT;
+use elem::ClassElem;
 
 thread_local! {
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
-// ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
-//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
-//  hereafter refered to as "Binary Quadratic Forms"
-//
-// A ClassElem is a tuple of three Mpz integers.
-
-#[allow(clippy::stutter)]
-#[derive(Debug)]
-pub struct ClassElem {
-  a: Mpz,
-  b: Mpz,
-  c: Mpz,
-}
-
-impl Default for ClassElem {
-  fn default() -> Self {
-    ClassElem {
-      a: Mpz::default(),
-      b: Mpz::default(),
-      c: Mpz::default(),
-    }
-  }
-}
-
-impl Clone for ClassElem {
-  fn clone(&self) -> Self {
-    let mut ret = ClassElem::default();
-    ret.a = self.a.clone();
-    ret.b = self.b.clone();
-    ret.c = self.c.clone();
-    ret
-  }
-}
-
-impl PartialEq for ClassElem {
-  fn eq(&self, other: &ClassElem) -> bool {
-    // ClassElems only ever exist in reduced form, unless manually
-    // instantiated with ClassElem {...}
-    self.a == other.a && self.b == other.b && self.c == other.c
-  }
-}
-
-impl Hash for ClassElem {
-  // Assumes `ClassElem` is reduced and normalized, which will be the case unless a struct is
-  // instantiated manually in this module.
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.a.hash(state);
-    self.b.hash(state);
-    self.c.hash(state);
-  }
-}
-
-impl Eq for ClassElem {}
-unsafe impl Send for ClassElem {}
-unsafe impl Sync for ClassElem {}
-
-impl ClassElem {
-  fn discriminant(&self, d: &mut Mpz) -> Mpz {
-    let mut tmp = Mpz::default();
-    d.mul(&self.b, &self.b);
-    tmp.mul(&self.a, &self.c);
-    tmp.mul_ui_mut(4);
-    d.sub_mut(&tmp);
-    d.clone()
-  }
-
-  fn validate(&self) -> bool {
-    let mut d = Mpz::default();
-    self.discriminant(&mut d);
-    d == *ClassGroup::rep()
-  }
-}
-
-#[allow(non_snake_case)]
-pub struct ClassCtx {
-  r: Mpz,
-  denom: Mpz,
-  old_b: Mpz,
-  ra: Mpz,
-  s: Mpz,
-  x: Mpz,
-  old_a: Mpz,
-  g: Mpz,
-  w: Mpz,
-  u: Mpz,
-  a: Mpz,
-  b: Mpz,
-  m: Mpz,
-  k: Mpz,
-  mu: Mpz,
-  v: Mpz,
-  sigma: Mpz,
-  lambda: Mpz,
-  h: Mpz,
-  t: Mpz,
-  l: Mpz,
-  j: Mpz,
-  G_sq_op: Mpz,
-  x_sq_op: Mpz,
-  y_sq_op: Mpz,
-  z_sq_op: Mpz,
-  By_sq_op: Mpz,
-  Dy_sq_op: Mpz,
-  bx_sq_op: Mpz,
-  by_sq_op: Mpz,
-  L_sq_op: Mpz,
-  dx_sq_op: Mpz,
-  dy_sq_op: Mpz,
-  t_sq_op: Mpz,
-  q_sq_op: Mpz,
-  ax_sq_op: Mpz,
-  ay_sq_op: Mpz,
-  Q1_sq_op: Mpz,
-  scratch: Mpz,
-  sctx: LinCongruenceCtx,
-}
-
-impl Default for ClassCtx {
-  fn default() -> Self {
-    let mut s = Self {
-      r: Mpz::default(),
-      denom: Mpz::default(),
-      old_b: Mpz::default(),
-      ra: Mpz::default(),
-      s: Mpz::default(),
-      x: Mpz::default(),
-      old_a: Mpz::default(),
-      g: Mpz::default(),
-      w: Mpz::default(),
-      u: Mpz::default(),
-      a: Mpz::default(),
-      b: Mpz::default(),
-      m: Mpz::default(),
-      k: Mpz::default(),
-      mu: Mpz::default(),
-      v: Mpz::default(),
-      sigma: Mpz::default(),
-      lambda: Mpz::default(),
-      h: Mpz::default(),
-      t: Mpz::default(),
-      l: Mpz::default(),
-      j: Mpz::default(),
-
-      // Used in squaring ops
-      G_sq_op: Mpz::default(),
-      x_sq_op: Mpz::default(),
-      y_sq_op: Mpz::default(),
-      z_sq_op: Mpz::default(),
-      By_sq_op: Mpz::default(),
-      Dy_sq_op: Mpz::default(),
-      bx_sq_op: Mpz::default(),
-      by_sq_op: Mpz::default(),
-      L_sq_op: Mpz::default(),
-      dx_sq_op: Mpz::default(),
-      dy_sq_op: Mpz::default(),
-      t_sq_op: Mpz::default(),
-      q_sq_op: Mpz::default(),
-      ax_sq_op: Mpz::default(),
-      ay_sq_op: Mpz::default(),
-      Q1_sq_op: Mpz::default(),
-      scratch: Mpz::default(),
-
-      sctx: LinCongruenceCtx::default(),
-    };
-
-    // Precomputation needed for NUDULP squaring.
-    s.L_sq_op.abs(&CLASS_GROUP_DISCRIMINANT.clone());
-    s.L_sq_op.root_mut(4);
-    s
-  }
-}
-
-impl ClassCtx {
-  fn normalize_(&mut self, a: &mut Mpz, b: &mut Mpz, c: &mut Mpz) {
-    // Binary Quadratic Forms, 5.1.1
-    self.r.sub(&a, &b);
-    self.denom.mul_ui(&a, 2);
-    self.r.fdiv_q_mut(&self.denom);
-
-    self.old_b.set(&b);
-
-    self.ra.mul(&self.r, &a);
-    b.add_mut(&self.ra);
-    b.add_mut(&self.ra);
-
-    self.ra.mul_mut(&self.r);
-    c.add_mut(&self.ra);
-
-    self.ra.set(&self.r);
-    self.ra.mul_mut(&self.old_b);
-    c.add_mut(&self.ra);
-  }
-
-  fn normalize_mut(&mut self, x: &mut ClassElem) {
-    if ClassGroup::is_normal(&x.a, &x.b, &x.c) {
-      return;
-    }
-    self.normalize_(&mut x.a, &mut x.b, &mut x.c);
-  }
-
-  fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
-    if ClassGroup::is_normal(&a, &b, &c) {
-      return (a, b, c);
-    }
-    self.normalize_(&mut a, &mut b, &mut c);
-    (a, b, c)
-  }
-
-  fn reduce_(&mut self, elem: &mut ClassElem) {
-    // Binary Quadratic Forms, 5.2.1
-    while !ClassGroup::is_reduced(&elem.a, &elem.b, &elem.c) {
-      self.s.add(&elem.c, &elem.b);
-      self.x.mul_ui(&elem.c, 2);
-      self.s.fdiv_q_mut(&self.x);
-      self.old_a.set(&elem.a);
-      self.old_b.set(&elem.b);
-      elem.a.set(&elem.c);
-      elem.b.neg_mut();
-      self.x.mul(&self.s, &elem.c);
-      self.x.mul_ui_mut(2);
-      elem.b.add_mut(&self.x);
-
-      elem.c.mul_mut(&self.s);
-      elem.c.mul_mut(&self.s);
-      self.x.mul(&self.old_b, &self.s);
-      elem.c.sub_mut(&self.x);
-      elem.c.add_mut(&self.old_a);
-    }
-  }
-
-  fn reduce(&mut self, a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
-    let (a, b, c) = self.normalize(a, b, c);
-    let mut elem = ClassElem { a, b, c };
-    self.reduce_(&mut elem);
-    self.normalize(elem.a, elem.b, elem.c)
-  }
-
-  fn reduce_mut(&mut self, x: &mut ClassElem) {
-    self.normalize_mut(x);
-    self.reduce_(x);
-    self.normalize_mut(x);
-  }
-
-  fn square(&mut self, x: &mut ClassElem) {
-    // Binary Quadratic Forms, 6.3.1
-    self
-      .sctx
-      .solve_linear_congruence(&mut self.mu, &mut self.v, &x.b, &x.c, &x.a)
-      .unwrap();
-
-    self.m.mul(&x.b, &self.mu);
-    self.m.sub_mut(&x.c);
-    self.m.fdiv_q_mut(&x.a);
-
-    self.old_a.set(&x.a);
-    x.a.square_mut();
-
-    self.a.mul(&self.mu, &self.old_a);
-    self.a.mul_ui_mut(2);
-    x.b.sub_mut(&self.a);
-
-    x.c.mul(&self.mu, &self.mu);
-    x.c.sub_mut(&self.m);
-
-    self.reduce_mut(x);
-  }
-
-  #[allow(non_snake_case)]
-  fn square_nudulp_help_flint(ctx: &mut ClassCtx) {
-    unsafe {
-      let mut fy: fmpz = 0;
-      let mut fx: fmpz = 0;
-      let mut fby: fmpz = 0;
-      let mut fbx: fmpz = 0;
-      let mut fL: fmpz = 0;
-
-      let mut y_square_clone = flint_mpz_struct::from(&ctx.y_sq_op);
-      let mut x_square_clone = flint_mpz_struct::from(&ctx.x_sq_op);
-      let mut by_square_clone = flint_mpz_struct::from(&ctx.by_sq_op);
-      let mut bx_square_clone = flint_mpz_struct::from(&ctx.bx_sq_op);
-      let mut L_square_clone = flint_mpz_struct::from(&ctx.L_sq_op);
-
-      flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
-      flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);
-      flint::fmpz_set_mpz(&mut fby, &mut by_square_clone);
-      flint::fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
-      flint::fmpz_set_mpz(&mut fL, &mut L_square_clone);
-
-      // Flint Lehmer partial extended GCD.
-      flint::fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
-
-      flint::fmpz_get_mpz(&mut y_square_clone, &mut fy);
-      flint::fmpz_get_mpz(&mut x_square_clone, &mut fx);
-      flint::fmpz_get_mpz(&mut by_square_clone, &mut fby);
-      flint::fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
-
-      ctx.y_sq_op = Mpz::from(y_square_clone);
-      ctx.x_sq_op = Mpz::from(x_square_clone);
-      ctx.by_sq_op = Mpz::from(by_square_clone);
-      ctx.bx_sq_op = Mpz::from(bx_square_clone);
-    }
-
-    ctx.x_sq_op.neg_mut();
-    if ctx.x_sq_op.sgn() > 0 {
-      ctx.y_sq_op.neg_mut();
-    } else {
-      ctx.by_sq_op.neg_mut();
-    }
-  }
-
-  fn square_nudulp_help(ctx: &mut ClassCtx) {
-    ctx.x_sq_op.set_ui(1);
-    ctx.y_sq_op.set_ui(0);
-    while ctx.by_sq_op.cmpabs(&ctx.L_sq_op) > 0 && ctx.bx_sq_op.sgn() == 0 {
-      ctx.q_sq_op.fdiv_q(&ctx.by_sq_op, &ctx.bx_sq_op);
-      ctx.t_sq_op.fdiv_r(&ctx.by_sq_op, &ctx.bx_sq_op);
-
-      ctx.by_sq_op.set(&ctx.bx_sq_op);
-      ctx.bx_sq_op.set(&ctx.t_sq_op);
-      ctx.y_sq_op.submul(&ctx.q_sq_op, &ctx.x_sq_op);
-      ctx.t_sq_op.set(&ctx.y_sq_op);
-      ctx.y_sq_op.set(&ctx.x_sq_op);
-      ctx.x_sq_op.set(&ctx.t_sq_op);
-      ctx.z_sq_op.add_ui_mut(1);
-    }
-
-    if ctx.z_sq_op.odd() != 0 {
-      ctx.by_sq_op.neg_mut();
-      ctx.y_sq_op.neg_mut();
-    }
-  }
-
-  fn square_nudulp(&mut self, x: &mut ClassElem) {
-    // Jacobson, Michael J., and Alfred J. Van Der Poorten. "Computational aspects of NUCOMP."
-    // Algorithm 2 (Alg 2).
-
-    // Step 1 in Alg 2.
-    self
-      .G_sq_op
-      .gcdext(&mut self.y_sq_op, &mut self.scratch, &x.b, &x.a);
-    self.By_sq_op.divexact(&x.a, &self.G_sq_op);
-    self.Dy_sq_op.divexact(&x.b, &self.G_sq_op);
-
-    // Step 2 in Alg 2.
-    self.bx_sq_op.mul(&self.y_sq_op, &x.c);
-    self.bx_sq_op.modulo_mut(&self.By_sq_op);
-    self.by_sq_op.set(&self.By_sq_op);
-
-    if self.by_sq_op.cmpabs(&self.L_sq_op) <= 0 {
-      // Step 4 in Alg 2.
-      self.dx_sq_op.mul(&self.bx_sq_op, &self.Dy_sq_op);
-      self.dx_sq_op.sub_mut(&x.c);
-      self.dx_sq_op.divexact_mut(&self.By_sq_op);
-      x.a.mul(&self.by_sq_op, &self.by_sq_op);
-      x.c.mul(&self.bx_sq_op, &self.bx_sq_op);
-      self.t_sq_op.add(&self.bx_sq_op, &self.by_sq_op);
-      self.t_sq_op.square_mut();
-      x.b.sub_mut(&self.t_sq_op);
-      x.b.add_mut(&x.a);
-      x.b.add_mut(&x.c);
-      self.t_sq_op.mul(&self.G_sq_op, &self.dx_sq_op);
-      x.c.sub_mut(&self.t_sq_op);
-      return;
-    }
-
-    // Most of Step 3 in Alg 2.
-    if cfg!(feature = "flint") {
-      // Subroutine as handled by top entry to the Chia VDF competition "bulaiden."
-      ClassCtx::square_nudulp_help_flint(self);
-    } else {
-      // Subroutine as presented in "Computational aspects of NUCOMP.", Algorithm 2, most of step 3.
-      ClassCtx::square_nudulp_help(self);
-    }
-
-    self.ax_sq_op.mul(&self.G_sq_op, &self.x_sq_op);
-    self.ay_sq_op.mul(&self.G_sq_op, &self.y_sq_op);
-
-    // Step 5 in Alg 2.
-    self.t_sq_op.mul(&self.Dy_sq_op, &self.bx_sq_op);
-    self.t_sq_op.submul(&x.c, &self.x_sq_op);
-    self.dx_sq_op.divexact(&self.t_sq_op, &self.By_sq_op);
-    self.Q1_sq_op.mul(&self.y_sq_op, &self.dx_sq_op);
-    self.dy_sq_op.add(&self.Q1_sq_op, &self.Dy_sq_op);
-    x.b.add(&self.dy_sq_op, &self.Q1_sq_op);
-    x.b.mul_mut(&self.G_sq_op);
-    self.dy_sq_op.divexact_mut(&self.x_sq_op);
-    x.a.mul(&self.by_sq_op, &self.by_sq_op);
-    x.c.mul(&self.bx_sq_op, &self.bx_sq_op);
-    self.t_sq_op.add(&self.bx_sq_op, &self.by_sq_op);
-    x.b.submul(&self.t_sq_op, &self.t_sq_op);
-    x.b.add_mut(&x.a);
-    x.b.add_mut(&x.c);
-    x.a.submul(&self.ay_sq_op, &self.dy_sq_op);
-    x.c.submul(&self.ax_sq_op, &self.dx_sq_op);
-    self.reduce_mut(x);
-  }
-
-  fn op(&mut self, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    // Binary Quadratic Forms, 6.1.1
-    self.g.add(&x.b, &y.b);
-    self.g.fdiv_q_ui_mut(2);
-    self.h.sub(&y.b, &x.b);
-    self.h.fdiv_q_ui_mut(2);
-    self.w.gcd(&x.a, &y.a);
-    self.w.gcd_mut(&self.g);
-    self.j.set(&self.w);
-    self.r.set_ui(0);
-    self.s.fdiv_q(&x.a, &self.w);
-    self.t.fdiv_q(&y.a, &self.w);
-    self.u.fdiv_q(&self.g, &self.w);
-    self.a.mul(&self.t, &self.u);
-    self.b.mul(&self.h, &self.u);
-    self.m.mul(&self.s, &x.c);
-    self.b.add_mut(&self.m);
-    self.m.mul(&self.s, &self.t);
-    self
-      .sctx
-      .solve_linear_congruence(&mut self.mu, &mut self.v, &self.a, &self.b, &self.m)
-      .unwrap();
-
-    self.a.mul(&self.t, &self.v);
-    self.m.mul(&self.t, &self.mu);
-    self.b.sub(&self.h, &self.m);
-    self.m.set(&self.s);
-    self
-      .sctx
-      .solve_linear_congruence(&mut self.lambda, &mut self.sigma, &self.a, &self.b, &self.m)
-      .unwrap();
-
-    self.a.mul(&self.v, &self.lambda);
-    self.k.add(&self.mu, &self.a);
-    self.l.mul(&self.k, &self.t);
-    self.l.sub_mut(&self.h);
-    self.l.fdiv_q_mut(&self.s);
-    self.m.mul(&self.t, &self.u);
-    self.m.mul_mut(&self.k);
-    self.a.mul(&self.h, &self.u);
-    self.m.sub_mut(&self.a);
-    self.a.mul(&x.c, &self.s);
-    self.m.sub_mut(&self.a);
-    self.a.mul(&self.s, &self.t);
-    self.m.fdiv_q_mut(&self.a);
-
-    let mut ret = ClassElem::default();
-
-    ret.a.mul(&self.s, &self.t);
-    self.a.mul(&self.r, &self.u);
-    ret.a.sub_mut(&self.a);
-
-    ret.b.mul(&self.j, &self.u);
-    self.a.mul(&self.m, &self.r);
-    ret.b.add_mut(&self.a);
-    self.a.mul(&self.k, &self.t);
-    ret.b.sub_mut(&self.a);
-    self.a.mul(&self.l, &self.s);
-    ret.b.sub_mut(&self.a);
-
-    ret.c.mul(&self.k, &self.l);
-    self.a.mul(&self.j, &self.m);
-    ret.c.sub_mut(&self.a);
-    let (a, b, c) = self.reduce(ret.a, ret.b, ret.c);
-    ClassElem { a, b, c }
-  }
-
-  fn id(&mut self, d: &Mpz) -> ClassElem {
-    // Binary Quadratic Forms, Definition 5.4
-    let mut ret = ClassElem::default();
-    ret.a.set_ui(1);
-    ret.b.set_ui(1);
-    self.a.sub(&ret.b, &d);
-    ret.c.fdiv_q_ui(&self.a, 4);
-    ret
-  }
-}
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ClassGroup {}
 
 impl TypeRep for ClassGroup {
   type Rep = Mpz;
@@ -514,6 +27,12 @@ impl TypeRep for ClassGroup {
     &CLASS_GROUP_DISCRIMINANT
   }
 }
+
+// ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
+//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
+//  hereafter refered to as "Binary Quadratic Forms"
+//
+// A ClassElem is a tuple of three Mpz integers.
 
 impl Group for ClassGroup {
   type Elem = ClassElem;
@@ -587,16 +106,15 @@ where
 {
   fn elem(abc: (A, B, C)) -> ClassElem {
     let (a, b, c) = ClassGroup::reduce(Mpz::from(abc.0), Mpz::from(abc.1), Mpz::from(abc.2));
-    let class_elem = ClassElem { a, b, c };
 
     // Ideally, this should return an error and the
     // return type of ElemFrom should be Result<Self::Elem, Self:err>,
     // but this would require a lot of ugly "unwraps" in the accumulator
     // library. Besides, users should not need to create new class group
     // elements, so an invalid ElemFrom here should signal a severe internal error.
-    assert!(class_elem.validate());
+    assert!(ClassGroup::validate(&a, &b, &c));
 
-    class_elem
+    ClassElem { a, b, c }
   }
 }
 
@@ -623,6 +141,25 @@ impl ClassGroup {
     neg_a.neg(a);
     neg_a < *b && b <= a
   }
+
+  fn validate(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    let mut d = Mpz::default();
+    Self::discriminant(&a, &b, &c, &mut d);
+    d == *ClassGroup::rep()
+  }
+
+  fn validate_elem(elem: &ClassElem) -> bool {
+    ClassGroup::validate(&elem.a, &elem.b, &elem.c)
+  }
+
+  fn discriminant(a: &Mpz, b: &Mpz, c: &Mpz, d: &mut Mpz) -> Mpz {
+    let mut tmp = Mpz::default();
+    d.mul(&b, &b);
+    tmp.mul(&a, &c);
+    tmp.mul_ui_mut(4);
+    d.sub_mut(&tmp);
+    d.clone()
+  }
 }
 
 // Caveat: tests that use "ground truth" use outputs from
@@ -632,6 +169,7 @@ impl ClassGroup {
 mod tests {
   use super::*;
   use std::collections::hash_map::DefaultHasher;
+  use std::hash::{Hash, Hasher};
 
   // Makes a class elem tuple but does not reduce.
   fn construct_raw_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
@@ -890,7 +428,7 @@ mod tests {
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
     let mut d = Mpz::default();
-    g.discriminant(&mut d);
+    ClassGroup::discriminant(&g.a, &g.b, &g.c, &mut d);
     assert!(d == *ClassGroup::rep())
   }
 
@@ -902,11 +440,11 @@ mod tests {
     let g3 = ClassGroup::op(&id, &g2);
     let g3_inv = ClassGroup::inv(&g3);
 
-    assert!(id.validate());
-    assert!(g1.validate());
-    assert!(g2.validate());
-    assert!(g3.validate());
-    assert!(g3_inv.validate());
+    assert!(ClassGroup::validate_elem(&id));
+    assert!(ClassGroup::validate_elem(&g1));
+    assert!(ClassGroup::validate_elem(&g2));
+    assert!(ClassGroup::validate_elem(&g3));
+    assert!(ClassGroup::validate_elem(&g3_inv));
   }
 
   #[test]
@@ -1001,24 +539,24 @@ mod tests {
     let mut g_star = ClassGroup::id();
     for i in 1..=1000 {
       g = ClassGroup::op(&g_anchor, &g);
-      assert!(g.validate());
+      assert!(ClassGroup::validate_elem(&g));
       if i % 100 == 0 {
         gs.push(g.clone());
         gs_invs.push(ClassGroup::inv(&g));
         g_star = ClassGroup::op(&g, &g_star);
-        assert!(g_star.validate());
+        assert!(ClassGroup::validate_elem(&g));
       }
     }
 
     let elems_n_invs = gs.iter().zip(gs_invs.iter());
     for (g_elem, g_inv) in elems_n_invs {
-      assert!(g_elem.validate());
-      assert!(g_inv.validate());
+      assert!(ClassGroup::validate_elem(&g_elem));
+      assert!(ClassGroup::validate_elem(&g_inv));
       let mut curr_prod = ClassGroup::id();
       for elem in &gs {
         if elem != g_elem {
           curr_prod = ClassGroup::op(&curr_prod, &elem);
-          assert!(curr_prod.validate());
+          assert!(ClassGroup::validate_elem(&curr_prod));
         }
       }
       assert_eq!(ClassGroup::id(), ClassGroup::op(&g_inv, &g_elem));
