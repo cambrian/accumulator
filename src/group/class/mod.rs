@@ -1,4 +1,5 @@
-//! Class Group implementation, with optimizations.
+//! Class Group implementation, with optimizations. Class group ops are run within a
+//! a dedicated Mpz context.
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::num::mpz::Mpz;
 use crate::util::TypeRep;
@@ -14,6 +15,7 @@ use discriminant::CLASS_GROUP_DISCRIMINANT;
 use elem::ClassElem;
 
 thread_local! {
+  // Thread-local context for class group operations.
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
@@ -104,7 +106,7 @@ impl ClassGroup {
   }
 }
 
-// Caveat: tests that use "ground truth" use outputs from
+//  Caveat: tests that use "ground truth" use outputs from
 //  Chia's sample implementation in python:
 //    https://github.com/Chia-Network/vdf-competition/blob/master/inkfish/classgroup.py.
 #[cfg(test)]

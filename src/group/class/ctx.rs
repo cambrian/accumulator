@@ -13,16 +13,16 @@ use rug::Integer;
 pub struct ClassCtx {
   r: Mpz,
   denom: Mpz,
-  old_b: Mpz,
   ra: Mpz,
   s: Mpz,
   x: Mpz,
-  old_a: Mpz,
   g: Mpz,
   w: Mpz,
   u: Mpz,
   a: Mpz,
+  old_a: Mpz,
   b: Mpz,
+  old_b: Mpz,
   m: Mpz,
   k: Mpz,
   mu: Mpz,
@@ -49,7 +49,9 @@ pub struct ClassCtx {
   ax_sq_op: Mpz,
   ay_sq_op: Mpz,
   Q1_sq_op: Mpz,
+
   scratch: Mpz,
+
   sctx: LinCongruenceCtx,
 }
 
@@ -58,16 +60,16 @@ impl Default for ClassCtx {
     let mut s = Self {
       r: Mpz::default(),
       denom: Mpz::default(),
-      old_b: Mpz::default(),
       ra: Mpz::default(),
       s: Mpz::default(),
       x: Mpz::default(),
-      old_a: Mpz::default(),
       g: Mpz::default(),
       w: Mpz::default(),
       u: Mpz::default(),
       a: Mpz::default(),
+      old_a: Mpz::default(),
       b: Mpz::default(),
+      old_b: Mpz::default(),
       m: Mpz::default(),
       k: Mpz::default(),
       mu: Mpz::default(),
@@ -79,7 +81,7 @@ impl Default for ClassCtx {
       l: Mpz::default(),
       j: Mpz::default(),
 
-      // Used in squaring ops
+      // Used in NUDULP
       G_sq_op: Mpz::default(),
       x_sq_op: Mpz::default(),
       y_sq_op: Mpz::default(),
@@ -96,12 +98,14 @@ impl Default for ClassCtx {
       ax_sq_op: Mpz::default(),
       ay_sq_op: Mpz::default(),
       Q1_sq_op: Mpz::default(),
+
+      // Scratch space
       scratch: Mpz::default(),
 
       sctx: LinCongruenceCtx::default(),
     };
 
-    // Precomputation needed for NUDULP squaring.
+    // Precomputation needed for NUDULP.
     s.L_sq_op.abs(&CLASS_GROUP_DISCRIMINANT.clone());
     s.L_sq_op.root_mut(4);
     s
