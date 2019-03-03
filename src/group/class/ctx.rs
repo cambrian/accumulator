@@ -5,7 +5,9 @@ use super::CLASS_GROUP_DISCRIMINANT;
 use crate::num::flint;
 use crate::num::flint::fmpz;
 use crate::num::mpz::{flint_mpz_struct, Mpz};
+use crate::util::int;
 use crate::util::{LinCongruenceCtx, TypeRep};
+use rug::Integer;
 
 #[allow(non_snake_case)]
 pub struct ClassCtx {
@@ -145,6 +147,15 @@ impl ClassCtx {
   }
 
   pub fn square(&mut self, x: &mut ClassElem) {
+    if cfg!(feature = "nudulp") {
+      // NUDULP optimization, maybe using FLINT bindings.
+      self.square_nudulp(x);
+    } else {
+      self.square_regular(x);
+    }
+  }
+
+  fn square_regular(&mut self, x: &mut ClassElem) {
     // Binary Quadratic Forms, 6.3.1
     self
       .sctx
@@ -168,14 +179,14 @@ impl ClassCtx {
     self.reduce_mut(x);
   }
 
-  pub fn square_nudulp(&mut self, x: &mut ClassElem) {
+  fn square_nudulp(&mut self, x: &mut ClassElem) {
     // Jacobson, Michael J., and Alfred J. Van Der Poorten. "Computational aspects of NUCOMP."
     // Algorithm 2 (Alg 2).
 
     // Step 1 in Alg 2.
     self
       .G_sq_op
-      .gcdext(&mut self.y_sq_op, &mut self.scratch, &x.b, &x.a);
+      .gcdext(&mut self.scratch, &mut self.y_sq_op, &x.a, &x.b);
     self.By_sq_op.divexact(&x.a, &self.G_sq_op);
     self.Dy_sq_op.divexact(&x.b, &self.G_sq_op);
 
@@ -193,11 +204,13 @@ impl ClassCtx {
       x.c.mul(&self.bx_sq_op, &self.bx_sq_op);
       self.t_sq_op.add(&self.bx_sq_op, &self.by_sq_op);
       self.t_sq_op.square_mut();
+
       x.b.sub_mut(&self.t_sq_op);
       x.b.add_mut(&x.a);
       x.b.add_mut(&x.c);
       self.t_sq_op.mul(&self.G_sq_op, &self.dx_sq_op);
       x.c.sub_mut(&self.t_sq_op);
+      self.reduce_mut(x);
       return;
     }
 
@@ -428,5 +441,32 @@ impl ClassCtx {
     self.ra.set(&self.r);
     self.ra.mul_mut(&self.old_b);
     c.add_mut(&self.ra);
+  }
+
+  pub fn exp(
+    &mut self,
+    d: &Mpz,
+    a: &ClassElem,
+    n: &Integer,
+    inv: fn(&ClassElem) -> ClassElem,
+  ) -> ClassElem {
+    let (mut val, mut a, mut n) = {
+      if *n < int(0) {
+        (self.id(d), inv(&a), int(-n))
+      } else {
+        (self.id(d), a.clone(), n.clone())
+      }
+    };
+    loop {
+      if n == int(0) {
+        return val;
+      }
+      if n.is_odd() {
+        val = self.op(&val, &a);
+      }
+
+      self.square(&mut a);
+      n >>= 1;
+    }
   }
 }

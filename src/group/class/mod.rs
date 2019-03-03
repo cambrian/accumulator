@@ -1,7 +1,7 @@
 //! Class Group implementation, with optimizations.
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::num::mpz::Mpz;
-use crate::util::{int, TypeRep};
+use crate::util::TypeRep;
 use rug::Integer;
 use std::cell::RefCell;
 
@@ -51,32 +51,7 @@ impl Group for ClassGroup {
   }
 
   fn exp_(d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
-    CTX.with(|ctx| {
-      let mut ctx = ctx.borrow_mut();
-      let (mut val, mut a, mut n) = {
-        if *n < int(0) {
-          (ctx.id(d), Self::inv(a), int(-n))
-        } else {
-          (ctx.id(d), a.clone(), n.clone())
-        }
-      };
-      loop {
-        if n == int(0) {
-          return val;
-        }
-        if n.is_odd() {
-          val = ctx.op(&val, &a);
-        }
-
-        if cfg!(feature = "nudulp") {
-          // NUDULP optimization, maybe using FLINT bindings.
-          ctx.square_nudulp(&mut a);
-        } else {
-          ctx.square(&mut a);
-        }
-        n >>= 1;
-      }
-    })
+    CTX.with(|ctx| ctx.borrow_mut().exp(d, a, n, Self::inv))
   }
 }
 
@@ -115,6 +90,7 @@ where
   }
 }
 
+// TODO: write a macro for using the context.
 impl ClassGroup {
   // Normalize, reduce, and square are public for benchmarking.
   pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
@@ -134,8 +110,8 @@ impl ClassGroup {
     CTX.with(|ctx| ctx.borrow_mut().is_reduced(a, b, c))
   }
 
-  fn is_normal(a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
-    CTX.with(|ctx| ctx.borrow_mut().is_normal(a, b, _c))
+  fn is_normal(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    CTX.with(|ctx| ctx.borrow_mut().is_normal(a, b, c))
   }
 
   fn validate(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
@@ -153,6 +129,7 @@ impl ClassGroup {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::util::int;
   use std::collections::hash_map::DefaultHasher;
   use std::hash::{Hash, Hasher};
   use std::str::FromStr;
@@ -621,21 +598,18 @@ mod tests {
 
   #[test]
   fn test_square_repeated() {
-    let g = ClassGroup::unknown_order_elem();
-    let mut g1024 = ClassGroup::id();
+    let mut g = ClassGroup::unknown_order_elem();
+    let g_ = g.clone();
 
-    // g^1024
-    for _ in 0..4096 {
-      g1024 = ClassGroup::op(&g, &g1024);
+    for i in 0..12 {
+      ClassGroup::square(&mut g);
+      let mut base = ClassGroup::id();
+
+      for _ in 0..(2i32.pow(i + 1)) {
+        base = ClassGroup::op(&g_, &base);
+      }
+
+      assert_eq!(g, base);
     }
-
-    // g^2
-    let mut g2 = g.clone();
-
-    // g^1024
-    for _ in 0..12 {
-      ClassGroup::square(&mut g2);
-    }
-    assert_eq!(g2, g1024);
   }
 }
