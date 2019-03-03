@@ -1,4 +1,4 @@
-//! Defines mpz context struct used for class group computations.
+//! Defines mpz context struct used for no-rellocation class group computations.
 use super::ClassElem;
 use super::ClassGroup;
 use super::CLASS_GROUP_DISCRIMINANT;
@@ -107,6 +107,14 @@ impl Default for ClassCtx {
 }
 
 impl ClassCtx {
+  pub fn discriminant(&mut self, a: &Mpz, b: &Mpz, c: &Mpz, d: &mut Mpz) -> Mpz {
+    d.mul(&b, &b);
+    self.scratch.mul(&a, &c);
+    self.scratch.mul_ui_mut(4);
+    d.sub_mut(&self.scratch);
+    d.clone()
+  }
+
   pub fn normalize(&mut self, mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
     if ClassGroup::is_normal(&a, &b, &c) {
       return (a, b, c);

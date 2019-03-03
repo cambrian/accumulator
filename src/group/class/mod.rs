@@ -30,8 +30,6 @@ impl TypeRep for ClassGroup {
 // ClassElem and ClassGroup ops based on Chia's fantastic doc explaining applied class groups:
 //  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
 //  hereafter refered to as "Binary Quadratic Forms"
-//
-// A ClassElem is a tuple of three Mpz integers.
 
 impl Group for ClassGroup {
   type Elem = ClassElem;
@@ -118,6 +116,7 @@ where
 }
 
 impl ClassGroup {
+  // Normalize, reduce, and square are public for benchmarking.
   pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
     CTX.with(|ctx| ctx.borrow_mut().normalize(a, b, c))
   }
@@ -148,12 +147,7 @@ impl ClassGroup {
   }
 
   fn discriminant(a: &Mpz, b: &Mpz, c: &Mpz, d: &mut Mpz) -> Mpz {
-    let mut tmp = Mpz::default();
-    d.mul(&b, &b);
-    tmp.mul(&a, &c);
-    tmp.mul_ui_mut(4);
-    d.sub_mut(&tmp);
-    d.clone()
+    CTX.with(|ctx| ctx.borrow_mut().discriminant(a, b, c, d))
   }
 }
 

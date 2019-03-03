@@ -1,3 +1,4 @@
+//! The fixed class group discriminant.
 use crate::num::mpz::Mpz;
 use std::str::FromStr;
 
