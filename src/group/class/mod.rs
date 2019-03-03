@@ -4,7 +4,6 @@ use crate::num::mpz::Mpz;
 use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
-use std::str::FromStr;
 
 mod ctx;
 mod discriminant;
@@ -148,10 +147,6 @@ impl ClassGroup {
     d == *ClassGroup::rep()
   }
 
-  fn validate_elem(elem: &ClassElem) -> bool {
-    ClassGroup::validate(&elem.a, &elem.b, &elem.c)
-  }
-
   fn discriminant(a: &Mpz, b: &Mpz, c: &Mpz, d: &mut Mpz) -> Mpz {
     let mut tmp = Mpz::default();
     d.mul(&b, &b);
@@ -170,6 +165,7 @@ mod tests {
   use super::*;
   use std::collections::hash_map::DefaultHasher;
   use std::hash::{Hash, Hasher};
+  use std::str::FromStr;
 
   // Makes a class elem tuple but does not reduce.
   fn construct_raw_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
@@ -440,11 +436,11 @@ mod tests {
     let g3 = ClassGroup::op(&id, &g2);
     let g3_inv = ClassGroup::inv(&g3);
 
-    assert!(ClassGroup::validate_elem(&id));
-    assert!(ClassGroup::validate_elem(&g1));
-    assert!(ClassGroup::validate_elem(&g2));
-    assert!(ClassGroup::validate_elem(&g3));
-    assert!(ClassGroup::validate_elem(&g3_inv));
+    assert!(ClassGroup::validate(&id.a, &id.b, &id.c));
+    assert!(ClassGroup::validate(&g1.a, &g1.b, &g1.c));
+    assert!(ClassGroup::validate(&g2.a, &g2.b, &g2.c));
+    assert!(ClassGroup::validate(&g3.a, &g3.b, &g3.c));
+    assert!(ClassGroup::validate(&g3_inv.a, &g3_inv.b, &g3_inv.c));
   }
 
   #[test]
@@ -539,24 +535,28 @@ mod tests {
     let mut g_star = ClassGroup::id();
     for i in 1..=1000 {
       g = ClassGroup::op(&g_anchor, &g);
-      assert!(ClassGroup::validate_elem(&g));
+      assert!(ClassGroup::validate(&g.a, &g.b, &g.c));
       if i % 100 == 0 {
         gs.push(g.clone());
         gs_invs.push(ClassGroup::inv(&g));
         g_star = ClassGroup::op(&g, &g_star);
-        assert!(ClassGroup::validate_elem(&g));
+        assert!(ClassGroup::validate(&g.a, &g.b, &g.c));
       }
     }
 
     let elems_n_invs = gs.iter().zip(gs_invs.iter());
     for (g_elem, g_inv) in elems_n_invs {
-      assert!(ClassGroup::validate_elem(&g_elem));
-      assert!(ClassGroup::validate_elem(&g_inv));
+      assert!(ClassGroup::validate(&g_elem.a, &g_elem.b, &g_elem.c));
+      assert!(ClassGroup::validate(&g_inv.a, &g_inv.b, &g_inv.c));
       let mut curr_prod = ClassGroup::id();
       for elem in &gs {
         if elem != g_elem {
           curr_prod = ClassGroup::op(&curr_prod, &elem);
-          assert!(ClassGroup::validate_elem(&curr_prod));
+          assert!(ClassGroup::validate(
+            &curr_prod.a,
+            &curr_prod.b,
+            &curr_prod.c
+          ));
         }
       }
       assert_eq!(ClassGroup::id(), ClassGroup::op(&g_inv, &g_elem));
