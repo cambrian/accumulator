@@ -5,6 +5,9 @@ use crate::util::{int, log_2, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
 use std::cmp::{max, min};
+use std::fmt;
+use std::fmt::Display;
+use std::fmt::Formatter;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
@@ -57,6 +60,12 @@ impl Default for ClassElem {
       b: Mpz::default(),
       c: Mpz::default(),
     }
+  }
+}
+
+impl Display for ClassElem {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    write!(f, "\na: {}\nb: {}\nc: {}", self.a, self.b, self.c)
   }
 }
 
@@ -204,14 +213,8 @@ pub fn mpz_get_si_2exp(op: &Mpz) -> (i64, i64) {
 }
 
 pub fn test_reduction(x: &mut ClassElem) -> bool {
-  // println!("x.a: {:?}", x.a);
-  // println!("x.b: {:?}", x.b);
-  // println!("x.c: {:?}", x.c);
   let a_b = x.a.cmp_abs(&x.b);
   let c_b = x.c.cmp_abs(&x.b);
-
-  println!("a_b: {}", a_b);
-  println!("a_c: {}", c_b);
 
   if a_b < 0 || c_b < 0 {
     return false;
@@ -230,60 +233,25 @@ pub fn test_reduction(x: &mut ClassElem) -> bool {
 
 impl ClassCtx {
   fn normalize(&mut self, x: &mut ClassElem) {
-    let a_b = x.a.cmp_abs(&x.b);
-    let c_b = x.c.cmp_abs(&x.b);
-    let a_c = x.a.cmp_abs(&x.c);
-    println!("normalize a_b: {}", a_b);
-    println!("normalize c_b: {}", c_b);
-    println!("normalize a_c: {}", a_c);
-
     self.mu.add(&x.b, &x.c);
     self.s.mul_ui(&x.c, 2); // a2 = s
+
     self.denom.floor_div(&self.mu, &self.s);
 
     self.a.set(&x.c);
 
     self.s.mul_ui(&self.denom, 2);
-    self.b.neg_mut();
+    self.b.neg(&x.b);
     self.b.addmul(&x.c, &self.s);
 
     self.r.set(&x.a);
-    self.r.submul(&self.b, &self.denom);
+    self.r.submul(&x.b, &self.denom);
     self.denom.square_mut();
     self.r.addmul(&x.c, &self.denom);
-
-    let a_b = x.a.cmp_abs(&x.b);
-    let c_b = x.c.cmp_abs(&x.b);
-    let a_c = x.a.cmp_abs(&x.c);
-    println!("normalize a_b redux: {}", a_b);
-    println!("normalize c_b redux: {}", c_b);
-    println!("normalize a_c redux: {}", a_c);
 
     x.a.set(&self.a);
     x.b.set(&self.b);
     x.c.set(&self.r);
-
-    /* if x.is_normalized(self) {
-      return;
-    }
-    // r = floor_div((a - b), 2a)
-    // (a, b, c) = (a, b + 2ra, ar^2 + br + c)
-    self.r.sub(&x.a, &x.b);
-    self.denom.mul_ui(&x.a, 2);
-    self.r.floor_div_mut(&self.denom);
-
-    self.old_b.set(&x.b);
-
-    self.ra.mul(&self.r, &x.a);
-    x.b.add_mut(&self.ra);
-    x.b.add_mut(&self.ra);
-
-    self.ra.mul_mut(&self.r);
-    x.c.add_mut(&self.ra);
-
-    self.ra.set(&self.r);
-    self.ra.mul_mut(&self.old_b);
-    x.c.add_mut(&self.ra);*/
   }
 
   fn reduce(&mut self, x: &mut ClassElem) {
@@ -291,10 +259,6 @@ impl ClassCtx {
       let (mut a, a_exp) = mpz_get_si_2exp(&x.a);
       let (mut b, b_exp) = mpz_get_si_2exp(&x.b);
       let (mut c, c_exp) = mpz_get_si_2exp(&x.c);
-
-      println!("a: {}", a);
-      println!("b: {}", b);
-      println!("c: {}", c);
 
       let mut max_exp = a_exp;
       let mut min_exp = a_exp;
@@ -304,20 +268,19 @@ impl ClassCtx {
       min_exp = min(min_exp, b_exp);
       min_exp = min(min_exp, c_exp);
 
-      println!("max_exp: {}", max_exp);
-      println!("min_exp: {}", min_exp);
+      println!("about to check normalize");
+
       if max_exp - min_exp > EXP_THRESH {
         self.normalize(x);
         continue;
       }
+      //  println!("a: {}", x.a);
+      //  println!("b: {}", x.b);
+      //  println!("c: {}", x.c);
       max_exp += 1; // for overflow safety
       a >>= max_exp - a_exp;
       b >>= max_exp - b_exp;
       c >>= max_exp - c_exp;
-
-      println!("shifted a: {}", a);
-      println!("shifted b: {}", b);
-      println!("shifted c: {}", c);
 
       let mut u_ = 1;
       let mut v_ = 0;
@@ -329,20 +292,27 @@ impl ClassCtx {
       let mut w;
       let mut y;
 
+      //    println!("starting do-while loop");
       loop {
+        println!("start of loop");
         u = u_;
         v = v_;
         w = w_;
         y = y_;
         let delta = if b >= 0 {
+          //      println!("top");
           (b + c) / (c << 1)
         } else {
-          -(b + c) / (c << 1)
+          //      println!("bottom");
+          -(-b + c) / (c << 1)
         };
         let a_ = c;
         let mut c_ = c * delta;
         let b_ = -b + (c_ << 1);
         let gamma = b - c_;
+        //    println!("a: {}", a);
+        //    println!("delta: {}", delta);
+        //    println!("gamma: {}", gamma);
         c_ = a - delta * gamma;
 
         a = a_;
@@ -357,6 +327,7 @@ impl ClassCtx {
           break;
         }
       }
+      println!("finished loop");
       if (v_.abs() | y_.abs()) <= THRESH {
         u = u_;
         v = v_;
@@ -364,14 +335,23 @@ impl ClassCtx {
         y = y_;
       }
       let aa = u * u;
+      println!("aa: {}", aa);
       let ab = u * w;
+      println!("ab: {}", ab);
       let ac = w * w;
+      println!("ac: {}", ac);
       let ba = (u * v) << 1;
+      println!("ba: {}", ba);
       let bb = u * y + v * w;
+      println!("bb: {}", bb);
       let bc = (w * y) << 1;
+      println!("bc: {}", bc);
       let ca = v * v;
+      println!("ca: {}", ca);
       let cb = v * y;
+      println!("cb: {}", cb);
       let cc = y * y;
+      println!("cc: {}", cc);
 
       self.a.mul_si(&x.a, aa); // a = faa
       self.b.mul_si(&x.b, ab); // b = fab
@@ -1084,11 +1064,19 @@ mod tests {
     let g_anchor = ClassGroup::unknown_order_elem();
     let mut g = ClassGroup::unknown_order_elem();
 
-    for _ in 0..1000 {
+    for i in 0..1000 {
       g = ClassGroup::op(&g, &g_anchor);
       let g_inv = ClassGroup::inv(&g);
-      assert_eq!(id, ClassGroup::op(&g_inv, &g));
-      assert_eq!(id, ClassGroup::op(&g, &g_inv));
+      //  println!("i: {}", i);
+      println!("g_inv: {}", g_inv);
+      let x1 = ClassGroup::op(&g_inv, &g);
+      let x2 = ClassGroup::op(&g, &g_inv);
+      println!("g_inv * g: {}", x1);
+      println!("g * g_inv: {}", x2);
+      println!("id: {}", id);
+      println!("g: {}", g);
+      assert_eq!(id, x1);
+      assert_eq!(id, x2);
       assert_eq!(g, ClassGroup::inv(&g_inv));
     }
   }
@@ -1109,10 +1097,10 @@ mod tests {
     let g = ClassGroup::unknown_order_elem();
     let mut g4 = ClassGroup::id();
 
-    /*   // g^4
+    // g^4
     for _ in 0..4 {
       g4 = ClassGroup::op(&g, &g4);
-    }*/
+    }
 
     // g^2
     let mut g2 = g.clone();
@@ -1120,6 +1108,6 @@ mod tests {
     g2.square();
     g2.square();
 
-    //  assert_eq!(&g2, &g4);
+    assert_eq!(&g2, &g4);
   }
 }

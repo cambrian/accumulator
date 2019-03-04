@@ -7,6 +7,7 @@ use gmp_mpfr_sys::gmp::{
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::fmt;
+use std::fmt::Display;
 use std::fmt::Formatter;
 use std::hash::{Hash, Hasher};
 use std::mem::uninitialized;
@@ -43,7 +44,8 @@ fn append_to_string(s: &mut String, i: &Mpz, radix: i32, to_upper: bool) {
     let bytes = s.as_mut_vec();
     let start = bytes.as_mut_ptr().offset(orig_len as isize);
     mpz_get_str(
-      cast_ptr_mut!(start, c_char),
+      //  cast_ptr_mut!(start, c_char),
+      start as *mut i8,
       case_radix as c_int,
       i.as_raw(),
     );
@@ -73,6 +75,12 @@ impl Default for Mpz {
       ret
     };
     Self { inner }
+  }
+}
+
+impl Display for Mpz {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fmt_radix(self, f, 10, false, "")
   }
 }
 
@@ -162,8 +170,16 @@ impl Mpz {
     unsafe { mpz_add(&mut self.inner, &self.inner, &x.inner) }
   }
   #[inline]
+  pub fn as_raw(&self) -> *const mpz_t {
+    &self.inner
+  }
+  #[inline]
   pub fn cmp(&self, other: &Mpz) -> i32 {
     unsafe { mpz_cmp(&self.inner, &other.inner) }
+  }
+  #[inline]
+  pub fn cmp0(&self) -> Ordering {
+    unsafe { mpz_sgn(self.as_raw()).cmp(&0) }
   }
   #[inline]
   pub fn cmp_abs(&self, other: &Mpz) -> i32 {
