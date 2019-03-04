@@ -108,15 +108,6 @@ fn criterion_benchmark(c: &mut Criterion) {
   );
 
   c.bench_function(
-    "group_class_inv",
-    enclose!(
-      (env) move |b| {
-        b.iter(|| ClassGroup::inv(&env.elem_to_inv))
-      }
-    ),
-  );
-
-  c.bench_function(
     "group_class_normalize",
     enclose!(
       (env) move |b| {
