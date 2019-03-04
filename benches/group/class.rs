@@ -93,12 +93,12 @@ fn init_env() -> ClassBenchEnv {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  let bench_env = init_env();
+  let env = init_env();
   c.bench_function(
     "group_class_op",
     enclose!(
-      (bench_env) move |b| {
-        b.iter(|| ClassGroup::op(&bench_env.op_l, &bench_env.op_r))
+      (env) move |b| {
+        b.iter(|| ClassGroup::op(&env.op_l, &env.op_r))
       }
     ),
   );
@@ -106,8 +106,8 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "group_class_exp",
     enclose!(
-      (bench_env) move |b| {
-        b.iter(|| ClassGroup::exp(&bench_env.exp_base, &bench_env.exp))
+      (env) move |b| {
+        b.iter(|| ClassGroup::exp(&env.exp_base, &env.exp))
       }
     ),
   );
@@ -115,8 +115,8 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "group_class_inv",
     enclose!(
-      (bench_env) move |b| {
-        b.iter(|| ClassGroup::inv(&bench_env.elem_to_inv))
+      (env) move |b| {
+        b.iter(|| ClassGroup::inv(&env.elem_to_inv))
       }
     ),
   );
@@ -124,8 +124,8 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "group_class_inv",
     enclose!(
-      (bench_env) move |b| {
-        b.iter(|| ClassGroup::inv(&bench_env.elem_to_inv))
+      (env) move |b| {
+        b.iter(|| ClassGroup::inv(&env.elem_to_inv))
       }
     ),
   );
@@ -133,9 +133,9 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "group_class_normalize",
     enclose!(
-      (bench_env) move |b| {
+      (env) move |b| {
         b.iter_with_setup(
-          || bench_env.elem_to_normalize.clone(),
+          || env.elem_to_normalize.clone(),
           |g| ClassGroup::normalize(g.0, g.1, g.2)
         )
       }
@@ -145,9 +145,9 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "group_class_reduce",
     enclose!(
-      (bench_env) move |b| {
+      (env) move |b| {
         b.iter_with_setup(
-          || bench_env.elem_to_reduce.clone(),
+          || env.elem_to_reduce.clone(),
           |g| ClassGroup::reduce(g.0, g.1, g.2)
         )
       }
@@ -157,9 +157,9 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "group_class_square",
     enclose!(
-      (bench_env) move |b| {
+      (env) move |b| {
         b.iter_with_setup(
-          || bench_env.elem_to_square.clone(),
+          || env.elem_to_square.clone(),
           |mut g| ClassGroup::square(&mut g)
         )
       }
