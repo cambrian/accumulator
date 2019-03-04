@@ -22,6 +22,8 @@ struct RsaBenchEnv {
   elem_to_inv: <Rsa2048 as Group>::Elem,
 }
 
+// Initialize all the elements we need here so that initialization logic
+// does not pollute the benchmarks.
 fn init_env() -> RsaBenchEnv {
   let op_l = Rsa2048::elem(
     Integer::from_str(

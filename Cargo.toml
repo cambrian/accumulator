@@ -28,7 +28,7 @@ criterion = "0.2.10"
 rand = "0.6.5"
 
 [[bench]]
-name = "comparison"
+name = "rsa"
 path = "benches/group/rsa.rs"
 harness = false
 
