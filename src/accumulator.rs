@@ -1,6 +1,4 @@
 //! Accumulator library, built on a generic group interface.
-//!
-
 use crate::group::UnknownOrderGroup;
 use crate::proof::{Poe, Poke2};
 use crate::util::{divide_and_conquer, int, shamir_trick};

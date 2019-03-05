@@ -1,4 +1,4 @@
-//! Vector commitment library, built on a generic group interface.
+//! Vector commitment library, built on a generic group interface. WIP.
 use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof};
 use crate::group::UnknownOrderGroup;
 use crate::hash::hash_to_prime;

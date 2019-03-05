@@ -11,7 +11,7 @@
 //! We have spent significant time optimizing performance. Most accumulator or vector-commitment
 //! functions will bottleneck in hashing to large primes. To alleviate this, we created a
 //! zero-allocation U256 type that uses the low-level `mpn_` functions in GMP, which is used in
-//! `hash_to_prime`. TODO: benchmark our U256 vs 256-but `rug::Integer` vs parity U256.
+//! `hash_to_prime`. TODO: Benchmark our U256 vs. 256-bit `rug::Integer` vs. Parity U256.
 #![allow(clippy::unknown_clippy_lints)]
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::empty_enum)]
