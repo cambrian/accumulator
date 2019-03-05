@@ -1,3 +1,4 @@
+//! Ristretto group implementation (cyclic subgroup of Ed25519).
 use super::Group;
 use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -8,8 +9,9 @@ use rug::ops::Pow;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Ed25519 {}
+pub enum Ristretto {}
 
 lazy_static! {
   pub static ref MAX_SAFE_EXPONENT: Integer = int(2).pow(255) - 1;
@@ -20,7 +22,7 @@ lazy_static! {
   };
 }
 
-impl Ed25519 {
+impl Ristretto {
   fn max_safe_exponent() -> &'static Integer {
     &MAX_SAFE_EXPONENT
   }
@@ -30,51 +32,52 @@ impl Ed25519 {
 /// be implemented for arbitrary types. How to fix without wrapping?
 ///
 /// It may make sense to fork curve25519-dalek to add the `Hash` impl. Then we won't need to wrap.
+#[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ed25519Elem(RistrettoPoint);
+pub struct RistrettoElem(RistrettoPoint);
 
 #[allow(clippy::derive_hash_xor_eq)]
-impl Hash for Ed25519Elem {
+impl Hash for RistrettoElem {
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.0.compress().as_bytes().hash(state);
   }
 }
 
-impl TypeRep for Ed25519 {
+impl TypeRep for Ristretto {
   type Rep = ();
   fn rep() -> &'static Self::Rep {
     &()
   }
 }
 
-impl Group for Ed25519 {
-  type Elem = Ed25519Elem;
+impl Group for Ristretto {
+  type Elem = RistrettoElem;
 
-  fn op_(_: &(), a: &Ed25519Elem, b: &Ed25519Elem) -> Ed25519Elem {
-    Ed25519Elem(a.0 + b.0)
+  fn op_(_: &(), a: &RistrettoElem, b: &RistrettoElem) -> RistrettoElem {
+    RistrettoElem(a.0 + b.0)
   }
 
-  fn id_(_: &()) -> Ed25519Elem {
-    Ed25519Elem(RistrettoPoint::identity())
+  fn id_(_: &()) -> RistrettoElem {
+    RistrettoElem(RistrettoPoint::identity())
   }
 
-  fn inv_(_: &(), x: &Ed25519Elem) -> Ed25519Elem {
-    Ed25519Elem(-x.0)
+  fn inv_(_: &(), x: &RistrettoElem) -> RistrettoElem {
+    RistrettoElem(-x.0)
   }
 
-  fn exp_(_: &(), x: &Ed25519Elem, n: &Integer) -> Ed25519Elem {
+  fn exp_(_: &(), x: &RistrettoElem, n: &Integer) -> RistrettoElem {
     let mut remaining = n.clone();
     let mut result = Self::id();
 
     while remaining > *MAX_SAFE_EXPONENT {
-      result = Ed25519Elem(result.0 + x.0 * (*MAX_SAFE_SCALAR));
+      result = RistrettoElem(result.0 + x.0 * (*MAX_SAFE_SCALAR));
       remaining -= Self::max_safe_exponent();
     }
 
     let mut digits: [u8; 32] = [0; 32];
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
-    Ed25519Elem(result.0 + x.0 * factor)
+    RistrettoElem(result.0 + x.0 * factor)
   }
 }
 
@@ -86,18 +89,18 @@ mod tests {
 
   #[test]
   fn test_inv() {
-    let bp = Ed25519Elem(constants::RISTRETTO_BASEPOINT_POINT);
-    let bp_inv = Ed25519::inv(&bp);
-    assert!(Ed25519::op(&bp, &bp_inv) == Ed25519::id());
+    let bp = RistrettoElem(constants::RISTRETTO_BASEPOINT_POINT);
+    let bp_inv = Ristretto::inv(&bp);
+    assert!(Ristretto::op(&bp, &bp_inv) == Ristretto::id());
     assert_ne!(bp, bp_inv);
   }
 
   #[test]
   fn test_exp() {
-    let bp = Ed25519Elem(constants::RISTRETTO_BASEPOINT_POINT);
-    let exp_a = Ed25519::exp(&bp, &int(2).pow(258));
-    let exp_b = Ed25519::exp(&bp, &int(2).pow(257));
-    let exp_b_2 = Ed25519::exp(&exp_b, &int(2));
+    let bp = RistrettoElem(constants::RISTRETTO_BASEPOINT_POINT);
+    let exp_a = Ristretto::exp(&bp, &int(2).pow(258));
+    let exp_b = Ristretto::exp(&bp, &int(2).pow(257));
+    let exp_b_2 = Ristretto::exp(&exp_b, &int(2));
     assert_eq!(exp_a, exp_b_2);
   }
 }

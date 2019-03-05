@@ -1,6 +1,5 @@
-// TODO: Consider conditional compilation of the old Rug-based version of `hash_to_prime`, just in
-// case some users are categorically opposed to our `unsafe` blocks. Of course, Rug also uses
-// `unsafe` under the hood, but has a much wider user base to catch potential pitfalls.
+//! This module wraps `blake2b_rfc` into a convenient hashing interface (`GeneralHasher`) and
+//! exports the `hash_to_prime` function. `hash_to_prime` is optimized to produce 256-bit primes.
 use crate::uint::u256;
 use rug::integer::Order;
 use rug::Integer;
