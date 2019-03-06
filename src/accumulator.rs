@@ -52,8 +52,8 @@ pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash + Eq> {
 }
 
 impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
-  /// Initializes the accumulator to a group element.
-  pub fn new() -> Self {
+  /// Create a new, empty accumulator
+  pub fn empty() -> Self {
     Accumulator {
       phantom: PhantomData,
       value: G::unknown_order_elem(),
@@ -64,7 +64,11 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
   /// new_witness_set must be a subset of old_witness_set.
   /// REVIEW: explicitly check that new_witness_set is a subset of old_witness_set, and improve
   /// the error type
-  pub fn sub_witness(self, new_witness_set: &[T], old_witness_set: &[T]) -> Result<Self, AccError> {
+  pub fn compute_sub_witness(
+    self,
+    new_witness_set: &[T],
+    old_witness_set: &[T],
+  ) -> Result<Self, AccError> {
     let numerator = prime_hash_product(old_witness_set);
     let denominator = prime_hash_product(new_witness_set);
 
@@ -244,40 +248,39 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
 
   /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
   /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
-  /// log N) time.
-  pub fn root_factor<V>(&self, hashes: &[Integer], elems: &[V]) -> Vec<(V, Self)>
-  where
-    V: Clone,
-  {
-    elems
-      .iter()
-      .zip(self.root_factor_(hashes).iter())
-      .map(|(x, y)| (x.clone(), y.clone()))
-      .collect()
+  /// log N) time using the root factor algorithm.
+  pub fn compute_all_witnesses<'a>(&self, elems: &'a [T]) -> Vec<(&'a T, Self)> {
+    let primes = elems.iter().map(hash_to_prime).collect::<Vec<_>>();
+    let witnesses = Self::root_factor(&self.value, &primes); // why is this necessary??
+    let witnesses = witnesses.iter().map(|value| Accumulator {
+      phantom: PhantomData,
+      value: value.clone(),
+    });
+    elems.iter().zip(witnesses).collect::<Vec<_>>()
   }
 
   #[allow(non_snake_case)]
-  fn root_factor_(&self, elems: &[Integer]) -> Vec<Self> {
-    if elems.len() == 1 {
-      return vec![self.clone()];
+  fn root_factor(g: &G::Elem, primes: &[Integer]) -> Vec<G::Elem> {
+    if primes.len() == 1 {
+      return vec![g.clone()];
     }
-    let half_n = elems.len() / 2;
-    let g_l = elems[..half_n]
+    let half_n = primes.len() / 2;
+    let g_l = primes[..half_n]
       .iter()
-      .fold(self.clone(), |sum, x| Accumulator {
-        phantom: PhantomData,
-        value: G::exp(&sum.value, x),
-      });
-    let g_r = elems[half_n..]
+      .fold(g.clone(), |g_, x| G::exp(&g_, x));
+    let g_r = primes[half_n..]
       .iter()
-      .fold(self.clone(), |sum, x| Accumulator {
-        phantom: PhantomData,
-        value: G::exp(&sum.value, x),
-      });
-    let mut L = g_r.root_factor_(&Vec::from(&elems[..half_n]));
-    let mut R = g_l.root_factor_(&Vec::from(&elems[half_n..]));
+      .fold(g.clone(), |g_, x| G::exp(&g_, x));
+    let mut L = Self::root_factor(&g_r, &primes[..half_n]);
+    let mut R = Self::root_factor(&g_l, &primes[half_n..]);
     L.append(&mut R);
     L
+  }
+}
+
+impl<G: UnknownOrderGroup, T: Hash + Eq> From<&[T]> for Accumulator<G, T> {
+  fn from(ts: &[T]) -> Self {
+    Accumulator::<G, T>::empty().add(ts).0
   }
 }
 
@@ -287,6 +290,11 @@ mod tests {
   use crate::group::{ClassGroup, Rsa2048};
   use crate::hash;
   use crate::util::int;
+
+  // For some reason this doesn't work with `from`
+  fn new_acc<G: UnknownOrderGroup, T: Hash + Eq>(data: &[T]) -> Accumulator<G, T> {
+    Accumulator::<G, T>::empty().add(data).0
+  }
 
   macro_rules! test_all_groups {
     ($test_func:ident, $func_name_rsa:ident, $func_name_class:ident, $($attr:meta)*) => {
@@ -306,10 +314,6 @@ mod tests {
         $test_func::<ClassGroup>();
       }
     };
-  }
-
-  fn init_acc<G: UnknownOrderGroup, T: Hash + Eq>(data: &[T]) -> Accumulator<G, T> {
-    Accumulator::<G, T>::new().add(data).0
   }
 
   // test_all_groups!(
@@ -352,7 +356,7 @@ mod tests {
 
   test_all_groups!(test_add, test_add_rsa2048, test_add_class,);
   fn test_add<G: UnknownOrderGroup>() {
-    let acc = init_acc::<G, &'static str>(&["a", "b"]);
+    let acc = new_acc::<G, &'static str>(&["a", "b"]);
     let new_elems = ["c", "d"];
     let (acc_new, proof) = acc.add(&new_elems);
     let acc_expected = G::exp(
@@ -383,7 +387,7 @@ mod tests {
     test_delete_empty_class,
   );
   fn test_delete_empty<G: UnknownOrderGroup>() {
-    let acc = init_acc::<G, &'static str>(&["a", "b"]);
+    let acc = new_acc::<G, &'static str>(&["a", "b"]);
     let (acc_new, proof) = acc.clone().delete(&[]).expect("valid delete expected");
     assert!(acc_new == acc);
     assert!(acc.verify_membership(&[], &proof));

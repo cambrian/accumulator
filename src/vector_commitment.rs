@@ -39,8 +39,8 @@ fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Int
 }
 
 impl<G: UnknownOrderGroup> VectorCommitment<G> {
-  pub fn setup() -> Self {
-    VectorCommitment(Accumulator::<G, Integer>::new())
+  pub fn empty() -> Self {
+    VectorCommitment(Accumulator::<G, Integer>::empty())
   }
 
   // Uses a move instead of a `&self` reference to prevent accidental use of the old vc state.
