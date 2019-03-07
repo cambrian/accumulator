@@ -17,8 +17,8 @@ pub struct flint_mpz_struct {
   pub mp_d: *mut ::std::os::raw::c_ulong,
 }
 
-impl From<&Mpz> for flint_mpz_struct {
-  fn from(x: &Mpz) -> Self {
+impl From<Mpz> for flint_mpz_struct {
+  fn from(x: Mpz) -> Self {
     flint_mpz_struct {
       mp_alloc: x.inner.alloc,
       mp_size: x.inner.size,
@@ -27,7 +27,7 @@ impl From<&Mpz> for flint_mpz_struct {
   }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Debug)]
 #[cfg_attr(repr_transparent, repr(transparent))]
 pub struct Mpz {
   pub inner: mpz_t,
