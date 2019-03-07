@@ -1,3 +1,4 @@
+//! Miscellaneous functions commonly used throughout the library.
 use crate::group::Group;
 use rug::Integer;
 

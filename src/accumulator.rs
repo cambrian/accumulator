@@ -1,7 +1,4 @@
 //! Accumulator library, built on a generic group interface.
-//!
-//! Operations that "mutate" the accumulator (`add`, `delete`) use moves instead of references so
-//! that you don't accidentally use the old accumulator state.
 use crate::group::UnknownOrderGroup;
 use crate::proof::{Poe, Poke2};
 use crate::util::{divide_and_conquer, int, shamir_trick};
@@ -60,6 +57,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   #[allow(clippy::should_implement_trait)]
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are coprime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
+  // Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
+  // state.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
     let x = elems.iter().product();
     let acc_new = G::exp(&self.0, &x);
@@ -76,6 +75,8 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
   /// Uses a divide-and-conquer approach to running the ShamirTrick, which keeps the average input
   /// smaller: For `[a, b, c, d]` do `S(S(a, b), S(c, d))` instead of `S(S(S(a, b), c), d)`.
+  // Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
+  // state.
   pub fn delete(
     self,
     elem_witnesses: &[(Integer, Self)],

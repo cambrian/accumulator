@@ -3,7 +3,7 @@
 extern crate criterion;
 
 use accumulator::hash::blake2b;
-use accumulator::U256;
+use accumulator::uint::U256;
 use criterion::{black_box, Criterion};
 use rug::integer::Order;
 use std::ops::Mul;

@@ -1,3 +1,9 @@
+//! This module contains implementations for different mathematical groups, each of which satisfies
+//! our `UnknownOrderGroup` trait. They can be used with the accumulator and vector commitment
+//! structures, or standalone if you have a custom application.
+//!
+//! The preferred elliptic group implementation is the Ristretto group, which is a cyclic subset of
+//! the Ed25519 group.
 use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::fmt::Debug;
@@ -5,9 +11,10 @@ use std::hash::Hash;
 use std::marker::Sized;
 
 mod class;
-mod ecc;
+pub use class::{ClassElem, ClassGroup};
+mod ristretto;
+pub use ristretto::{Ristretto, RistrettoElem};
 mod rsa;
-pub use class::ClassGroup;
 pub use rsa::{Rsa2048, Rsa2048Elem};
 
 /// We avoid having to pass group objects around by using the `TypeRep` trait.

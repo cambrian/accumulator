@@ -1,3 +1,5 @@
+//! Primality testing for U256 inputs. Use `is_prob_prime` unless you have a specific reason to use
+//! a lower-level test.
 use crate::uint::{u256, u512, U256};
 
 mod constants;
