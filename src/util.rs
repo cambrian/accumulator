@@ -2,6 +2,18 @@ use crate::group::Group;
 use crate::num::mpz::Mpz;
 use rug::Integer;
 
+// Get a tuple of mutable reference from a tuple.
+#[macro_export]
+macro_rules! mut_tuple_elems {
+  ($ctx:expr, $($tpl_idx:tt),+) => {
+    (
+      $(
+        &mut $ctx.inner.$tpl_idx,
+      )*
+    )
+  };
+}
+
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
 pub trait TypeRep: 'static {

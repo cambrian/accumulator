@@ -8,6 +8,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate arrayref;
 
+#[macro_use]
 pub mod util;
 
 mod accumulator;

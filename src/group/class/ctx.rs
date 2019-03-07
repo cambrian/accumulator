@@ -9,16 +9,6 @@ use crate::util::int;
 use crate::util::TypeRep;
 use rug::Integer;
 
-macro_rules! mut_tuple_elems {
-  ($ctx:expr, $($tpl_idx:tt),+) => {
-    (
-      $(
-        &mut $ctx.inner.$tpl_idx,
-      )*
-    )
-  };
-}
-
 pub struct LinCongruenceCtx {
   pub inner: (Mpz, Mpz, Mpz, Mpz, Mpz),
 }
@@ -115,7 +105,7 @@ impl LinCongruenceCtx {
 #[allow(non_snake_case)]
 #[allow(clippy::type_complexity)]
 pub struct ClassCtx {
-  pub L_sq_op: Mpz,
+  pub L: Mpz,
   pub op_ctx: OpCtx,
   pub lin_cong_ctx: LinCongruenceCtx,
 }
@@ -123,14 +113,14 @@ pub struct ClassCtx {
 impl Default for ClassCtx {
   fn default() -> Self {
     let mut s = Self {
-      L_sq_op: Mpz::default(),
+      L: Mpz::default(),
       op_ctx: OpCtx::default(),
       lin_cong_ctx: LinCongruenceCtx::default(),
     };
 
     // Precomputation needed for NUDULP.
-    s.L_sq_op.abs(&CLASS_GROUP_DISCRIMINANT);
-    s.L_sq_op.root_mut(4);
+    s.L.abs(&CLASS_GROUP_DISCRIMINANT);
+    s.L.root_mut(4);
     s
   }
 }

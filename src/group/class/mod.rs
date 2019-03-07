@@ -21,16 +21,6 @@ thread_local! {
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
-macro_rules! mut_tuple_elems {
-  ($ctx:expr, $($tpl_idx:tt),+) => {
-    (
-      $(
-        &mut $ctx.inner.$tpl_idx,
-      )*
-    )
-  };
-}
-
 macro_rules! with_ctx {
   ($logic:expr) => {
     CTX.with(|refcell| {
@@ -313,7 +303,7 @@ impl ClassGroup {
         dy_sq_op,
       ) = mut_tuple_elems!(ctx.op_ctx, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
-      let L_sq_op = &mut ctx.L_sq_op;
+      let L_sq_op = &mut ctx.L;
 
       // Step 1 in Alg 2.
       G_sq_op.gcdext(scratch, y_sq_op, &x.a, &x.b);
