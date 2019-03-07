@@ -8,11 +8,12 @@ use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
 
-mod ctx;
+mod class_ctx;
 mod discriminant;
 mod elem;
+mod lin_congruence_ctx;
 
-use ctx::ClassCtx;
+use class_ctx::ClassCtx;
 use discriminant::CLASS_GROUP_DISCRIMINANT;
 use elem::ClassElem;
 
@@ -233,6 +234,8 @@ impl ClassGroup {
     }
   }
 
+  // Private functions.
+
   fn validate(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
     ClassGroup::discriminant(a, b, c) == *ClassGroup::rep()
   }
@@ -433,6 +436,12 @@ impl ClassGroup {
     *scratch < *b && b <= a
   }
 
+  fn reduce_mut(x: &mut ClassElem) {
+    Self::normalize_mut(x);
+    Self::reduce_(x);
+    Self::normalize_mut(x);
+  }
+
   fn reduce_(elem: &mut ClassElem) {
     with_ctx!(|ctx: &mut ClassCtx| {
       let (x, s, old_a, old_b, scratch) = mut_tuple_elems!(ctx.op_ctx, 0, 1, 2, 3, 4);
@@ -457,12 +466,6 @@ impl ClassGroup {
         elem.c.add_mut(&old_a);
       }
     })
-  }
-
-  fn reduce_mut(x: &mut ClassElem) {
-    Self::normalize_mut(x);
-    Self::reduce_(x);
-    Self::normalize_mut(x);
   }
 
   fn normalize_mut(x: &mut ClassElem) {

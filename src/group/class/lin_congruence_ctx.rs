@@ -1,5 +1,4 @@
-//! Defines Mpz context struct used for no-reallocation class group computations.
-use super::CLASS_GROUP_DISCRIMINANT;
+//! Reusable memory context for solving linear congruences.
 use crate::num::mpz::Mpz;
 
 pub struct LinCongruenceCtx {
@@ -10,55 +9,6 @@ impl Default for LinCongruenceCtx {
   fn default() -> Self {
     Self {
       inner: (
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-      ),
-    }
-  }
-}
-
-#[allow(clippy::type_complexity)]
-pub struct OpCtx {
-  pub inner: (
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-    Mpz,
-  ),
-}
-
-impl Default for OpCtx {
-  fn default() -> Self {
-    Self {
-      inner: (
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
-        Mpz::default(),
         Mpz::default(),
         Mpz::default(),
         Mpz::default(),
@@ -93,29 +43,6 @@ impl LinCongruenceCtx {
     mu.modulo_mut(m);
     v.fdiv_q(m, &g);
     Some(())
-  }
-}
-
-#[allow(non_snake_case)]
-#[allow(clippy::type_complexity)]
-pub struct ClassCtx {
-  pub L: Mpz,
-  pub op_ctx: OpCtx,
-  pub lin_cong_ctx: LinCongruenceCtx,
-}
-
-impl Default for ClassCtx {
-  fn default() -> Self {
-    let mut s = Self {
-      L: Mpz::default(),
-      op_ctx: OpCtx::default(),
-      lin_cong_ctx: LinCongruenceCtx::default(),
-    };
-
-    // Precomputation needed for NUDULP.
-    s.L.abs(&CLASS_GROUP_DISCRIMINANT);
-    s.L.root_mut(4);
-    s
   }
 }
 
@@ -171,3 +98,4 @@ mod tests {
     test_congruence_problem_no_solution(13, 14, 39);
   }
 }
+
