@@ -41,6 +41,11 @@ impl TypeRep for ClassGroup {
   }
 }
 
+//  Class group operations based on Chia's fantastic doc explaining form class groups:
+//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
+//  hereafter refered to as "Binary Quadratic Forms".  Includes optimizations from Chia's VDF
+//  competition and from Jacobson, Michael J., and Alfred J. Van Der Poorten.
+//  "Computational aspects of NUCOMP."
 impl Group for ClassGroup {
   type Elem = ClassElem;
 
@@ -197,11 +202,6 @@ where
   }
 }
 
-//  Class group operations based on Chia's fantastic doc explaining applied class groups:
-//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
-//  hereafter refered to as "Binary Quadratic Forms".  Includes optimizations from Chia's VDF
-//  competition and from Jacobson, Michael J., and Alfred J. Van Der Poorten.
-//  "Computational aspects of NUCOMP."
 impl ClassGroup {
   // Normalize, reduce, and square are public for benchmarking.
   pub fn normalize(mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
