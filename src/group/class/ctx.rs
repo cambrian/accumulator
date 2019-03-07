@@ -1,13 +1,6 @@
 //! Defines Mpz context struct used for no-reallocation class group computations.
-use super::ClassElem;
-use super::ClassGroup;
 use super::CLASS_GROUP_DISCRIMINANT;
-use crate::num::flint;
-use crate::num::flint::fmpz;
-use crate::num::mpz::{flint_mpz_struct, Mpz};
-use crate::util::int;
-use crate::util::TypeRep;
-use rug::Integer;
+use crate::num::mpz::Mpz;
 
 pub struct LinCongruenceCtx {
   pub inner: (Mpz, Mpz, Mpz, Mpz, Mpz),
@@ -27,6 +20,7 @@ impl Default for LinCongruenceCtx {
   }
 }
 
+#[allow(clippy::type_complexity)]
 pub struct OpCtx {
   pub inner: (
     Mpz,

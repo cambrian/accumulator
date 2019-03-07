@@ -343,11 +343,11 @@ impl ClassGroup {
           let mut fbx: fmpz = 0;
           let mut fL: fmpz = 0;
 
-          let mut y_square_clone = flint_mpz_struct::from(*y_sq_op);
-          let mut x_square_clone = flint_mpz_struct::from(*x_sq_op);
-          let mut by_square_clone = flint_mpz_struct::from(*by_sq_op);
-          let mut bx_square_clone = flint_mpz_struct::from(*bx_sq_op);
-          let mut L_square_clone = flint_mpz_struct::from(*L_sq_op);
+          let mut y_square_clone = flint_mpz_struct::from(y_sq_op.clone());
+          let mut x_square_clone = flint_mpz_struct::from(x_sq_op.clone());
+          let mut by_square_clone = flint_mpz_struct::from(by_sq_op.clone());
+          let mut bx_square_clone = flint_mpz_struct::from(bx_sq_op.clone());
+          let mut L_square_clone = flint_mpz_struct::from(L_sq_op.clone());
 
           flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
           flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);

@@ -27,7 +27,7 @@ impl From<Mpz> for flint_mpz_struct {
   }
 }
 
-#[derive(Copy, Debug)]
+#[derive(Debug)]
 #[cfg_attr(repr_transparent, repr(transparent))]
 pub struct Mpz {
   pub inner: mpz_t,

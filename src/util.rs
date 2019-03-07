@@ -1,5 +1,4 @@
 use crate::group::Group;
-use crate::num::mpz::Mpz;
 use rug::Integer;
 
 // Get a tuple of mutable reference from a tuple.
