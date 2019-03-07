@@ -1,8 +1,10 @@
 //! Class Group implementation, with optimizations. Class group ops are run within a
 //! a dedicated Mpz context.
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::num::mpz::Mpz;
-use crate::util::TypeRep;
+use crate::num::flint;
+use crate::num::flint::fmpz;
+use crate::num::mpz::{flint_mpz_struct, Mpz};
+use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
 
@@ -19,15 +21,22 @@ thread_local! {
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
-macro_rules! with_context {
-  ($ctx_func:ident, $($arg:expr),*) => {
-    CTX.with(
-      |ctx| ctx.borrow_mut().$ctx_func(
-        $(
-          $arg,
-        )*
-      )
+macro_rules! mut_tuple_elems {
+  ($ctx:expr, $($tpl_idx:tt),+) => {
+    (
+      $(
+        &mut $ctx.inner.$tpl_idx,
+      )*
     )
+  };
+}
+
+macro_rules! with_ctx {
+  ($logic:expr) => {
+    CTX.with(|refcell| {
+      let mut ctx_ = refcell.borrow_mut();
+      $logic(&mut ctx_)
+    })
   };
 }
 
@@ -45,25 +54,135 @@ impl Group for ClassGroup {
   type Elem = ClassElem;
 
   fn op_(_: &Mpz, x: &ClassElem, y: &ClassElem) -> ClassElem {
-    with_context!(op, x, y)
+    let mut unreduced = with_ctx!(|ctx: &mut ClassCtx| {
+      let (g, h, j, w, r, s, t, u, a, b, l, m, mut mu, mut v, mut lambda, mut sigma, k) =
+        mut_tuple_elems!(ctx.op_ctx, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+
+      // Binary Quadratic Forms, 6.1.1
+      g.add(&x.b, &y.b);
+      g.fdiv_q_ui_mut(2);
+      h.sub(&y.b, &x.b);
+      h.fdiv_q_ui_mut(2);
+      w.gcd(&x.a, &y.a);
+      w.gcd_mut(&g);
+      j.set(&w);
+      r.set_ui(0);
+      s.fdiv_q(&x.a, &w);
+      t.fdiv_q(&y.a, &w);
+      u.fdiv_q(&g, &w);
+      a.mul(&t, &u);
+      b.mul(&h, &u);
+      m.mul(&s, &x.c);
+      b.add_mut(&m);
+      m.mul(&s, &t);
+      ctx
+        .lin_cong_ctx
+        .solve_linear_congruence(&mut mu, &mut v, &a, &b, &m)
+        .unwrap();
+
+      a.mul(&t, &v);
+      m.mul(&t, &mu);
+      b.sub(&h, &m);
+      m.set(&s);
+      ctx
+        .lin_cong_ctx
+        .solve_linear_congruence(&mut lambda, &mut sigma, &a, &b, &m)
+        .unwrap();
+
+      a.mul(&v, &lambda);
+      k.add(&mu, &a);
+      l.mul(&k, &t);
+      l.sub_mut(&h);
+      l.fdiv_q_mut(&s);
+      m.mul(&t, &u);
+      m.mul_mut(&k);
+      a.mul(&h, &u);
+      m.sub_mut(&a);
+      a.mul(&x.c, &s);
+      m.sub_mut(&a);
+      a.mul(&s, &t);
+      m.fdiv_q_mut(&a);
+
+      let mut ret = ClassElem::default();
+
+      ret.a.mul(&s, &t);
+      a.mul(&r, &u);
+      ret.a.sub_mut(&a);
+
+      ret.b.mul(&j, &u);
+      a.mul(&m, &r);
+      ret.b.add_mut(&a);
+      a.mul(&k, &t);
+      ret.b.sub_mut(&a);
+      a.mul(&l, &s);
+      ret.b.sub_mut(&a);
+
+      ret.c.mul(&k, &l);
+      a.mul(&j, &m);
+      ret.c.sub_mut(&a);
+      ret
+    });
+
+    Self::reduce_mut(&mut unreduced);
+    unreduced
   }
 
   fn id_(d: &Mpz) -> ClassElem {
-    with_context!(id, d)
+    with_ctx!(|ctx: &mut ClassCtx| {
+      let (a,) = mut_tuple_elems!(ctx.op_ctx, 0);
+
+      // Binary Quadratic Forms, Definition 5.4
+      let mut ret = ClassElem::default();
+      ret.a.set_ui(1);
+      ret.b.set_ui(1);
+      a.sub(&ret.b, &d);
+      ret.c.fdiv_q_ui(&a, 4);
+      ret
+    })
   }
 
   fn inv_(_: &Mpz, x: &ClassElem) -> ClassElem {
-    with_context!(inv, x)
+    let mut ret = ClassElem::default();
+    ret.a.set(&x.a);
+    ret.b.neg(&x.b);
+    ret.c.set(&x.c);
+    ret
   }
 
-  fn exp_(d: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
-    with_context!(exp, d, a, n)
+  fn exp_(_: &Mpz, a: &ClassElem, n: &Integer) -> ClassElem {
+    let (mut val, mut a, mut n) = {
+      if *n < int(0) {
+        (Self::id(), Self::inv(&a), int(-n))
+      } else {
+        (Self::id(), a.clone(), n.clone())
+      }
+    };
+    loop {
+      if n == int(0) {
+        return val;
+      }
+      if n.is_odd() {
+        val = Self::op(&val, &a);
+      }
+
+      ClassGroup::square(&mut a);
+      n >>= 1;
+    }
   }
 }
 
 impl UnknownOrderGroup for ClassGroup {
   fn unknown_order_elem_(d: &Mpz) -> ClassElem {
-    with_context!(generator, d)
+    // Binary Quadratic Forms, Definition 5.4
+    let mut ret = ClassElem::default();
+    ret.a.set_ui(2);
+    ret.b.set_ui(1);
+    ret.c.set_ui(1);
+    ret.c.sub_mut(&d);
+    ret.c.fdiv_q_ui_mut(8);
+
+    let (a, b, c) = Self::reduce(ret.a, ret.b, ret.c);
+    ClassElem { a, b, c }
   }
 }
 
@@ -87,22 +206,311 @@ where
   }
 }
 
+//  Class group operations based on Chia's fantastic doc explaining applied class groups:
+//  https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf,
+//  hereafter refered to as "Binary Quadratic Forms".  Includes optimizations from Chia's VDF
+//  competition and from Jacobson, Michael J., and Alfred J. Van Der Poorten.
+//  "Computational aspects of NUCOMP."
 impl ClassGroup {
   // Normalize, reduce, and square are public for benchmarking.
-  pub fn normalize(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
-    with_context!(normalize, a, b, c)
+  pub fn normalize(mut a: Mpz, mut b: Mpz, mut c: Mpz) -> (Mpz, Mpz, Mpz) {
+    let already_normal = with_ctx!(|ctx: &mut ClassCtx| {
+      let (scratch,) = mut_tuple_elems!(ctx.op_ctx, 0);
+      Self::elem_is_normal(scratch, &a, &b, &c)
+    });
+
+    if already_normal {
+      (a, b, c)
+    } else {
+      ClassGroup::normalize_(&mut a, &mut b, &mut c);
+      (a, b, c)
+    }
   }
 
   pub fn reduce(a: Mpz, b: Mpz, c: Mpz) -> (Mpz, Mpz, Mpz) {
-    with_context!(reduce, a, b, c)
+    let (a, b, c) = Self::normalize(a, b, c);
+    let mut elem = ClassElem { a, b, c };
+    Self::reduce_(&mut elem);
+    Self::normalize(elem.a, elem.b, elem.c)
   }
 
   pub fn square(x: &mut ClassElem) {
-    with_context!(square, x)
+    if cfg!(feature = "nudulp") {
+      // NUDULP optimization, maybe using FLINT bindings.
+      Self::square_nudulp(x);
+    } else {
+      Self::square_regular(x);
+    }
   }
 
   fn validate(a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
-    with_context!(validate, a, b, c)
+    ClassGroup::discriminant(a, b, c) == *ClassGroup::rep()
+  }
+
+  fn discriminant(a: &Mpz, b: &Mpz, c: &Mpz) -> Mpz {
+    with_ctx!(|ctx: &mut ClassCtx| {
+      let (scratch,) = mut_tuple_elems!(ctx.op_ctx, 0);
+
+      let mut d = Mpz::default();
+      d.mul(&b, &b);
+      scratch.mul(&a, &c);
+      scratch.mul_ui_mut(4);
+      d.sub_mut(&scratch);
+      d
+    })
+  }
+
+  fn square_regular(x: &mut ClassElem) {
+    with_ctx!(|ctx: &mut ClassCtx| {
+      let (mut mu, mut v, m, a, old_a) = mut_tuple_elems!(ctx.op_ctx, 0, 1, 2, 3, 4);
+
+      // Binary Quadratic Forms, 6.3.1
+      ctx
+        .lin_cong_ctx
+        .solve_linear_congruence(&mut mu, &mut v, &x.b, &x.c, &x.a)
+        .unwrap();
+
+      m.mul(&x.b, &mu);
+      m.sub_mut(&x.c);
+      m.fdiv_q_mut(&x.a);
+
+      old_a.set(&x.a);
+      x.a.square_mut();
+
+      a.mul(&mu, &old_a);
+      a.mul_ui_mut(2);
+      x.b.sub_mut(&a);
+
+      x.c.mul(&mu, &mu);
+      x.c.sub_mut(&m);
+    });
+
+    ClassGroup::reduce_mut(x);
+  }
+
+  #[allow(non_snake_case)]
+  fn square_nudulp(x: &mut ClassElem) {
+    // Jacobson, Michael J., and Alfred J. Van Der Poorten. "Computational aspects of NUCOMP."
+    // Algorithm 2 (Alg 2).
+
+    with_ctx!(|ctx: &mut ClassCtx| {
+      let (
+        G_sq_op,
+        scratch,
+        y_sq_op,
+        By_sq_op,
+        Dy_sq_op,
+        bx_sq_op,
+        by_sq_op,
+        dx_sq_op,
+        q_sq_op,
+        t_sq_op,
+        ax_sq_op,
+        ay_sq_op,
+        Q1_sq_op,
+        x_sq_op,
+        z_sq_op,
+        dy_sq_op,
+      ) = mut_tuple_elems!(ctx.op_ctx, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+
+      let L_sq_op = &mut ctx.L_sq_op;
+
+      // Step 1 in Alg 2.
+      G_sq_op.gcdext(scratch, y_sq_op, &x.a, &x.b);
+      By_sq_op.divexact(&x.a, &G_sq_op);
+      Dy_sq_op.divexact(&x.b, &G_sq_op);
+
+      // Step 2 in Alg 2.
+      bx_sq_op.mul(&y_sq_op, &x.c);
+      bx_sq_op.modulo_mut(&By_sq_op);
+      by_sq_op.set(&By_sq_op);
+
+      if by_sq_op.cmpabs(&L_sq_op) <= 0 {
+        // Step 4 in Alg 2.
+        dx_sq_op.mul(&bx_sq_op, &Dy_sq_op);
+        dx_sq_op.sub_mut(&x.c);
+        dx_sq_op.divexact_mut(&By_sq_op);
+        x.a.mul(&by_sq_op, &by_sq_op);
+        x.c.mul(&bx_sq_op, &bx_sq_op);
+        t_sq_op.add(&bx_sq_op, &by_sq_op);
+        t_sq_op.square_mut();
+
+        x.b.sub_mut(&t_sq_op);
+        x.b.add_mut(&x.a);
+        x.b.add_mut(&x.c);
+        t_sq_op.mul(&G_sq_op, &dx_sq_op);
+        x.c.sub_mut(&t_sq_op);
+        return;
+      }
+
+      // Most of Step 3 in Alg 2.
+      if cfg!(feature = "flint") {
+        // Subroutine as handled by top entry to the Chia VDF competition "bulaiden."
+        unsafe {
+          let mut fy: fmpz = 0;
+          let mut fx: fmpz = 0;
+          let mut fby: fmpz = 0;
+          let mut fbx: fmpz = 0;
+          let mut fL: fmpz = 0;
+
+          let mut y_square_clone = flint_mpz_struct::from(*y_sq_op);
+          let mut x_square_clone = flint_mpz_struct::from(*x_sq_op);
+          let mut by_square_clone = flint_mpz_struct::from(*by_sq_op);
+          let mut bx_square_clone = flint_mpz_struct::from(*bx_sq_op);
+          let mut L_square_clone = flint_mpz_struct::from(*L_sq_op);
+
+          flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
+          flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);
+          flint::fmpz_set_mpz(&mut fby, &mut by_square_clone);
+          flint::fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
+          flint::fmpz_set_mpz(&mut fL, &mut L_square_clone);
+
+          // Flint Lehmer partial extended GCD.
+          flint::fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
+
+          flint::fmpz_get_mpz(&mut y_square_clone, &mut fy);
+          flint::fmpz_get_mpz(&mut x_square_clone, &mut fx);
+          flint::fmpz_get_mpz(&mut by_square_clone, &mut fby);
+          flint::fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
+
+          *y_sq_op = Mpz::from(y_square_clone);
+          *x_sq_op = Mpz::from(x_square_clone);
+          *by_sq_op = Mpz::from(by_square_clone);
+          *bx_sq_op = Mpz::from(bx_square_clone);
+        }
+
+        x_sq_op.neg_mut();
+        if x_sq_op.sgn() > 0 {
+          y_sq_op.neg_mut();
+        } else {
+          by_sq_op.neg_mut();
+        }
+      } else {
+        // Subroutine as presented in "Computational aspects of NUCOMP.", Algorithm 2, most of step 3.
+        x_sq_op.set_ui(1);
+        y_sq_op.set_ui(0);
+        z_sq_op.set_ui(0);
+        while by_sq_op.cmpabs(&L_sq_op) > 0 && bx_sq_op.sgn() == 0 {
+          q_sq_op.fdiv_q(&by_sq_op, &bx_sq_op);
+          t_sq_op.fdiv_r(&by_sq_op, &bx_sq_op);
+
+          by_sq_op.set(&bx_sq_op);
+          bx_sq_op.set(&t_sq_op);
+          y_sq_op.submul(&q_sq_op, &x_sq_op);
+          t_sq_op.set(&y_sq_op);
+          y_sq_op.set(&x_sq_op);
+          x_sq_op.set(&t_sq_op);
+          z_sq_op.add_ui_mut(1);
+        }
+
+        if z_sq_op.odd() != 0 {
+          by_sq_op.neg_mut();
+          y_sq_op.neg_mut();
+        }
+      }
+
+      ax_sq_op.mul(&G_sq_op, &x_sq_op);
+      ay_sq_op.mul(&G_sq_op, &y_sq_op);
+
+      // Step 5 in Alg 2.
+      t_sq_op.mul(&Dy_sq_op, &bx_sq_op);
+      t_sq_op.submul(&x.c, &x_sq_op);
+      dx_sq_op.divexact(&t_sq_op, &By_sq_op);
+      Q1_sq_op.mul(&y_sq_op, &dx_sq_op);
+      dy_sq_op.add(&Q1_sq_op, &Dy_sq_op);
+      x.b.add(&dy_sq_op, &Q1_sq_op);
+      x.b.mul_mut(&G_sq_op);
+      dy_sq_op.divexact_mut(&x_sq_op);
+      x.a.mul(&by_sq_op, &by_sq_op);
+      x.c.mul(&bx_sq_op, &bx_sq_op);
+      t_sq_op.add(&bx_sq_op, &by_sq_op);
+      x.b.submul(&t_sq_op, &t_sq_op);
+      x.b.add_mut(&x.a);
+      x.b.add_mut(&x.c);
+      x.a.submul(&ay_sq_op, &dy_sq_op);
+      x.c.submul(&ax_sq_op, &dx_sq_op);
+    });
+
+    Self::reduce_mut(x);
+  }
+
+  fn elem_is_reduced(scratch: &mut Mpz, a: &Mpz, b: &Mpz, c: &Mpz) -> bool {
+    Self::elem_is_normal(scratch, a, b, c) && (a <= c && !(a == c && b.cmp_si(0) < 0))
+  }
+
+  fn elem_is_normal(scratch: &mut Mpz, a: &Mpz, b: &Mpz, _c: &Mpz) -> bool {
+    scratch.neg(&a);
+    *scratch < *b && b <= a
+  }
+
+  fn reduce_(elem: &mut ClassElem) {
+    with_ctx!(|ctx: &mut ClassCtx| {
+      let (x, s, old_a, old_b, scratch) = mut_tuple_elems!(ctx.op_ctx, 0, 1, 2, 3, 4);
+
+      // Binary Quadratic Forms, 5.2.1
+      while !Self::elem_is_reduced(scratch, &elem.a, &elem.b, &elem.c) {
+        s.add(&elem.c, &elem.b);
+        x.mul_ui(&elem.c, 2);
+        s.fdiv_q_mut(&x);
+        old_a.set(&elem.a);
+        old_b.set(&elem.b);
+        elem.a.set(&elem.c);
+        elem.b.neg_mut();
+        x.mul(&s, &elem.c);
+        x.mul_ui_mut(2);
+        elem.b.add_mut(&x);
+
+        elem.c.mul_mut(&s);
+        elem.c.mul_mut(&s);
+        x.mul(&old_b, &s);
+        elem.c.sub_mut(&x);
+        elem.c.add_mut(&old_a);
+      }
+    })
+  }
+
+  fn reduce_mut(x: &mut ClassElem) {
+    Self::normalize_mut(x);
+    Self::reduce_(x);
+    Self::normalize_mut(x);
+  }
+
+  fn normalize_mut(x: &mut ClassElem) {
+    let already_normal = with_ctx!(|ctx: &mut ClassCtx| {
+      let (scratch,) = mut_tuple_elems!(ctx.op_ctx, 0);
+      if Self::elem_is_normal(scratch, &x.a, &x.b, &x.c) {
+        return true;
+      }
+      false
+    });
+
+    if !already_normal {
+      ClassGroup::normalize_(&mut x.a, &mut x.b, &mut x.c);
+    }
+  }
+
+  fn normalize_(a: &mut Mpz, b: &mut Mpz, c: &mut Mpz) {
+    with_ctx!(|ctx: &mut ClassCtx| {
+      let (r, denom, old_b, ra) = mut_tuple_elems!(ctx.op_ctx, 0, 1, 2, 3);
+
+      // Binary Quadratic Forms, 5.1.1
+      r.sub(&a, &b);
+      denom.mul_ui(&a, 2);
+      r.fdiv_q_mut(&denom);
+
+      old_b.set(&b);
+
+      ra.mul(&r, &a);
+      b.add_mut(&ra);
+      b.add_mut(&ra);
+
+      ra.mul_mut(&r);
+      c.add_mut(&ra);
+
+      ra.set(&r);
+      ra.mul_mut(&old_b);
+      c.add_mut(&ra);
+    })
   }
 }
 
