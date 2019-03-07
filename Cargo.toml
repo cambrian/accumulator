@@ -3,12 +3,12 @@ name = "accumulator"
 version = "0.1.1"
 edition = "2018"
 authors = [
-  "Pablo Aldape <pablo@vest.io>",
-  "Lucas Ege <lucas@vest.io>",
-  "Alan Flores-Lopez <alan@vest.io>",
-  "Sanjay Kannan <sanjay@vest.io>",
-  "Michael Straka <michael.s@vest.io>",
-  "Eddie Wang <eddie@vest.io>"
+  "Pablo Aldape <pablo@cambrian.dev>",
+  "Lucas Ege <lucas@cambrian.dev>",
+  "Alan Flores-Lopez <alan@cambrian.dev>",
+  "Sanjay Kannan <sanjay@cambrian.dev>",
+  "Michael Straka <michael@cambrian.dev>",
+  "Eddie Wang <eddie@cambrian.dev>"
 ]
 description = "Cryptographic accumulators in Rust."
 keywords = ["cryptography", "crypto", "accumulator", "rsa", "vector", "commitment"]
