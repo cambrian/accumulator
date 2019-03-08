@@ -19,14 +19,14 @@ pub enum AccError {
 // See https://doc.rust-lang.org/std/marker/struct.PhantomData.html#ownership-and-the-drop-check
 // for recommendations re phantom types.
 #[derive(PartialEq, Eq, Debug, Hash)]
-pub struct Accumulator<G: UnknownOrderGroup, T: Hash + Eq> {
+pub struct Accumulator<G: UnknownOrderGroup, T: Hash> {
   phantom: PhantomData<*const T>,
   value: G::Elem,
 }
 
 // Manual clone impl required because Rust's type inference is not good. See
 // https://github.com/rust-lang/rust/issues/26925
-impl<G: UnknownOrderGroup, T: Hash + Eq> Clone for Accumulator<G, T> {
+impl<G: UnknownOrderGroup, T: Hash> Clone for Accumulator<G, T> {
   fn clone(&self) -> Self {
     Accumulator {
       phantom: PhantomData,
@@ -37,16 +37,16 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Clone for Accumulator<G, T> {
 
 // REVIEW: Should this wrap a G::Elem instead of an Accumulator<G, T>?
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub struct Witness<G: UnknownOrderGroup, T: Hash + Eq>(Accumulator<G, T>);
+pub struct Witness<G: UnknownOrderGroup, T: Hash>(Accumulator<G, T>);
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub struct MembershipProof<G: UnknownOrderGroup, T: Hash + Eq> {
+pub struct MembershipProof<G: UnknownOrderGroup, T: Hash> {
   pub witness: Witness<G, T>,
   proof: Poe<G>,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash + Eq> {
+pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash> {
   phantom: PhantomData<*const T>,
   d: G::Elem,
   v: G::Elem,
@@ -55,7 +55,7 @@ pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash + Eq> {
   poe_proof: Poe<G>,
 }
 
-impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
+impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
   /// Create a new, empty accumulator
   pub fn empty() -> Self {
     Accumulator {
@@ -221,7 +221,10 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
     tracked_elems: &[T],
     untracked_additions: &[T],
     untracked_deletions: &[T],
-  ) -> Result<Witness<G, T>, AccError> {
+  ) -> Result<Witness<G, T>, AccError>
+  where
+    T: Eq,
+  {
     let x = prime_hash_product(tracked_elems);
     let x_hat = prime_hash_product(untracked_deletions);
 
