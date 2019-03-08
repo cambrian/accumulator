@@ -22,6 +22,10 @@ thread_local! {
   static CTX: RefCell<ClassCtx> = Default::default();
 }
 
+// Runs the given closure with the Class Context. The expression passed must be
+// a closure that takes in an element of type &mut ClassElem. Furthermore, the lambda
+// cannot contain subroutines which themselves call the `with_ctx` macro, or the
+// compiler will not be happy.
 macro_rules! with_ctx {
   ($logic:expr) => {
     CTX.with(|refcell| {
