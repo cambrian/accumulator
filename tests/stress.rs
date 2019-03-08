@@ -16,8 +16,7 @@ fn stress_test() {
     acc_set.push(random_elem);
   }
   println!("Starting add");
-  let (holder, _) = acc.clone().add(&acc_set);
-  acc = holder;
+  acc = acc.clone().add(&acc_set);
   println!("{}", acc_set.len());
   for _ in 0..100 {
     let new_elem = rand::thread_rng().gen::<[u8; 32]>();

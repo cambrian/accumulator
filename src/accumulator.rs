@@ -90,9 +90,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
 
   // Internal fn that also returns the prime hash product of the added elements, to enable
   // efficient add_with_proof.
-  // Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
-  // state.
-  fn add_(self, elems: &[T]) -> (Self, Integer, Witness<G, T>) {
+  fn add_(&self, elems: &[T]) -> (Self, Integer) {
     let x = prime_hash_product(elems);
     let acc_elem = G::exp(&self.value, &x);
     (
@@ -101,7 +99,6 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
         value: acc_elem,
       },
       x,
-      Witness(self),
     )
   }
 
@@ -110,18 +107,27 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
   #[allow(clippy::should_implement_trait)]
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements have not already been
   /// added. It is up to clients to either ensure uniqueness or treat this as multiset.
-  pub fn add(self, elems: &[T]) -> (Self, Witness<G, T>) {
-    let (acc, _, witness) = self.add_(elems);
-    (acc, witness)
+  // Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
+  // state.
+  pub fn add(self, elems: &[T]) -> Self {
+    self.add_(elems).0
   }
 
   /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements have not already been
   /// added. It is up to clients to either ensure uniqueness or treat this as multiset.
   /// Also returns a batch membership proof for elems in the new accumulator.
+  // Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
+  // state.
   pub fn add_with_proof(self, elems: &[T]) -> (Self, MembershipProof<G, T>) {
-    let (acc, x, witness) = self.add_(elems);
-    let proof = Poe::<G>::prove(&witness.0.value, &x, &acc.value);
-    (acc, MembershipProof { witness, proof })
+    let (acc, x) = self.add_(elems);
+    let proof = Poe::<G>::prove(&self.value, &x, &acc.value);
+    (
+      acc,
+      MembershipProof {
+        witness: Witness(self),
+        proof,
+      },
+    )
   }
 
   // Internal fn that also returns the prime hash product of the deleted elements, to enable
@@ -237,7 +243,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&x_hat));
     assert!(gcd == int(1));
 
-    let w = witness.0.add(untracked_additions).0;
+    let w = witness.0.add(untracked_additions);
     let w_to_b = G::exp(&w.value, &b);
     let acc_new_to_a = G::exp(&self.value, &a);
     Ok(Witness(Accumulator {
@@ -332,7 +338,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
 
 impl<G: UnknownOrderGroup, T: Hash + Eq> From<&[T]> for Accumulator<G, T> {
   fn from(ts: &[T]) -> Self {
-    Accumulator::<G, T>::empty().add(ts).0
+    Accumulator::<G, T>::empty().add(ts)
   }
 }
 
@@ -343,7 +349,7 @@ mod tests {
 
   // For some reason this doesn't work with `from`
   fn new_acc<G: UnknownOrderGroup, T: Hash + Eq>(data: &[T]) -> Accumulator<G, T> {
-    Accumulator::<G, T>::empty().add(data).0
+    Accumulator::<G, T>::empty().add(data)
   }
 
   macro_rules! test_all_groups {
@@ -394,10 +400,10 @@ mod tests {
   test_all_groups!(test_delete, test_delete_rsa2048, test_delete_class,);
   fn test_delete<G: UnknownOrderGroup>() {
     let acc_0 = new_acc::<G, &'static str>(&["a", "b"]);
-    let (acc_1, c_witness) = acc_0.clone().add(&["c"]);
+    let (acc_1, c_proof) = acc_0.clone().add_with_proof(&["c"]);
     let (acc_2, proof) = acc_1
       .clone()
-      .delete_with_proof(&[("c", c_witness)])
+      .delete_with_proof(&[("c", c_proof.witness)])
       .expect("valid delete expected");
     assert!(acc_2 == acc_0);
     assert!(acc_1.verify_membership(&"c", &proof));
@@ -442,7 +448,7 @@ mod tests {
     let witness_new = acc
       .update_membership_witness(witness, &["a"], &["b"], &["d"])
       .unwrap();
-    assert!(witness_new.0.add(&["a"]).0 == acc);
+    assert!(witness_new.0.add(&["a"]) == acc);
   }
 
   test_all_groups!(
