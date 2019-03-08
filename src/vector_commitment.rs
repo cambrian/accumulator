@@ -1,5 +1,5 @@
 //! Vector commitment library, built on a generic group interface. WIP.
-use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof};
+use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof, Witness};
 use crate::group::UnknownOrderGroup;
 use rug::Integer;
 use std::collections::HashSet;
@@ -51,7 +51,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
   ) -> Result<(Self, VectorProof<G>), VCError> {
     // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
     let (elems_with_zero, elems_with_one) = group_elems_by_bit(&bits)?;
-    let (new_acc, membership_proof) = vc.0.add(&elems_with_one);
+    let (new_acc, membership_proof) = vc.0.add_with_proof(&elems_with_one);
     let nonmembership_proof = new_acc
       .prove_nonmembership(vc_acc_set, &elems_with_zero)
       .map_err(|_| VCError::UnexpectedState)?;
@@ -68,7 +68,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     vc: &Self,
     vc_acc_set: &[Integer],
     zero_bits: &[Integer],
-    one_bit_witnesses: &[(Integer, Accumulator<G, Integer>)],
+    one_bit_witnesses: &[(Integer, Witness<G, Integer>)],
   ) -> Result<VectorProof<G>, VCError> {
     let membership_proof = vc
       .0
@@ -97,7 +97,9 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
       return false;
     }
     let (elems_with_zero, elems_with_one) = group_result.unwrap();
-    let verified_membership = vc.0.verify_membership(&elems_with_one, membership_proof);
+    let verified_membership = vc
+      .0
+      .verify_aggregate_membership(&elems_with_one, membership_proof);
     let verified_nonmembership = vc
       .0
       .verify_nonmembership(&elems_with_zero, nonmembership_proof);

@@ -1,5 +1,6 @@
 //! Proof of Knowledge of Exponentation. See page 16 of B&B. Allows zero-knowledge proof and
-//! efficient verification for knowledge of group exponentiation.
+//! efficient verification for knowledge of group exponentiation when the exponent is larger than
+//! 2^256.
 use crate::group::UnknownOrderGroup;
 use crate::hash::{blake2b, hash_to_prime};
 use rug::Integer;

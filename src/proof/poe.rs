@@ -1,5 +1,5 @@
 //! Proof of Exponentiation. See page 16 of B&B. Allows efficient verification of group
-//! exponentiation.
+//! exponentiation when the exponent is larger than 2^256.
 use crate::group::Group;
 use crate::hash::hash_to_prime;
 use crate::util::int;
