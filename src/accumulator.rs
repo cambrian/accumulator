@@ -422,18 +422,18 @@ mod tests {
     assert!(acc.verify_aggregate_membership(&[], &proof));
   }
 
-  // test_all_groups!(
-  //   test_delete_bad_witness,
-  //   test_delete_bad_witness_rsa2048,
-  //   test_delete_bad_witness_class,
-  //   should_panic(expected = "BadWitness")
-  // );
-  // fn test_delete_bad_witness<G: UnknownOrderGroup>() {
-  //   let acc = Accumulator::<G, &'static str>::empty();
-  //   let a_witness = new_acc::<G, &'static str>(&["b", "c"]);
-  //   let b_witness = new_acc::<G, &'static str>(&["a", "c"]);
-  //   acc.delete(&[("a", a_witness), ("b", b_witness)]).unwrap();
-  // }
+  test_all_groups!(
+    test_delete_bad_witness,
+    test_delete_bad_witness_rsa2048,
+    test_delete_bad_witness_class,
+    should_panic(expected = "BadWitness")
+  );
+  fn test_delete_bad_witness<G: UnknownOrderGroup>() {
+    let acc = Accumulator::<G, &'static str>::empty();
+    let a_witness = Witness(new_acc::<G, &'static str>(&["b", "c"]));
+    let b_witness = Witness(new_acc::<G, &'static str>(&["a", "c"]));
+    acc.delete(&[("a", a_witness), ("b", b_witness)]).unwrap();
+  }
 
   test_all_groups!(
     test_update_membership_witness,
