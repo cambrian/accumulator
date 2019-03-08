@@ -9,17 +9,19 @@ use std::mem::uninitialized;
 use std::slice;
 use std::str::FromStr;
 
+// This struct defines what the Flint library considers an Mpz integer. We need this in order
+// to convert between GMP Mpz and Flint Mpz.
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct flint_mpz_struct {
+pub struct flinty_mpz {
   pub mp_alloc: ::std::os::raw::c_int,
   pub mp_size: ::std::os::raw::c_int,
   pub mp_d: *mut ::std::os::raw::c_ulong,
 }
 
-impl From<Mpz> for flint_mpz_struct {
+impl From<Mpz> for flinty_mpz {
   fn from(x: Mpz) -> Self {
-    flint_mpz_struct {
+    flinty_mpz {
       mp_alloc: x.inner.alloc,
       mp_size: x.inner.size,
       mp_d: x.inner.d,
@@ -102,8 +104,8 @@ impl From<u64> for Mpz {
   }
 }
 
-impl From<flint_mpz_struct> for Mpz {
-  fn from(x: flint_mpz_struct) -> Self {
+impl From<flinty_mpz> for Mpz {
+  fn from(x: flinty_mpz) -> Self {
     let mut ret = Mpz::default();
     ret.inner.alloc = x.mp_alloc;
     ret.inner.size = x.mp_size;

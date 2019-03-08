@@ -3,7 +3,7 @@
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::num::flint;
 use crate::num::flint::fmpz;
-use crate::num::mpz::{flint_mpz_struct, Mpz};
+use crate::num::mpz::{flinty_mpz, Mpz};
 use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::cell::RefCell;
@@ -339,38 +339,39 @@ impl ClassGroup {
       // Most of Step 3 in Alg 2.
       if cfg!(feature = "flint") {
         // Subroutine as handled by top entry to the Chia VDF competition "bulaiden."
-        unsafe {
-          let mut fy: fmpz = 0;
-          let mut fx: fmpz = 0;
-          let mut fby: fmpz = 0;
-          let mut fbx: fmpz = 0;
-          let mut fL: fmpz = 0;
+        let mut fy: fmpz = 0;
+        let mut fx: fmpz = 0;
+        let mut fby: fmpz = 0;
+        let mut fbx: fmpz = 0;
+        let mut fL: fmpz = 0;
 
-          let mut y_square_clone = flint_mpz_struct::from(y_sq_op.clone());
-          let mut x_square_clone = flint_mpz_struct::from(x_sq_op.clone());
-          let mut by_square_clone = flint_mpz_struct::from(by_sq_op.clone());
-          let mut bx_square_clone = flint_mpz_struct::from(bx_sq_op.clone());
-          let mut L_square_clone = flint_mpz_struct::from(L_sq_op.clone());
+        // Convert our Mpz's into a form that Flint can understand as an Mpz.
+        let mut y_square_clone = flinty_mpz::from(y_sq_op.clone());
+        let mut x_square_clone = flinty_mpz::from(x_sq_op.clone());
+        let mut by_square_clone = flinty_mpz::from(by_sq_op.clone());
+        let mut bx_square_clone = flinty_mpz::from(bx_sq_op.clone());
+        let mut L_square_clone = flinty_mpz::from(L_sq_op.clone());
 
-          flint::fmpz_set_mpz(&mut fy, &mut y_square_clone);
-          flint::fmpz_set_mpz(&mut fx, &mut x_square_clone);
-          flint::fmpz_set_mpz(&mut fby, &mut by_square_clone);
-          flint::fmpz_set_mpz(&mut fbx, &mut bx_square_clone);
-          flint::fmpz_set_mpz(&mut fL, &mut L_square_clone);
+        // Convert the Flint-style Mpz's into true fmpz types.
+        flint::set_mpz(&mut fy, &mut y_square_clone);
+        flint::set_mpz(&mut fx, &mut x_square_clone);
+        flint::set_mpz(&mut fby, &mut by_square_clone);
+        flint::set_mpz(&mut fbx, &mut bx_square_clone);
+        flint::set_mpz(&mut fL, &mut L_square_clone);
 
-          // Flint Lehmer partial extended GCD.
-          flint::fmpz_xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
+        // Flint Lehmer partial extended GCD.
+        flint::xgcd_partial(&mut fy, &mut fx, &mut fby, &mut fbx, &mut fL);
 
-          flint::fmpz_get_mpz(&mut y_square_clone, &mut fy);
-          flint::fmpz_get_mpz(&mut x_square_clone, &mut fx);
-          flint::fmpz_get_mpz(&mut by_square_clone, &mut fby);
-          flint::fmpz_get_mpz(&mut bx_square_clone, &mut fbx);
+        // Unwrap the fmpz results back to our Mpz type.
+        flint::get_mpz(&mut y_square_clone, &mut fy);
+        flint::get_mpz(&mut x_square_clone, &mut fx);
+        flint::get_mpz(&mut by_square_clone, &mut fby);
+        flint::get_mpz(&mut bx_square_clone, &mut fbx);
 
-          *y_sq_op = Mpz::from(y_square_clone);
-          *x_sq_op = Mpz::from(x_square_clone);
-          *by_sq_op = Mpz::from(by_square_clone);
-          *bx_sq_op = Mpz::from(bx_square_clone);
-        }
+        *y_sq_op = Mpz::from(y_square_clone);
+        *x_sq_op = Mpz::from(x_square_clone);
+        *by_sq_op = Mpz::from(by_square_clone);
+        *bx_sq_op = Mpz::from(bx_square_clone);
 
         x_sq_op.neg_mut();
         if x_sq_op.sgn() > 0 {
