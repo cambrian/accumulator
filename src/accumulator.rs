@@ -298,22 +298,25 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
     Poke2::verify(&self.value, v, poke2_proof) && Poe::verify(d, &x, gv_inv, poe_proof)
   }
 
-  /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
-  /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
+  /// For accumulator with elems `[x_1, ..., x_n]`, computes a membership witness for each `x_i` in
+  /// accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
   /// log N) time using the root factor algorithm.
-  pub fn compute_individual_witnesses<'a>(&self, elems: &'a [T]) -> Vec<(&'a T, Self)> {
+  pub fn compute_individual_witnesses<'a>(elems: &'a [T]) -> Vec<(&'a T, Witness<G, T>)> {
     let primes = elems.iter().map(hash_to_prime).collect::<Vec<_>>();
-    let witnesses = Self::root_factor(&self.value, &primes);
+    let witnesses = Self::root_factor(&G::unknown_order_elem(), &primes);
     // why is it necessary to split this calculation into 2 lines??
-    let witnesses = witnesses.iter().map(|value| Accumulator {
-      phantom: PhantomData,
-      value: value.clone(),
+    let witnesses = witnesses.iter().map(|value| {
+      Witness(Accumulator {
+        phantom: PhantomData,
+        value: value.clone(),
+      })
     });
     elems.iter().zip(witnesses).collect::<Vec<_>>()
   }
 
   #[allow(non_snake_case)]
   fn root_factor(g: &G::Elem, primes: &[Integer]) -> Vec<G::Elem> {
+    dbg!((&g, &primes));
     if primes.len() == 1 {
       return vec![g.clone()];
     }
@@ -340,7 +343,7 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> From<&[T]> for Accumulator<G, T> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ClassGroup, Rsa2048};
+  use crate::group::{ClassGroup, ElemFrom, Rsa2048};
 
   // For some reason this doesn't work with `from`
   fn new_acc<G: UnknownOrderGroup, T: Hash + Eq>(data: &[T]) -> Accumulator<G, T> {
@@ -475,29 +478,18 @@ mod tests {
     assert!(acc.verify_nonmembership(&non_members, &proof));
   }
 
-  // fn test_compute_individual_witnesses<G: UnknownOrderGroup>() {
-  //   let acc = new_acc::<G, &'static str>(&["a", "b", "c"]);
-  //   acc.compute_individual_witnesses()
-  //   let acc = init_acc::<G>();
-  //   let orig = [
-  //     97 as usize,
-  //     101 as usize,
-  //     103 as usize,
-  //     107 as usize,
-  //     109 as usize,
-  //   ];
-  //   let factors: Vec<Integer> = orig.iter().map(|x| hash::hash_to_prime(x)).collect();
-  //   let witnesses = acc.root_factor(&factors, &orig);
-  //   for (i, (_, witness)) in witnesses.iter().enumerate() {
-  //     let partial_product = factors.iter().product::<Integer>() / factors[i].clone();
-  //     let expected = acc.clone().add(&[partial_product]).0;
-  //     assert_eq!(*witness, expected);
-  //   }
-  // }
+  fn test_compute_individual_witnesses<G: UnknownOrderGroup + ElemFrom<u32>>() {
+    let elems = ["a", "b", "c"];
+    let acc = new_acc::<G, &'static str>(&elems);
+    let witnesses = Accumulator::<G, &'static str>::compute_individual_witnesses(&elems);
+    for (elem, witness) in witnesses {
+      assert_eq!(acc.value, G::exp(&witness.0.value, &hash_to_prime(*elem)));
+    }
+  }
 
-  // #[test]
-  // fn test_compute_individual_witnesses_rsa2048() {
-  //   // Class version takes too long for a unit test.
-  //   test_compute_individual_witnesses::<Rsa2048>();
-  // }
+  #[test]
+  fn test_compute_individual_witnesses_rsa2048() {
+    // Class version takes too long for a unit test.
+    test_compute_individual_witnesses::<Rsa2048>();
+  }
 }
