@@ -28,7 +28,7 @@ pub struct Accumulator<G: UnknownOrderGroup, T: Hash> {
 // https://github.com/rust-lang/rust/issues/26925
 impl<G: UnknownOrderGroup, T: Hash> Clone for Accumulator<G, T> {
   fn clone(&self) -> Self {
-    Accumulator {
+    Self {
       phantom: PhantomData,
       value: self.value.clone(),
     }
@@ -58,7 +58,7 @@ pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash> {
 impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
   /// Create a new, empty accumulator
   pub fn empty() -> Self {
-    Accumulator {
+    Self {
       phantom: PhantomData,
       value: G::unknown_order_elem(),
     }
@@ -82,7 +82,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
       return Err(AccError::InexactDivision);
     }
 
-    Ok(Accumulator {
+    Ok(Self {
       phantom: PhantomData,
       value: G::exp(&self.value, &quotient),
     })
@@ -94,7 +94,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     let x = prime_hash_product(elems);
     let acc_elem = G::exp(&self.value, &x);
     (
-      Accumulator {
+      Self {
         phantom: PhantomData,
         value: acc_elem,
       },
@@ -155,7 +155,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     )?;
 
     Ok((
-      Accumulator {
+      Self {
         phantom: PhantomData,
         value: acc_elem.clone(),
       },
@@ -246,7 +246,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     let w = witness.0.add(untracked_additions);
     let w_to_b = G::exp(&w.value, &b);
     let acc_new_to_a = G::exp(&self.value, &a);
-    Ok(Witness(Accumulator {
+    Ok(Witness(Self {
       phantom: PhantomData,
       value: G::op(&w_to_b, &acc_new_to_a),
     }))
@@ -308,7 +308,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     let witnesses = Self::root_factor(&G::unknown_order_elem(), &primes);
     // why is it necessary to split this calculation into 2 lines??
     let witnesses = witnesses.iter().map(|value| {
-      Witness(Accumulator {
+      Witness(Self {
         phantom: PhantomData,
         value: value.clone(),
       })
@@ -338,7 +338,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
 
 impl<G: UnknownOrderGroup, T: Hash + Eq> From<&[T]> for Accumulator<G, T> {
   fn from(ts: &[T]) -> Self {
-    Accumulator::<G, T>::empty().add(ts)
+    Self::empty().add(ts)
   }
 }
 
