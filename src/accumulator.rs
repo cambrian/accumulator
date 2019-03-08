@@ -35,16 +35,9 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Clone for Accumulator<G, T> {
   }
 }
 
+// REVIEW: Should this wrap a G::Elem instead of an Accumulator<G, T>?
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Witness<G: UnknownOrderGroup, T: Hash + Eq>(Accumulator<G, T>);
-
-// // Manual clone impl required because Rust's type inference is not good. See
-// // https://github.com/rust-lang/rust/issues/26925
-// impl<G: UnknownOrderGroup, T: Hash + Eq> Clone for Witness<G, T> {
-//   fn clone(&self) -> Self {
-//     Witness(self.0.clone())
-//   }
-// }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct MembershipProof<G: UnknownOrderGroup, T: Hash + Eq> {
@@ -223,12 +216,12 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
 
   /// See Section 4.2 in the Li, Li, Xue paper.
   pub fn update_membership_witness(
-    self,
-    acc_new: &Self,
+    &self,
+    witness: Witness<G, T>,
     tracked_elems: &[T],
     untracked_additions: &[T],
     untracked_deletions: &[T],
-  ) -> Result<Self, AccError> {
+  ) -> Result<Witness<G, T>, AccError> {
     let x = prime_hash_product(tracked_elems);
     let x_hat = prime_hash_product(untracked_deletions);
 
@@ -241,13 +234,13 @@ impl<G: UnknownOrderGroup, T: Hash + Eq> Accumulator<G, T> {
     let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&x_hat));
     assert!(gcd == int(1));
 
-    let w = self.add(untracked_additions).0;
+    let w = witness.0.add(untracked_additions).0;
     let w_to_b = G::exp(&w.value, &b);
-    let acc_new_to_a = G::exp(&acc_new.value, &a);
-    Ok(Accumulator {
+    let acc_new_to_a = G::exp(&self.value, &a);
+    Ok(Witness(Accumulator {
       phantom: PhantomData,
       value: G::op(&w_to_b, &acc_new_to_a),
-    })
+    }))
   }
 
   /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
@@ -442,11 +435,11 @@ mod tests {
   );
   fn test_update_membership_witness<G: UnknownOrderGroup>() {
     let acc = new_acc::<G, &'static str>(&["a", "b", "c"]);
-    let witness = new_acc::<G, &'static str>(&["c", "d"]);
-    let witness_new = witness
-      .update_membership_witness(&acc, &["a"], &["b"], &["d"])
+    let witness = Witness(new_acc::<G, &'static str>(&["c", "d"]));
+    let witness_new = acc
+      .update_membership_witness(witness, &["a"], &["b"], &["d"])
       .unwrap();
-    assert!(witness_new.add(&["a"]).0 == acc);
+    assert!(witness_new.0.add(&["a"]).0 == acc);
   }
 
   test_all_groups!(
@@ -457,9 +450,9 @@ mod tests {
   );
   fn test_update_membership_witness_failure<G: UnknownOrderGroup>() {
     let acc = new_acc::<G, &'static str>(&["a", "b", "c"]);
-    let witness = new_acc::<G, &'static str>(&["c", "d"]);
-    witness
-      .update_membership_witness(&acc, &["a"], &["b"], &["a"])
+    let witness = Witness(new_acc::<G, &'static str>(&["c", "d"]));
+    acc
+      .update_membership_witness(witness, &["a"], &["b"], &["a"])
       .unwrap();
   }
 
