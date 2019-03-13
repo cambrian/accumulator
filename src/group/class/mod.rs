@@ -132,6 +132,7 @@ impl Group for ClassGroup {
       let (a,) = mut_tuple_elems!(ctx.op_ctx, 0);
 
       // Binary Quadratic Forms, Definition 5.4
+      // The identity is the Principal Form of Discriminant d.
       let mut ret = ClassElem::default();
       ret.a.set_ui(1);
       ret.b.set_ui(1);
@@ -174,7 +175,6 @@ impl Group for ClassGroup {
 impl UnknownOrderGroup for ClassGroup {
   fn unknown_order_elem_(d: &Mpz) -> ClassElem {
     // Binary Quadratic Forms, Definition 5.4
-    // The generator is the Principal Form of Discriminant d.
     let mut ret = ClassElem::default();
     ret.a.set_ui(2);
     ret.b.set_ui(1);
