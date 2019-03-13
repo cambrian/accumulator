@@ -174,6 +174,7 @@ impl Group for ClassGroup {
 impl UnknownOrderGroup for ClassGroup {
   fn unknown_order_elem_(d: &Mpz) -> ClassElem {
     // Binary Quadratic Forms, Definition 5.4
+    // The generator is the Principal Form of Discriminant d.
     let mut ret = ClassElem::default();
     ret.a.set_ui(2);
     ret.b.set_ui(1);
