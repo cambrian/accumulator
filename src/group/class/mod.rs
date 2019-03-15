@@ -523,15 +523,8 @@ mod tests {
   use std::collections::hash_map::DefaultHasher;
   use std::hash::{Hash, Hasher};
   use std::str::FromStr;
-
-  // Makes a class elem tuple but does not reduce.
-  fn construct_raw_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
-    ClassElem {
-      a: Mpz::from_str(a).unwrap(),
-      b: Mpz::from_str(b).unwrap(),
-      c: Mpz::from_str(c).unwrap(),
-    }
-  }
+  use std::fs::File;
+  use std::io::{BufRead, BufReader, Result};
 
   #[should_panic]
   #[test]
@@ -918,28 +911,40 @@ mod tests {
   #[test]
   fn test_id_repeated() {
     let mut id = ClassGroup::id();
+
+    // Test with 1000 consecutive elements from the generator.
     let g_anchor = ClassGroup::unknown_order_elem();
     let mut g = ClassGroup::unknown_order_elem();
     for _ in 0..1000 {
-      id = ClassGroup::op(&id, &id);
-      assert_eq!(id, ClassGroup::id());
-      g = ClassGroup::op(&g, &ClassGroup::id());
+      g = ClassGroup::op(&g, &id);
       assert_eq!(g, g_anchor);
+    }
+
+    // Test with 1000 random elements.
+    for elem in read_group_elems() {
+      assert_eq!(ClassGroup::op(&elem, &id), elem);
     }
   }
 
   #[test]
-  fn test_inv() {
+  fn test_inv_repeated() {
     let id = ClassGroup::id();
     let g_anchor = ClassGroup::unknown_order_elem();
     let mut g = ClassGroup::unknown_order_elem();
 
+    // Test with 1000 consecutive elements from generator.
     for _ in 0..1000 {
       g = ClassGroup::op(&g, &g_anchor);
       let g_inv = ClassGroup::inv(&g);
       assert_eq!(id, ClassGroup::op(&g_inv, &g));
       assert_eq!(id, ClassGroup::op(&g, &g_inv));
       assert_eq!(g, ClassGroup::inv(&g_inv));
+    }
+
+    // Test with 1000 random elements
+    for elem in read_group_elems() {
+      assert_eq!(ClassGroup::op(&elem, &ClassGroup::inv(&elem)), id);
+      assert_eq!(ClassGroup::op(&ClassGroup::inv(&elem), &elem), id);
     }
   }
 
@@ -987,6 +992,158 @@ mod tests {
       }
 
       assert_eq!(g, base);
+    }
+  }
+
+  #[test]
+  fn test_op_with_gt() {
+
+    // Multiply one way...
+    test_with_gt(
+      "src/group/class/test/op.txt",
+      |s: String| {
+        let operands: Vec<&str> = s.split(":").collect();
+        let rh = construct_raw_elem_from_string(operands[0]);
+        let lh = construct_raw_elem_from_string(operands[1]);
+        ClassGroup::op(&rh, &lh)
+      }
+    );
+
+    // ...and the other way
+    test_with_gt(
+      "src/group/class/test/op.txt",
+      |s: String| {
+        let operands: Vec<&str> = s.split(":").collect();
+        let rh = construct_raw_elem_from_string(operands[0]);
+        let lh = construct_raw_elem_from_string(operands[1]);
+        ClassGroup::op(&lh, &rh)
+      }
+    );
+  }
+
+  #[test]
+  fn test_normalize_with_gt() {
+    test_with_gt(
+      "src/group/class/test/normalize.txt",
+      |s: String| {
+        let mut to_normalize = construct_raw_elem_from_string(&s);
+        let (norm_a, norm_b, norm_c) = ClassGroup::normalize(
+          to_normalize.a, to_normalize.b, to_normalize.c
+        );
+        ClassElem {a: norm_a, b: norm_b, c: norm_c}
+      }
+    );
+  }
+
+  #[test]
+  fn test_reduce_with_gt() {
+    test_with_gt(
+      "src/group/class/test/reduce.txt",
+      |s: String| {
+        let mut to_reduce = construct_raw_elem_from_string(&s);
+        let (reduced_a, reduced_b, reduced_c) = ClassGroup::reduce(
+          to_reduce.a, to_reduce.b, to_reduce.c
+        );
+        ClassElem {a: reduced_a, b: reduced_b, c: reduced_c}
+      }
+    );
+  }
+
+  #[test]
+  fn test_square_with_gt() {
+    test_with_gt(
+      "src/group/class/test/square.txt",
+      |s: String| {
+        let mut to_square = construct_raw_elem_from_string(&s);
+        ClassGroup::square(&mut to_square);
+        to_square
+      }
+    );
+  }
+
+  #[test]
+  fn test_exp_with_gt() {
+    test_with_gt(
+      "src/group/class/test/exp.txt",
+      |s: String| {
+        let elem_and_exp: Vec<&str> = s.split(":").collect();
+        let elem = construct_raw_elem_from_string(elem_and_exp[0]);
+        let exp = Integer::from_str(elem_and_exp[1]).unwrap();
+        ClassGroup::exp(&elem, &exp)
+      }
+    );
+  }
+
+  /* Helper functions */
+
+  // Makes a class elem tuple but does not reduce.
+  fn construct_raw_elem_from_strings(a: &str, b: &str, c: &str) -> ClassElem {
+    ClassElem {
+      a: Mpz::from_str(a).unwrap(),
+      b: Mpz::from_str(b).unwrap(),
+      c: Mpz::from_str(c).unwrap(),
+    }
+  }
+
+  // Makes a class elem tuple but does not reduce, from a string of format "(a,b,c)"
+  fn construct_raw_elem_from_string(elem: &str) -> ClassElem {
+    let len = elem.len();
+    let parts: Vec<&str> = elem[1..len - 1].split(',').collect();
+    construct_raw_elem_from_strings(parts[0], parts[1], parts[2])
+  }
+
+  // Given a file path with per-line ground-truth test cases, returns a vector of triples (A, B, C)
+  // where A is a colon-separated list of input strings corresponding to class elements of form
+  // "(a,b,c)" or single integers (it is up to a user of this function to know which it is),
+  // B is a class element corresponding to the ground-truth output, and C is true if this
+  // is a positive (i.e. true) example.
+  fn parse_gt_file(file_path: &str) -> Vec<(String, ClassElem, bool)> {
+    let mut out: Vec<(String, ClassElem, bool)> = Vec::new();
+    let file = File::open(file_path).unwrap();
+    for line in BufReader::new(file).lines() {
+      match line {
+        Ok(inner_line) => {
+          let main_parts: Vec<&str> = inner_line.split("|").collect();
+          let inputs_str = &main_parts[0][1..main_parts[0].len() - 1];
+          let output_str = &main_parts[1];
+          let pos_or_neg_str = &main_parts[2];
+          let true_example = pos_or_neg_str == &"+";
+          let out_elem = construct_raw_elem_from_string(output_str);
+          out.push((inputs_str.to_string(), out_elem, true_example));
+        },
+        Err(_) => ()
+      }
+    }
+    out
+  }
+
+  // Reads static list of 1000 random group elements into a vector of ClassElems.
+  fn read_group_elems() -> Vec<ClassElem> {
+    let mut group_elems = Vec::new();
+    let file = File::open("src/group/class/test/group_elems.txt").unwrap();
+    for line in BufReader::new(file).lines() {
+      match line {
+        Ok(inner_line) => {
+          group_elems.push(construct_raw_elem_from_string(&inner_line));
+        },
+        Err(_) => ()
+      }
+    }
+    group_elems
+  }
+
+  // Generic test function for comparing ground-truth inputs to ground-truth outputs.
+  // Expects to be called with the file path containing the test cases and a procedure that maps
+  // the input string of the test cases to the final ClassElem to be tested.
+  fn test_with_gt(file_path: &str, procedure: fn(String) -> ClassElem) {
+    let parsed = parse_gt_file(file_path);
+    for (inp_s, gt_out, pos_or_neg) in parsed {
+      let to_test = procedure(inp_s);
+      if pos_or_neg {
+        assert_eq!(to_test, gt_out);
+      } else {
+        assert_ne!(to_test, gt_out);
+      }
     }
   }
 }
