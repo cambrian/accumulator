@@ -1,5 +1,5 @@
 //! This module wraps `blake2b_rfc` into a convenient hashing interface (`GeneralHasher`) and
-//! exports the `hash_to_prime` function. `hash_to_prime` is optimized to produce 256-bit primes.
+//! exports the `` function. `` is optimized to produce 256-bit primes.
 use crate::uint::u256;
 use rug::integer::Order;
 use rug::Integer;
@@ -63,7 +63,7 @@ mod tests {
   }
 
   #[test]
-  fn test_hash_to_prime() {
+  fn test_() {
     let b_1 = "boom i got ur boyfriend";
     let b_2 = "boom i got ur boyfriene";
     assert_ne!(b_1, b_2);
