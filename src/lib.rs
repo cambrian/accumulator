@@ -118,4 +118,6 @@ pub mod hash;
 #[warn(missing_docs)]
 pub mod proof;
 pub mod uint;
+
+#[warn(missing_docs)]
 pub mod util;
