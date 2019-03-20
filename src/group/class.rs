@@ -11,17 +11,8 @@ use std::str::FromStr;
 
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// Class Group implementation, with optional optimizations.
-///
-///
-///
-/// # Examples
-///
-/// ```
-/// use std::rc::Rc;
-///
-/// let five = Rc::new(5);
-/// ```
+/// Class Group implementation, with optimizations available with the
+/// `--features` flag.
 pub enum ClassGroup {}
 
 // 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.

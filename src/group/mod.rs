@@ -124,6 +124,7 @@ pub trait ElemFrom<T>: Group {
   fn elem(val: T) -> Self::Elem;
 }
 
+///
 pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   if alphas.len() == 1 {
     return alphas[0].clone();
