@@ -114,6 +114,8 @@ pub use vector_commitment::*;
 pub mod group;
 
 pub mod hash;
+
+#[warn(missing_docs)]
 pub mod proof;
 pub mod uint;
 pub mod util;
