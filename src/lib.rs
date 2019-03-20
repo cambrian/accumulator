@@ -113,6 +113,7 @@ pub use vector_commitment::*;
 #[warn(missing_docs)]
 pub mod group;
 
+#[warn(missing_docs)]
 pub mod hash;
 
 #[warn(missing_docs)]

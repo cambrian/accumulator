@@ -21,6 +21,7 @@ pub fn is_prob_prime(n: &U256) -> bool {
   passes_miller_rabin_base_2(&n) && passes_lucas(&n)
 }
 
+///
 pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
   let (d, r) = (n - 1).remove_factor(u256(2));
   let mut x = u256(2).pow_mod(d, n);
