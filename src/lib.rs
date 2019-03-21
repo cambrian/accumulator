@@ -98,6 +98,7 @@
 #![allow(clippy::unknown_clippy_lints)]
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::empty_enum)]
+#![warn(missing_docs)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -107,18 +108,14 @@ extern crate arrayref;
 
 mod accumulator;
 pub use accumulator::*;
+
+#[allow(missing_docs)]
 mod vector_commitment;
 pub use vector_commitment::*;
 
-#[warn(missing_docs)]
 pub mod group;
-
-#[warn(missing_docs)]
 pub mod hash;
-
-#[warn(missing_docs)]
 pub mod proof;
+#[allow(missing_docs)]
 pub mod uint;
-
-#[warn(missing_docs)]
 pub mod util;

@@ -5,24 +5,38 @@ use crate::util::{divide_and_conquer, int, shamir_trick};
 use rug::Integer;
 
 #[derive(Debug)]
+/// Enum for different types of accumulator errors.
 pub enum AccError {
+  /// Bad witness.
   BadWitness,
+
+  /// Error when updating a witness.
   BadWitnessUpdate,
+
+  /// Division by zero.
   DivisionByZero,
+
+  /// Inexact division where exact division is expected.
   InexactDivision,
+
+  /// Inputs not coprime when they are expected to be coprime.
   InputsNotCoprime,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Default, Hash)]
+/// Struct for a cryptographic accumulator. Wraps a single unknown order group element.
 pub struct Accumulator<G: UnknownOrderGroup>(G::Elem);
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
+/// Struct for an accumulator membership proof.
 pub struct MembershipProof<G: UnknownOrderGroup> {
+  /// Membership witness.
   pub witness: Accumulator<G>,
   proof: Poe<G>,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
+/// Struct for an accumulator non-membership proof.
 pub struct NonmembershipProof<G: UnknownOrderGroup> {
   d: G::Elem,
   v: G::Elem,
@@ -32,7 +46,7 @@ pub struct NonmembershipProof<G: UnknownOrderGroup> {
 }
 
 impl<G: UnknownOrderGroup> Accumulator<G> {
-  /// Initializes the accumulator to a group element.
+  /// Initializes an accumulator.
   pub fn new() -> Self {
     Accumulator(G::unknown_order_elem())
   }
@@ -55,10 +69,36 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   // The conciseness of `accumulator.add()` and low probability of confusion with implementations of
   // the `Add` trait probably justify this...
   #[allow(clippy::should_implement_trait)]
-  /// Adds `elems` to the accumulator `acc`. Cannot check whether the elements are coprime with the
+  /// Adds elements to the accumulator.
+  ///
+  /// # Arguments
+  ///
+  /// * `elems` - A slice of Rust Integers to accumulate -- must be distinct odd primes.
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// let acc = Accumulator::new();
+  ///
+  /// let prime1 = Integer::from(23);
+  /// let (acc, proof1) = acc.add(&[prime1]);
+  ///
+  /// let prime2 = Integer::from(29);
+  /// let (acc, proof2) = acc.add(&[prime2]);
+  /// ```
+  ///
+  /// # Return value
+  ///
+  /// Returns a tuple `(acc, proof)` of the new accumulator state and a proof that
+  /// can be verified with `verify_membership`.
+  ///
+  /// # Remarks
+  ///
+  /// Cannot check whether the elements are coprime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
-  // Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
-  // state.
+  ///
+  /// Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
+  /// state.
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
     let x = elems.iter().product();
     let acc_new = G::exp(&self.0, &x);
@@ -72,11 +112,40 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     )
   }
 
-  /// Removes the elements in `elem_witnesses` from the accumulator `acc`.
+  /// Removes elements from the accumulator.
+  ///
+  /// # Arguments
+  ///
+  /// * `elem_witnesses` - A slice of pairs (`elem`, `witness`), where `elem` is a Rug Integer
+  /// corresponding to the integer to delete, and `witness` is the `witness` field of a proof
+  /// that `elem` was accumulated in the first place.
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// let acc = Accumulator::new();
+  ///
+  /// let prime1 = Integer::from(23);
+  /// let (acc, proof1) = acc.add(&[prime1]);
+  ///
+  /// let prime2 = Integer::from(29);
+  /// let (acc, proof2) = acc.add(&[prime2]);
+  ///
+  /// let
+  /// ```
+  ///
+  /// # Return value
+  ///
+  /// Returns a tuple `(acc, proof)` of the new accumulator state and a proof that
+  /// can be verified with `verify_membership`.
+  ///
+  /// # Remarks
+  ///
   /// Uses a divide-and-conquer approach to running the ShamirTrick, which keeps the average input
   /// smaller: For `[a, b, c, d]` do `S(S(a, b), S(c, d))` instead of `S(S(S(a, b), c), d)`.
-  // Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
-  // state.
+  ///
+  /// Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
+  /// state.
   pub fn delete(
     self,
     elem_witnesses: &[(Integer, Self)],
