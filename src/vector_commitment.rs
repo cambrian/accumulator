@@ -6,16 +6,24 @@ use rug::Integer;
 use std::collections::HashSet;
 
 #[derive(Debug)]
+/// Enum for different types of vector commitment errors.
 pub enum VCError {
+  /// When there are conflicting indices in the vector commitment
   ConflictingIndices,
+
+  /// When an opening fails.
   InvalidOpen,
+
+  /// Unexpected state during an update.Box
   UnexpectedState,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
+/// Struct for a vector commitment.  Wraps an accumulator.
 pub struct VectorCommitment<G: UnknownOrderGroup>(Accumulator<G>);
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
+/// Struct for a vector proof.
 pub struct VectorProof<G: UnknownOrderGroup> {
   membership_proof: MembershipProof<G>,
   nonmembership_proof: NonmembershipProof<G>,
@@ -39,11 +47,19 @@ fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Int
 }
 
 impl<G: UnknownOrderGroup> VectorCommitment<G> {
+  /// Initializes a new vector commitment.
   pub fn setup() -> Self {
     VectorCommitment(Accumulator::<G>::new())
   }
 
-  // Uses a move instead of a `&self` reference to prevent accidental use of the old vc state.
+  /// Updates a vector commitment with a list of values and positions.
+  ///
+  /// # Arguments
+  ///
+  /// * `vc_acc_set` - Slice of
+  /// * `bits` -
+  ///
+  ///  Uses a move instead of a `&self` reference to prevent accidental use of the old vc state.
   pub fn update(
     vc: Self,
     vc_acc_set: &[Integer],
@@ -64,6 +80,13 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     ))
   }
 
+  /// Opens a commitment.
+  ///
+  /// # Arguments
+  /// * `vc_ac_set` -
+  /// * `zero_bits` -
+  /// * `one_bit_witnesses` -
+  ///
   pub fn open(
     vc: &Self,
     vc_acc_set: &[Integer],
@@ -89,6 +112,12 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     })
   }
 
+  /// Verifies  a commitment.
+  ///
+  /// # Arguments
+  ///
+  /// * `bits`
+  /// * `VectorProof`
   pub fn verify(
     vc: &Self,
     bits: &[(bool, Integer)],
