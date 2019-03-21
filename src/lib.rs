@@ -26,6 +26,12 @@
 //! mathematics behind accumulators, see _Batching Techniques for Accumulators with
 //! Applications to IOPs and Stateless Blockchains_ by Boneh, Bünz, and Fisch.
 //!
+//! # What is a vector commitment?
+//!
+//! A vector commitment is like an accumulator, except that they are position binding.  In other
+//! words, not only can you claim an element has been accumulated, but you can claim at what
+//! _position_ it has been accumulated.
+//!
 //! # Examples
 //!
 //! Correct Usage:
@@ -109,7 +115,6 @@ extern crate arrayref;
 mod accumulator;
 pub use accumulator::*;
 
-#[allow(missing_docs)]
 mod vector_commitment;
 pub use vector_commitment::*;
 
