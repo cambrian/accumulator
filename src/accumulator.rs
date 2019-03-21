@@ -68,8 +68,11 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
 
   // The conciseness of `accumulator.add()` and low probability of confusion with implementations of
   // the `Add` trait probably justify this...
-  #[allow(clippy::should_implement_trait)]
+
   /// Adds elements to the accumulator.
+  ///
+  /// Uses a move instead of a `&self` reference to prevent accidental use of the
+  /// old accumulator state.
   ///
   /// # Arguments
   ///
@@ -96,9 +99,7 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   ///
   /// Cannot check whether the elements are coprime with the
   /// accumulator, but it is up to clients to either ensure uniqueness or treat this as multiset.
-  ///
-  /// Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator
-  /// state.
+  #[allow(clippy::should_implement_trait)]
   pub fn add(self, elems: &[Integer]) -> (Self, MembershipProof<G>) {
     let x = elems.iter().product();
     let acc_new = G::exp(&self.0, &x);
@@ -123,21 +124,16 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// # Examples
   ///
   /// ```
-  /// let acc = Accumulator::new();
+  /// let acc = Accumulator::<Rsa2048>::new();
   ///
   /// let prime1 = Integer::from(23);
-  /// let (acc, proof1) = acc.add(&[prime1]);
+  /// let (acc, _) = acc.add(&[prime1]);
   ///
   /// let prime2 = Integer::from(29);
-  /// let (acc, proof2) = acc.add(&[prime2]);
+  /// let (acc, proof2) = acc.add(&[prime2.clone()]);
   ///
-  /// let
+  /// let (acc, _) = acc.delete(&[(prime2, proof2.witness)]).unwrap();
   /// ```
-  ///
-  /// # Return value
-  ///
-  /// Returns a tuple `(acc, proof)` of the new accumulator state and a proof that
-  /// can be verified with `verify_membership`.
   ///
   /// # Remarks
   ///
@@ -178,6 +174,12 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   /// Returns a proof (and associated variables) that `elem_witnesses` are aggregated in `acc`.
+  ///
+  /// # Arguments
+  ///
+  /// * `elem_witnesses` - A slice of pairs (`elem`, `witness`), where `elem` is a Rug Integer
+  /// and `witness` is the `witness` field of a proof that `elem` was
+  /// accumulated in the first place.
   pub fn prove_membership(
     &self,
     elem_witnesses: &[(Integer, Self)],
@@ -186,6 +188,24 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   }
 
   /// Verifies the PoE returned by `prove_membership`.
+  ///
+  /// # Arguments
+  ///
+  /// * `elems` - A slice of Rug Integers to verify.
+  /// * `{ witness, proof }` - a proof of exponentiation struct returned by `prove_membership`.
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// let acc = Accumulator::<ClassGroup>::new();
+  /// let new_elems = [Integer::from(5), Integer::from(7), Integer::from(11)];
+  /// let (acc_new, proof) = acc.add(&new_elems);
+  /// if acc_new.verify_membership(&new_elems, &proof)) {
+  ///   // Things look as expected.
+  /// } else {
+  ///   // Something horribly wrong occurred.
+  /// }
+  /// ```
   pub fn verify_membership(
     &self,
     elems: &[Integer],
@@ -195,7 +215,34 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Poe::verify(&witness.0, &exp, &self.0, proof)
   }
 
-  /// Updates a membership witness for some set. See Section 4.2 in the Li, Li, Xue paper.
+  /// Updates a membership witness for some set.
+  ///
+  /// See Section 4.2 in the _Universal Accumulators with Efficient NonmembershipProofs_
+  /// by Li, Li, and Xue.
+  ///
+  /// # Arguments
+  ///
+  /// * `acc_new`
+  /// * `witness_set`
+  /// * `untracked_additions`
+  /// * `untracked_deletions` -
+  ///
+  /// # Example
+  ///
+  /// ```
+  ///  // Original accumulator has [3, 7, 11, 17].
+  ///  // Witness is tracking elements [11, 13] and eventually [7].
+  /// let acc_new = Accumulator::<ClassGroup>::new()
+  ///   .add(&[Integer::from(3), Integer::from(7), Integer::from(11), Integer::from(17)])
+  ///   .0;
+  ///
+  /// let witness = Accumulator::<ClassGroup>::new().add(&[Integer::from(11), Integer::from(13)]).0;
+  /// let witness_new = witness
+  ///   .update_membership_witness(&acc_new, &[Integer::from(3), Integer::from(7)], &[Integer::from(17)], &[Integer::from(13)])
+  ///   .unwrap();
+  /// assert!(witness_new.add(&[Integer::from(3), Integer::from(7)]).0 == acc_new);
+  ///
+  /// ```
   pub fn update_membership_witness(
     self,
     acc_new: &Self,
@@ -221,7 +268,23 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     Ok(Accumulator(G::op(&w_to_b, &acc_new_to_a)))
   }
 
-  /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
+  /// Returns a proof (and associated variables) that some `elems` are not in `acc_set`.
+  ///
+  /// # Arguments
+  ///
+  /// * `acc_set` - A slice of Integers that have been accumulated.
+  /// * `elems` - A slice of Integers you want to prove are not in `acc_set`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// let acc_set = [Integer::from(41), Integer::from(67), Integer::from(89)];
+  /// let elems = [Integer::from(5), Integer::from(7), Integer::from(11)];
+  /// let proof = acc
+  ///   .prove_nonmembership(&acc_set, &elems)
+  ///   .expect("valid proof expected");
+  /// assert!(acc.verify_nonmembership(&elems, &proof));
+  /// ```
   pub fn prove_nonmembership(
     &self,
     acc_set: &[Integer],
@@ -251,7 +314,13 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
     })
   }
 
-  /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
+  /// Verifies the NonmembershipProof (PoKE2 and PoE) returned by `prove_nonmembership`.
+  ///
+  /// # Arguments
+  ///
+  /// * `elems` - Slice of Integers claimed to not be part of some set.
+  /// * `NonmembershipProof` - The output of `prove_nonmembership`.
+  ///
   pub fn verify_nonmembership(
     &self,
     elems: &[Integer],
@@ -270,6 +339,11 @@ impl<G: UnknownOrderGroup> Accumulator<G> {
   /// For accumulator with value `g` and elems `[x_1, ..., x_n]`, computes a membership witness for
   /// each `x_i` in accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N
   /// log N) time.
+  ///
+  /// # Arguments
+  ///
+  /// * `hashes`
+  /// * `elems`
   pub fn root_factor<T>(&self, hashes: &[Integer], elems: &[T]) -> Vec<(T, Self)>
   where
     T: Clone,
