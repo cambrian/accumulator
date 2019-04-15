@@ -1,7 +1,6 @@
 //! Vector commitment library, built on a generic group interface. WIP.
-use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof};
+use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof, Witness};
 use crate::group::UnknownOrderGroup;
-use crate::hash::hash_to_prime;
 use rug::Integer;
 use std::collections::HashSet;
 
@@ -12,13 +11,14 @@ pub enum VCError {
   UnexpectedState,
 }
 
+// Represented internally by an accumulator of indices where the corresponding bit == 1.
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub struct VectorCommitment<G: UnknownOrderGroup>(Accumulator<G>);
+pub struct VectorCommitment<G: UnknownOrderGroup>(Accumulator<G, Integer>);
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct VectorProof<G: UnknownOrderGroup> {
-  membership_proof: MembershipProof<G>,
-  nonmembership_proof: NonmembershipProof<G>,
+  membership_proof: MembershipProof<G, Integer>,
+  nonmembership_proof: NonmembershipProof<G, Integer>,
 }
 
 fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Integer>), VCError> {
@@ -30,17 +30,17 @@ fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Int
       return Err(VCError::ConflictingIndices);
     }
     if *bit {
-      elems_with_one.push(hash_to_prime(&i));
+      elems_with_one.push(i.clone());
     } else {
-      elems_with_zero.push(hash_to_prime(&i));
+      elems_with_zero.push(i.clone());
     }
   }
   Ok((elems_with_zero, elems_with_one))
 }
 
 impl<G: UnknownOrderGroup> VectorCommitment<G> {
-  pub fn setup() -> Self {
-    VectorCommitment(Accumulator::<G>::new())
+  pub fn empty() -> Self {
+    VectorCommitment(Accumulator::<G, Integer>::empty())
   }
 
   // Uses a move instead of a `&self` reference to prevent accidental use of the old vc state.
@@ -51,7 +51,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
   ) -> Result<(Self, VectorProof<G>), VCError> {
     // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
     let (elems_with_zero, elems_with_one) = group_elems_by_bit(&bits)?;
-    let (new_acc, membership_proof) = vc.0.add(&elems_with_one);
+    let (new_acc, membership_proof) = vc.0.add_with_proof(&elems_with_one);
     let nonmembership_proof = new_acc
       .prove_nonmembership(vc_acc_set, &elems_with_zero)
       .map_err(|_| VCError::UnexpectedState)?;
@@ -68,20 +68,15 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     vc: &Self,
     vc_acc_set: &[Integer],
     zero_bits: &[Integer],
-    one_bit_witnesses: &[(Integer, Accumulator<G>)],
+    one_bit_witnesses: &[(Integer, Witness<G, Integer>)],
   ) -> Result<VectorProof<G>, VCError> {
-    let elems_with_zero: Vec<Integer> = zero_bits.iter().map(|i| hash_to_prime(&i)).collect();
-    let elem_witnesses_with_one: Vec<(Integer, Accumulator<G>)> = one_bit_witnesses
-      .iter()
-      .map(|(i, witness)| (hash_to_prime(&i), witness.clone()))
-      .collect();
     let membership_proof = vc
       .0
-      .prove_membership(&elem_witnesses_with_one)
+      .prove_membership(one_bit_witnesses)
       .map_err(|_| VCError::InvalidOpen)?;
     let nonmembership_proof = vc
       .0
-      .prove_nonmembership(vc_acc_set, &elems_with_zero)
+      .prove_nonmembership(vc_acc_set, zero_bits)
       .map_err(|_| VCError::InvalidOpen)?;
     Ok(VectorProof {
       membership_proof,
@@ -102,7 +97,9 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
       return false;
     }
     let (elems_with_zero, elems_with_one) = group_result.unwrap();
-    let verified_membership = vc.0.verify_membership(&elems_with_one, membership_proof);
+    let verified_membership = vc
+      .0
+      .verify_aggregate_membership(&elems_with_one, membership_proof);
     let verified_nonmembership = vc
       .0
       .verify_nonmembership(&elems_with_zero, nonmembership_proof);

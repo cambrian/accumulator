@@ -1,6 +1,8 @@
 //! Miscellaneous functions commonly used throughout the library.
 use crate::group::Group;
+use crate::hash::hash_to_prime;
 use rug::Integer;
+use std::hash::Hash;
 
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
@@ -14,6 +16,10 @@ where
   Integer: From<T>,
 {
   Integer::from(val)
+}
+
+pub fn prime_hash_product<T: Hash>(ts: &[T]) -> Integer {
+  ts.iter().map(hash_to_prime).product()
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.

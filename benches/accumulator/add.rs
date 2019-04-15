@@ -10,35 +10,39 @@ use rand::Rng;
 use rug::Integer;
 
 fn bench_add<G: UnknownOrderGroup>(elems: &[Integer]) {
-  let acc = Accumulator::<G>::new();
+  let acc = Accumulator::<G, Integer>::empty();
   acc.add(elems);
 }
 
 fn bench_verify<G: UnknownOrderGroup>(
-  acc: &Accumulator<G>,
+  acc: &Accumulator<G, Integer>,
   elems: &[Integer],
-  proof: &MembershipProof<G>,
+  proof: &MembershipProof<G, Integer>,
 ) {
-  assert!(acc.verify_membership(elems, proof));
+  assert!(acc.verify_aggregate_membership(elems, proof));
 }
 
 #[allow(dead_code)]
 fn bench_iterative_add(elems: &[Integer]) {
-  let mut acc = Accumulator::<Rsa2048>::new();
+  let mut acc = Accumulator::<Rsa2048, Integer>::empty();
   for elem in elems.chunks(1) {
-    acc = acc.add(elem).0;
+    acc = acc.add(elem);
   }
 }
 
-fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<Integer>) {
+fn init_acc<G: UnknownOrderGroup>() -> (
+  Accumulator<G, Integer>,
+  MembershipProof<G, Integer>,
+  Vec<Integer>,
+) {
   let mut elems = Vec::new();
   for _ in 0..100 {
     let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
     let prime = hash_to_prime(&random_bytes);
     elems.push(prime);
   }
-  let acc = Accumulator::<G>::new();
-  let (mut acc, mut proof) = acc.clone().add(&elems);
+  let acc = Accumulator::<G, Integer>::empty();
+  let (mut acc, mut proof) = acc.clone().add_with_proof(&elems);
   for _ in 0..100 {
     elems = vec![];
     for _ in 0..100 {
@@ -46,7 +50,7 @@ fn init_acc<G: UnknownOrderGroup>() -> (Accumulator<G>, MembershipProof<G>, Vec<
       let prime = hash_to_prime(&random_bytes);
       elems.push(prime);
     }
-    let (curr_acc, curr_proof) = acc.add(&elems);
+    let (curr_acc, curr_proof) = acc.add_with_proof(&elems);
     acc = curr_acc;
     proof = curr_proof;
   }
