@@ -7,10 +7,14 @@ use std::hash::Hash;
 /// Poor man's type-level programming.
 /// This trait allows us to reflect "type-level" (i.e. static) information at runtime.
 pub trait TypeRep: 'static {
+  /// The associated type of the simulated type-level static information.
   type Rep: 'static;
+
+  /// Returns the static data for the type.
   fn rep() -> &'static Self::Rep;
 }
 
+/// Convenience wrapper for creating Rug Integers.
 pub fn int<T>(val: T) -> Integer
 where
   Integer: From<T>,
@@ -23,7 +27,7 @@ pub fn prime_hash_product<T: Hash>(ts: &[T]) -> Integer {
 }
 
 /// Computes the `(xy)`th root of `g` given the `x`th and `y`th roots of `g` and `(x, y)` coprime.
-/// Consider moving this to accumulator?
+// TODO: Consider moving this to accumulator?
 #[allow(clippy::similar_names)]
 pub fn shamir_trick<G: Group>(
   xth_root: &G::Elem,
@@ -44,8 +48,8 @@ pub fn shamir_trick<G: Group>(
   Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
 }
 
-// Solve a linear congruence of form `ax = b mod m` for the set of solutions x,
-// characterized by integers mu and v such that x = mu + vn where n is any integer.
+/// Solve a linear congruence of form `ax = b mod m` for the set of solutions x,
+/// characterized by integers mu and v such that x = mu + vn where n is any integer.
 pub fn solve_linear_congruence(
   a: &Integer,
   b: &Integer,

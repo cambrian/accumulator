@@ -11,6 +11,7 @@ use std::hash::{Hash, Hasher};
 
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// Ristretto group implementation.
 pub enum Ristretto {}
 
 lazy_static! {
@@ -28,12 +29,13 @@ impl Ristretto {
   }
 }
 
-/// REVIEW: Ideally we'd just use `RistrettoPoint` here, but only traits defined in this crate can
-/// be implemented for arbitrary types. How to fix without wrapping?
-///
-/// It may make sense to fork curve25519-dalek to add the `Hash` impl. Then we won't need to wrap.
+// REVIEW: Ideally we'd just use `RistrettoPoint` here, but only traits defined in this crate can
+// be implemented for arbitrary types. How to fix without wrapping?
+//
+// It may make sense to fork curve25519-dalek to add the `Hash` impl. Then we won't need to wrap.
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// Ristretto group element.  Thin wrapper around a ristretto point.
 pub struct RistrettoElem(RistrettoPoint);
 
 #[allow(clippy::derive_hash_xor_eq)]

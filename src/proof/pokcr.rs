@@ -4,17 +4,25 @@ use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
+/// Struct for Proof of Knowledge of Co-prime roots.
+///
+/// See page 15 in _Batching Techniques for Accumulators
+/// with Applications to IOPs and Stateless Blockchains_.
 pub struct Pokcr<G: Group> {
   w: G::Elem,
 }
 
 impl<G: Group> Pokcr<G> {
+  /// See page 15 in _Batching Techniques for Accumulators
+  /// with Applications to IOPs and Stateless Blockchains_.
   pub fn prove(witnesses: &[G::Elem]) -> Self {
     Self {
       w: witnesses.iter().fold(G::id(), |a, b| G::op(&a, b)),
     }
   }
 
+  /// See page 15 in _Batching Techniques for Accumulators
+  /// with Applications to IOPs and Stateless Blockchains_.
   pub fn verify(alphas: &[G::Elem], x: &[Integer], proof: &Self) -> bool {
     let y = multi_exp::<G>(alphas, x);
     let lhs = G::exp(&proof.w, &x.iter().product());

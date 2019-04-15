@@ -1,4 +1,7 @@
-//! Class Group implementation
+//! Fixed-discriminant implementation of a form class group, with optimizations.
+//!
+//! Using a class group instead of an RSA group for accumulators or vector commitements eliminates
+//! the need for a trusted setup at the expense of slower operations.
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{int, TypeRep};
@@ -8,6 +11,8 @@ use std::str::FromStr;
 
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// Class Group implementation, with optimizations available with the
+/// `--features` flag.
 pub enum ClassGroup {}
 
 // 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
@@ -30,6 +35,8 @@ lazy_static! {
 
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, Eq)]
+/// A class group element.  A wrapper around three Rug integers. You should not
+/// ever need to construct a class group element yourself.
 pub struct ClassElem {
   a: Integer,
   b: Integer,
@@ -39,8 +46,7 @@ pub struct ClassElem {
 // `ClassElem` and `ClassGroup` ops based on Chia's fantastic doc explaining applied class groups:
 // https://github.com/Chia-Network/vdf-competition/blob/master/classgroups.pdf.
 impl ClassGroup {
-  /// This fn is public for benchmarking purposes. Prefer `ClassGroup::elem((a, b, c))` for
-  /// constructing `ClassElem`s.
+  /// This method is only public for benchmarking. You should not need to use it.
   pub fn normalize(a: Integer, b: Integer, c: Integer) -> (Integer, Integer, Integer) {
     if Self::is_normal(&a, &b, &c) {
       return (a, b, c);
@@ -53,9 +59,10 @@ impl ClassGroup {
     (a, new_b, new_c)
   }
 
-  /// Does not return a ClassElem because the output is not guaranteed to be valid for all inputs.
-  /// This fn is public for benchmarking purposes. Prefer ClassGroup::elem((a, b, c)) for
-  /// constructing ClassElems.
+  /// This method is public for benchmarking. You should not need to use it.
+
+  // Note: Does not return a ClassElem because the output is not guaranteed to be
+  // a valid ClassElem for all inputs.
   pub fn reduce(mut a: Integer, mut b: Integer, mut c: Integer) -> (Integer, Integer, Integer) {
     while !Self::is_reduced(&a, &b, &c) {
       // s = floor_div(c + b, 2c)
@@ -72,6 +79,7 @@ impl ClassGroup {
   }
 
   #[allow(non_snake_case)]
+  /// This method is public for benchmarking purposes. You should not need to use it.
   pub fn square(x: &ClassElem) -> ClassElem {
     // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n.
     let (mu, _) = util::solve_linear_congruence(&x.b, &x.c, &x.a).unwrap();
@@ -82,9 +90,7 @@ impl ClassGroup {
     // C = mu^2 - tmp
     let a = int(x.a.square_ref());
     let b = &x.b - int(2 * &x.a) * &mu;
-    let (tmp, _) = <(Integer, Integer)>::from(
-      int((&x.b * &mu) - &x.c).div_rem_floor_ref(&x.a),
-    );
+    let (tmp, _) = <(Integer, Integer)>::from(int((&x.b * &mu) - &x.c).div_rem_floor_ref(&x.a));
     let c = mu.square() - tmp;
 
     Self::elem((a, b, c))
@@ -159,8 +165,7 @@ impl Group for ClassGroup {
     // m = (tuk - hu - cs) / st
     let k = &mu + int(&v * &lambda);
     let (l, _) = <(Integer, Integer)>::from((int(&k * &t) - &h).div_rem_floor_ref(&s));
-    let (m, _) =
-      (int(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(int(&s * &t));
+    let (m, _) = (int(&t * &u) * &k - &h * &u - &x.c * &s).div_rem_floor(int(&s * &t));
 
     // A = st
     // B = ju - kt + ls
@@ -460,11 +465,15 @@ mod tests {
     );
 
     let (a, b, c) = ClassGroup::reduce(to_reduce.a, to_reduce.b, to_reduce.c);
-    assert_eq!(ClassElem {a, b, c}, reduced_ground_truth.clone());
+    assert_eq!(ClassElem { a, b, c }, reduced_ground_truth.clone());
 
     let reduced_ground_truth_ = reduced_ground_truth.clone();
-    let (a, b, c) = ClassGroup::reduce(reduced_ground_truth_.a, reduced_ground_truth_.b, reduced_ground_truth_.c);
-    assert_eq!(ClassElem {a, b, c}, reduced_ground_truth);
+    let (a, b, c) = ClassGroup::reduce(
+      reduced_ground_truth_.a,
+      reduced_ground_truth_.b,
+      reduced_ground_truth_.c,
+    );
+    assert_eq!(ClassElem { a, b, c }, reduced_ground_truth);
   }
 
   #[test]
@@ -496,7 +505,7 @@ mod tests {
     );
 
     let (a, b, c) = ClassGroup::normalize(unnormalized.a, unnormalized.b, unnormalized.c);
-    assert_eq!(normalized_ground_truth, ClassElem {a, b, c});
+    assert_eq!(normalized_ground_truth, ClassElem { a, b, c });
   }
 
   #[test]
@@ -504,7 +513,10 @@ mod tests {
   // working correctly.
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
-    assert_eq!(ClassGroup::discriminant(&g.a, &g.b, &g.c), *ClassGroup::rep());
+    assert_eq!(
+      ClassGroup::discriminant(&g.a, &g.b, &g.c),
+      *ClassGroup::rep()
+    );
   }
 
   #[test]
@@ -632,7 +644,11 @@ mod tests {
       for elem in &gs {
         if elem != g_elem {
           curr_prod = ClassGroup::op(&curr_prod, &elem);
-          assert!(ClassGroup::validate(&curr_prod.a, &curr_prod.b, &curr_prod.c));
+          assert!(ClassGroup::validate(
+            &curr_prod.a,
+            &curr_prod.b,
+            &curr_prod.c
+          ));
         }
       }
       assert_eq!(ClassGroup::id(), ClassGroup::op(&g_inv, &g_elem));

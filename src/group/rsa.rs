@@ -6,6 +6,8 @@ use std::str::FromStr;
 
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// RSA-2048 group implementation. Modulus taken
+/// from [here](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
 pub enum Rsa2048 {}
 
 /// RSA-2048 modulus, taken from [Wikipedia](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
@@ -25,6 +27,7 @@ lazy_static! {
 
 #[allow(clippy::stutter)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// RSA 2048 group element. A thin wrapper around a Rug integer.
 pub struct Rsa2048Elem(Integer);
 
 impl TypeRep for Rsa2048 {

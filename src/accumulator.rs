@@ -8,17 +8,28 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 
 #[derive(Debug)]
+/// Enum for different types of accumulator errors.
 pub enum AccError {
+  /// Bad witness.
   BadWitness,
+
+  /// Error when updating a witness.
   BadWitnessUpdate,
+
+  /// Division by zero.
   DivisionByZero,
+
+  /// Inexact division where exact division is expected.
   InexactDivision,
+
+  /// Inputs not coprime when they are expected to be coprime.
   InputsNotCoprime,
 }
 
 // See https://doc.rust-lang.org/std/marker/struct.PhantomData.html#ownership-and-the-drop-check
 // for recommendations re phantom types.
 #[derive(PartialEq, Eq, Debug, Hash)]
+/// Struct for a cryptographic accumulator. Wraps a single unknown order group element.
 pub struct Accumulator<G: UnknownOrderGroup, T: Hash> {
   phantom: PhantomData<*const T>,
   value: G::Elem,
@@ -252,7 +263,23 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     }))
   }
 
-  /// Returns a proof (and associated variables) that `elems` are not in `acc_set`.
+  /// Returns a proof (and associated variables) that some `elems` are not in `acc_set`.
+  ///
+  /// # Arguments
+  ///
+  /// * `acc_set` - A slice of Integers that have been accumulated.
+  /// * `elems` - A slice of Integers you want to prove are not in `acc_set`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// let acc_set = [Integer::from(41), Integer::from(67), Integer::from(89)];
+  /// let elems = [Integer::from(5), Integer::from(7), Integer::from(11)];
+  /// let proof = acc
+  ///   .prove_nonmembership(&acc_set, &elems)
+  ///   .expect("valid proof expected");
+  /// assert!(acc.verify_nonmembership(&elems, &proof));
+  /// ```
   pub fn prove_nonmembership(
     &self,
     acc_set: &[T],
@@ -283,7 +310,13 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     })
   }
 
-  /// Verifies the PoKE2 and PoE returned by `prove_nonmembership`.
+  /// Verifies the NonmembershipProof (PoKE2 and PoE) returned by `prove_nonmembership`.
+  ///
+  /// # Arguments
+  ///
+  /// * `elems` - Slice of Integers claimed to not be part of some set.
+  /// * `NonmembershipProof` - The output of `prove_nonmembership`.
+  ///
   pub fn verify_nonmembership(
     &self,
     elems: &[T],

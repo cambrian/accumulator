@@ -17,23 +17,43 @@ pub use ristretto::{Ristretto, RistrettoElem};
 mod rsa;
 pub use rsa::{Rsa2048, Rsa2048Elem};
 
-/// We avoid having to pass group objects around by using the `TypeRep` trait.
+/// Trait for Group operations.
 ///
-/// The other traits are only required here because Rust can't figure out how to do stuff with an
-/// `Accumulator<G>` even though it's just a wrapped `G::Elem`. If possible we'd remove them.
+/// This trait allows the implementation of standard group routines:
+/// - Op
+/// - Squaring
+/// - Exponentiation
+/// - Identity
+/// - Inverse
+///
+/// The `TypeRep` trait lets us emulate type-level static fields, e.g., the
+/// modulus in an RSA group or the discriminant in a class group.
+///
+/// Implementors of this trait need to implement functions of the form `*_`, which
+/// take in `TypeRep` data as a parameter. Consumers use functions without the underscore,
+/// `id`, `op`, `exp`, and `inv`.
+
+// The other traits are only required here because Rust can't figure out how to do stuff with an
+// `Accumulator<G>` even though it's just a wrapped `G::Elem`. If possible we'd remove them.
 pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
-  /// In theory the association `Group::Elem` is bijective, such that it makes sense to write
-  /// something like `Elem::Group::get()`. This would let us define `op`, `exp`, `inv`, etc. on the
-  /// `Elem` type and avoid using prefix notation for all of our group operations.
-  /// But AFAIK bijective associated types are not supported by Rust.
+  // In theory the association `Group::Elem` is bijective, such that it makes sense to write
+  // something like `Elem::Group::get()`. This would let us define `op`, `exp`, `inv`, etc. on the
+  //`Elem` type and avoid using prefix notation for all of our group operations.
+  // But AFAIK bijective associated types are not supported by Rust.
+
+  /// The associated group element type for this group.
   type Elem: Clone + Debug + Eq + Hash + Sized + Send + Sync;
 
+  /// This method is a group-specific wrapper for `id`.
   fn id_(rep: &Self::Rep) -> Self::Elem;
 
+  /// This method is a group-specific wrapper for `op`.
   fn op_(rep: &Self::Rep, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
 
-  /// Default implementation of exponentiation via repeated squaring.
-  /// Implementations may provide more performant specializations
+  /// This method is a group-specific wrapper for `exp`, although it uses
+  /// a default implementation via repeated squarings.
+  ///
+  /// Specific implementations may provide more performant specializations as needed
   /// (e.g. Montgomery multiplication for RSA groups).
   fn exp_(_rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
     let (mut val, mut a, mut n) = {
@@ -53,46 +73,58 @@ pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
     val
   }
 
+  /// This method is a group-specific wrapper for `inv`.
   fn inv_(rep: &Self::Rep, a: &Self::Elem) -> Self::Elem;
 
   // -------------------
   // END OF REQUIRED FNS
   // -------------------
 
+  /// This method returns the identity element of the group.
   fn id() -> Self::Elem {
     Self::id_(Self::rep())
   }
 
+  /// This method applies the group operation to elements `a` and `b` and
+  /// returns the result.
   fn op(a: &Self::Elem, b: &Self::Elem) -> Self::Elem {
     Self::op_(Self::rep(), a, b)
   }
 
+  /// This method applies the group operation to `a` and itself `n` times and
+  /// returns the result.
   fn exp(a: &Self::Elem, n: &Integer) -> Self::Elem {
     Self::exp_(Self::rep(), a, n)
   }
 
+  /// Ths method returns the inverse of `a`.
   fn inv(a: &Self::Elem) -> Self::Elem {
     Self::inv_(Self::rep(), a)
   }
 }
 
+///
+///
 /// We use this to mean a group containing elements of unknown order, not necessarily that the group
 /// itself has unknown order. E.g. RSA groups.
 #[allow(clippy::stutter)]
 pub trait UnknownOrderGroup: Group {
-  /// E.g. 2, for RSA groups.
-  fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;
-
+  /// This method returns an element of unknown order in the group.
   fn unknown_order_elem() -> Self::Elem {
     Self::unknown_order_elem_(Self::rep())
   }
+
+  /// This method is an group-specific wrapper for `unknown_order_elem`.
+  fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;
 }
 
 /// Like `From<T>`, but implemented on the Group instead of the element type.
 pub trait ElemFrom<T>: Group {
+  /// Returns a group element from an initial value.
   fn elem(val: T) -> Self::Elem;
 }
 
+///
 pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   if alphas.len() == 1 {
     return alphas[0].clone();
