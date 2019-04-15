@@ -6,4 +6,5 @@ class group implementations) included!
 TODO.
 
 ## Contributing
-See `CONTRIBUTING.md`. We are looking for long-term maintainers!
+See [`CONTRIBUTING.md`](https://github.com/cambrian/accumulator/blob/master/CONTRIBUTING.md). We are
+looking for long-term maintainers!
