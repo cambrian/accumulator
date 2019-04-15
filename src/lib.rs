@@ -23,7 +23,7 @@ extern crate lazy_static;
 extern crate arrayref;
 
 mod accumulator;
-pub use accumulator::*;
+pub use crate::accumulator::*;
 mod vector_commitment;
 pub use vector_commitment::*;
 

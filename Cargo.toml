@@ -3,12 +3,12 @@ name = "accumulator"
 version = "0.1.1"
 edition = "2018"
 authors = [
-  "Pablo Aldape <pablo@cambrian.dev>",
-  "Lucas Ege <lucas@cambrian.dev>",
-  "Alan Flores-Lopez <alan@cambrian.dev>",
-  "Sanjay Kannan <sanjay@cambrian.dev>",
-  "Michael Straka <michael@cambrian.dev>",
-  "Eddie Wang <eddie@cambrian.dev>"
+  "Pablo Aldape <pablo.aldape@gmail.com>",
+  "Lucas Ege <egelucas@gmail.com>",
+  "Alan Flores-Lopez <alanf94@gmail.com>",
+  "Sanjay Kannan <whaatt@gmail.com>",
+  "Michael Straka <mstraka100@gmail.com>",
+  "Eddie Wang <eddiew@cs.stanford.edu>"
 ]
 description = "Cryptographic accumulators in Rust."
 keywords = ["cryptography", "crypto", "accumulator", "rsa", "vector", "commitment"]
@@ -19,12 +19,12 @@ repository = "https://github.com/1protocol/accumulator"
 arrayref = "0.3.5"
 blake2-rfc = "0.2.18"
 curve25519-dalek = "1.1.3"
-gmp-mpfr-sys = "1.1.11"
-lazy_static = "1.2.0"
+gmp-mpfr-sys = "1.1.12"
+lazy_static = "1.3.0"
 rug = "1.3.0"
 
 [dev-dependencies]
-criterion = "0.2.10"
+criterion = "0.2.11"
 rand = "0.6.5"
 
 [[bench]]
