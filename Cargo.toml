@@ -28,7 +28,7 @@ criterion = "0.2.11"
 rand = "0.6.5"
 
 [[bench]]
-name = "comparison"
+name = "rsa"
 path = "benches/group/rsa.rs"
 harness = false
 
@@ -85,3 +85,9 @@ debug = true
 # Flamegraph debug symbols. TODO: Remove when we actually cut releases?
 [profile.release]
 debug = true
+
+[features]
+
+# Optimizations for class group squaring.
+flint = []
+nudulp = []

@@ -11,7 +11,7 @@ use std::hash::Hash;
 use std::marker::Sized;
 
 mod class;
-pub use class::{ClassElem, ClassGroup};
+pub use class::ClassGroup;
 mod ristretto;
 pub use ristretto::{Ristretto, RistrettoElem};
 mod rsa;

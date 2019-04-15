@@ -27,8 +27,11 @@ pub use crate::accumulator::*;
 mod vector_commitment;
 pub use vector_commitment::*;
 
+#[macro_use]
+pub mod util;
+
 pub mod group;
 pub mod hash;
+pub mod num;
 pub mod proof;
 pub mod uint;
-pub mod util;
