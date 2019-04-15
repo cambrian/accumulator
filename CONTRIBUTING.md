@@ -11,17 +11,17 @@ Contributions are encouraged from anyone!
 1. Clone this repository.
 2. Run `./setup.sh` (if you already have the Rust toolchain installed, take a look at the setup
    script and add only the tools you are missing).
-3. Open VS Code and install the recommended extensions. **Note**: You are more than welcome to use
-   your favorite IDE, but the original authors of this library have found VS Code extremely handy.
+3. Open VS Code and install the recommended extensions. **Note**: You are welcome to use your
+   favorite IDE, but the original authors of this library have found VS Code extremely handy.
 4. Restart VS Code.
 
 ## Development
 - Leave `cargo watch -x "clippy -- -W clippy::pedantic"` running to type-check on save. Please
-  adhere to the `pedantic` option, as any contribution must pass those checks (without errors or
-  warnings) to be included.
+  adhere to the `pedantic` option in Clippy, as any contribution must pass those checks (without
+  errors or warnings) to be included.
 - Ensure that your code is formatted with `rustfmt`. If you use the recommended VS Code setup, this
   should happen whenever you save a file.
-- Write tests! The repository has many examples of tests; run `cargo test` early and often
+- Write tests! The repository has many examples of tests; run `cargo test` early and often.
 - The command `cargo bench` uses [Criterion](https://crates.io/crates/criterion) benchmarks.
 - When you are ready to submit your branch, create a pull request to `master`. A code owner will
   shepherd your PR through a review process prior to merge.
