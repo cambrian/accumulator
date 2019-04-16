@@ -92,7 +92,7 @@
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! This module wraps `blake2b_rfc` into a convenient hashing interface (`GeneralHasher`) and</span>
 <span class="doccomment">//! exports the generalized `hash` function. Also exported is `hash_to_prime`, which works by</span>
-<span class="doccomment">//! primality-testing the iterative outputs of `hash`.</span>
+<span class="doccomment">//! repeatedly `hash`ing a value together with an incrementing nonce until the output is prime.</span>
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">uint</span>::<span class="ident">u256</span>;
 <span class="kw">use</span> <span class="ident">rug</span>::<span class="ident">integer</span>::<span class="ident">Order</span>;
 <span class="kw">use</span> <span class="ident">rug</span>::<span class="ident">Integer</span>;

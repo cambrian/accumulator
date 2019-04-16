@@ -6,7 +6,7 @@ class group implementations) included!
 ```toml
 # Cargo.toml
 [dependencies]
-accumulator = { git = "https://github.com/cambrian/accumulator.git" }
+accumulator = { git = "https://github.com/cambrian/accumulator.git", tag = "v0.2.0" }
 ```
 
 ## Docs

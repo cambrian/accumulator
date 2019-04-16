@@ -5,20 +5,19 @@ redirect_from: "/index.html"
 Technologies <a href="https://github.com/cambrian/accumulator">[GitHub]</a>.</p>
 <p><strong>Disclaimer</strong>: This library is intended to be production-quality code, but it has not been
 independently-audited for correctness or tested to a critical degree. As such, please treat this
-library as <strong>research-grade</strong> for the near future.</p>
+library as <strong>research-grade</strong> for the time being.</p>
 <h1 id="important-note" class="section-header"><a href="#important-note">Important Note</a></h1>
-<p>In order to ensure correspondence between accumulator and set operations in your application
-you must ensure that <strong>no element is accumulated twice</strong>. In particular, deleting a doubly
-accumulated element will remove only one &quot;copy&quot; of it from the accumulator, meaning its
-membership can still be verified. Hence an accumulator without this invariant can essentially
-be viewed as a multiset.</p>
+<p>To ensure correspondence between accumulator and set operations in your application, you must
+ensure that <strong>no element is accumulated twice</strong>. In particular, deleting a doubly-accumulated
+element will remove only one &quot;copy&quot; of it from the accumulator, meaning that its membership can
+still be verified. Hence, an accumulator without this invariant can be viewed as a multiset.</p>
 <h1 id="what-is-an-accumulator" class="section-header"><a href="#what-is-an-accumulator">What is an accumulator?</a></h1>
 <p>An accumulator is a cryptographic primitive which functions essentially as a secure
 decentralized set. It allows parties to maintain consensus on a set of values via a
 <em>succinct binding commitment</em> as well as to issue <em>efficiently verifiable (non)membership
 proofs</em> for elements of interest, all without requiring any party to store the entire set.</p>
-<p>Similarly to a Merkle tree, the accumulator stores its commitment to state in constant space.
-A notable difference, however, is that its inclusion and exclusion proofs also take up constant
+<p>Similarly to a Merkle tree, the accumulator stores its state commitment in constant space. A
+notable difference, however, is that its inclusion and exclusion proofs also take up constant
 space, and can be verified in constant time. For a far more detailed discussion of accumulators
 as implemented here, see <em>Batching Techniques for Accumulators with Applications to IOPs and
 Stateless Blockchains</em> (Boneh, Bünz, and Fisch 2018)
@@ -28,10 +27,10 @@ Accumulators with Efficient Nonmembership Proofs</em> (Li, Li, Xue 2007)
 <a href="https://link.springer.com/content/pdf/10.1007/978-3-540-72738-5_17.pdf">[Link]</a>, abbreviated
 henceforth as <code>LLX</code>.</p>
 <h1 id="what-is-a-vector-commitment" class="section-header"><a href="#what-is-a-vector-commitment">What is a vector commitment?</a></h1>
-<p>A vector commitment (VC) is a closely related primitive, distinguished from an accumulator in
+<p>A vector commitment (VC) is a closely-related primitive, distinguished from an accumulator in
 that it provides a <em>position-binding</em> commitment to state. That is, a VC allows parties to
-prove or disprove that a certain element exists at a certain position.
-(Think VC : vector :: accumulator : set.)</p>
+prove or disprove that a certain element exists at a certain position.</p>
+<p>(Think VC : Vector :: Accumulator : Set.)</p>
 <p>Our vector commitment implementation is a work-in-progress (WIP), and should be treated with
 even more skepticism than our accumulators.</p>
 <h1 id="usage" class="section-header"><a href="#usage">Usage</a></h1>
@@ -53,7 +52,7 @@ even more skepticism than our accumulators.</p>
 <span class="comment">// ... and trying to verify something that has not been accumulated will fail.</span>
 <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">acc</span>.<span class="ident">verify_membership</span>(<span class="kw-2">&amp;</span><span class="string">&quot;cow&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>));</pre></div>
 <p>Typical users of this library will access public-facing routines on <code>accumulator</code> and
-<code>vector_commitment</code>. Howeer, we also export internal modules for useful traits, types (such as
+<code>vector_commitment</code>. However, we also export internal modules for useful traits, types (such as
 the <code>Rsa2048</code> group), and specialized procedures. <strong>Use internal components at your own risk</strong>.</p>
 <p>You can find a more interesting application of our library
 <a href="https://github.com/cambrian/accumulator-demo">here</a>, where we create a proof-of-concept for
@@ -79,7 +78,7 @@ works to drastically improve their performance using techniques learned from the
 structures, or standalone if you have a custom application.</p>
 </td></tr><tr class='module-item'><td><a class="mod" href="hash/index.html" title='accumulator::hash mod'>hash</a></td><td class='docblock-short'><p>This module wraps <code>blake2b_rfc</code> into a convenient hashing interface (<code>GeneralHasher</code>) and
 exports the generalized <code>hash</code> function. Also exported is <code>hash_to_prime</code>, which works by
-primality-testing the iterative outputs of <code>hash</code>.</p>
+repeatedly <code>hash</code>ing a value together with an incrementing nonce until the output is prime.</p>
 </td></tr><tr class='module-item'><td><a class="mod" href="proof/index.html" title='accumulator::proof mod'>proof</a></td><td class='docblock-short'><p>Succinct proofs over unknown-order groups. These proofs are used as building blocks for many of
 the cryptographic primitives in this library.</p>
 </td></tr><tr class='module-item'><td><a class="mod" href="uint/index.html" title='accumulator::uint mod'>uint</a></td><td class='docblock-short'><p>Zero-allocation U256 and U512 types built on GMP. We created this module specifically for our

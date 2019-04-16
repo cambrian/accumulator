@@ -3,15 +3,14 @@
 //!
 //! **Disclaimer**: This library is intended to be production-quality code, but it has not been
 //! independently-audited for correctness or tested to a critical degree. As such, please treat this
-//! library as **research-grade** for the near future.
+//! library as **research-grade** for the time being.
 //!
 //! # Important Note
 //!
-//! In order to ensure correspondence between accumulator and set operations in your application
-//! you must ensure that **no element is accumulated twice**. In particular, deleting a doubly
-//! accumulated element will remove only one "copy" of it from the accumulator, meaning its
-//! membership can still be verified. Hence an accumulator without this invariant can essentially
-//! be viewed as a multiset.
+//! To ensure correspondence between accumulator and set operations in your application, you must
+//! ensure that **no element is accumulated twice**. In particular, deleting a doubly-accumulated
+//! element will remove only one "copy" of it from the accumulator, meaning that its membership can
+//! still be verified. Hence, an accumulator without this invariant can be viewed as a multiset.
 //!
 //! # What is an accumulator?
 //!
@@ -20,8 +19,8 @@
 //! _succinct binding commitment_ as well as to issue _efficiently verifiable (non)membership
 //! proofs_ for elements of interest, all without requiring any party to store the entire set.
 //!
-//! Similarly to a Merkle tree, the accumulator stores its commitment to state in constant space.
-//! A notable difference, however, is that its inclusion and exclusion proofs also take up constant
+//! Similarly to a Merkle tree, the accumulator stores its state commitment in constant space. A
+//! notable difference, however, is that its inclusion and exclusion proofs also take up constant
 //! space, and can be verified in constant time. For a far more detailed discussion of accumulators
 //! as implemented here, see _Batching Techniques for Accumulators with Applications to IOPs and
 //! Stateless Blockchains_ (Boneh, Bünz, and Fisch 2018)
@@ -34,10 +33,11 @@
 //!
 //! # What is a vector commitment?
 //!
-//! A vector commitment (VC) is a closely related primitive, distinguished from an accumulator in
+//! A vector commitment (VC) is a closely-related primitive, distinguished from an accumulator in
 //! that it provides a _position-binding_ commitment to state. That is, a VC allows parties to
 //! prove or disprove that a certain element exists at a certain position.
-//! (Think VC : vector :: accumulator : set.)
+//!
+//! (Think VC : Vector :: Accumulator : Set.)
 //!
 //! Our vector commitment implementation is a work-in-progress (WIP), and should be treated with
 //! even more skepticism than our accumulators.

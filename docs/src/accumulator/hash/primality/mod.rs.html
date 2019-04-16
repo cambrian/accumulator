@@ -236,6 +236,9 @@
 <span id="236">236</span>
 <span id="237">237</span>
 <span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Primality testing for U256 inputs. Use `is_prob_prime` unless you have a specific reason to use</span>
 <span class="doccomment">//! a lower-level test.</span>
@@ -245,11 +248,14 @@
 <span class="kw">use</span> <span class="ident">constants</span>::{<span class="ident">D_VALUES</span>, <span class="ident">SMALL_PRIMES</span>};
 
 <span class="doccomment">/// Implements the Baillie-PSW probabilistic primality test, which is known to be deterministic over</span>
-<span class="doccomment">/// all integers up to 64 bits (u64). Offers more bang for your buck than Miller-Rabin (i.e.</span>
-<span class="doccomment">/// iterated Fermat tests of random base) at wide `n` since Fermat and Lucas pseudoprimes have been</span>
-<span class="doccomment">/// shown to be anticorrelated. Steps of BPSW are as follows:</span>
+<span class="doccomment">/// all integers up to 64 bits.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Outperforms naked Miller-Rabin (i.e. iterated Fermat tests of random base) at wide `n` since</span>
+<span class="doccomment">/// Fermat and Lucas pseudoprimes have been shown to be anticorrelated. Steps of BPSW are as</span>
+<span class="doccomment">/// follows:</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// 1. Accept small primes and reject multiples of them.</span>
-<span class="doccomment">/// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).</span>
+<span class="doccomment">/// 2. Do a single iteration of Miller-Rabin (in particular, a base-2 Fermat test).</span>
 <span class="doccomment">/// 3. Do a strong probabilistic Lucas test (squares filtered during test initialization).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_prob_prime</span>(<span class="ident">n</span>: <span class="kw-2">&amp;</span><span class="ident">U256</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
   <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">p</span> <span class="kw">in</span> <span class="ident">SMALL_PRIMES</span>.<span class="ident">iter</span>() {
@@ -260,7 +266,7 @@
   <span class="ident">passes_miller_rabin_base_2</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>) <span class="op">&amp;&amp;</span> <span class="ident">passes_lucas</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>)
 }
 
-<span class="doccomment">/// A single iteration of the Miller-Rabin test.</span>
+<span class="doccomment">/// A single iteration of the Miller-Rabin test (base-2 Fermat test).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">passes_miller_rabin_base_2</span>(<span class="ident">n</span>: <span class="kw-2">&amp;</span><span class="ident">U256</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
   <span class="kw">let</span> (<span class="ident">d</span>, <span class="ident">r</span>) <span class="op">=</span> (<span class="ident">n</span> <span class="op">-</span> <span class="number">1</span>).<span class="ident">remove_factor</span>(<span class="ident">u256</span>(<span class="number">2</span>));
   <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">u256</span>(<span class="number">2</span>).<span class="ident">pow_mod</span>(<span class="ident">d</span>, <span class="ident">n</span>);
