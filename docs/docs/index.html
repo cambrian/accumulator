@@ -47,7 +47,7 @@ treated with even more skepticism than our accumulators.</p>
 <span class="comment">// ... and trying to verify something that has not been accumulated will fail.</span>
 <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">acc</span>.<span class="ident">verify_membership</span>(<span class="kw-2">&amp;</span><span class="string">&quot;cow&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>));</pre></div>
 <p>Typical users of this library will access public-facing routines on <code>accumulator</code> and
-<code>vector_commitment</code>. Howeer, we also export internal modules for useful traits, types (such as
+<code>vector_commitment</code>. However, we also export internal modules for useful traits, types (such as
 the <code>Rsa2048</code> group), and specialized procedures. <strong>Use internal components at your own risk</strong>.</p>
 <p>You can find a more interesting application of our library
 <a href="https://github.com/cambrian/accumulator-demo">here</a>, where we create a proof-of-concept for
