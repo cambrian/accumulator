@@ -57,7 +57,7 @@
 //! ```
 //!
 //! Typical users of this library will access public-facing routines on `accumulator` and
-//! `vector_commitment`. Howeer, we also export internal modules for useful traits, types (such as
+//! `vector_commitment`. However, we also export internal modules for useful traits, types (such as
 //! the `Rsa2048` group), and specialized procedures. **Use internal components at your own risk**.
 //!
 //! You can find a more interesting application of our library
