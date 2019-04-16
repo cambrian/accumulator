@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Poe","Struct for NI-PoE."],["Pokcr","Struct for NI-PoKCR."],["Poke2","Struct for NI-PoKE2."]]});

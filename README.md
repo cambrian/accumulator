@@ -9,6 +9,14 @@ class group implementations) included!
 accumulator = { git = "https://github.com/cambrian/accumulator.git" }
 ```
 
+## Docs
+Available [here](https://cambrian.dev/accumulator/docs), and feel free to reach out with any
+questions.
+
+## Demo
+We have a [proof-of-concept](https://github.com/cambrian/accumulator-demo) for stateless Bitcoin
+nodes!
+
 ## Contributing
 Please see our
 [contribution guide](https://github.com/cambrian/accumulator/blob/master/CONTRIBUTING.md). We are
