@@ -33,7 +33,7 @@ pub enum AccError {
 /// A cryptographic accumulator. Wraps a single unknown-order group element and phantom data
 /// representing the type `T` being hashed-to-prime and accumulated.
 pub struct Accumulator<G: UnknownOrderGroup, T> {
-  phantom: PhantomData<*const T>,
+  phantom: PhantomData<T>,
   value: G::Elem,
 }
 
