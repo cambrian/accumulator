@@ -1,4 +1,4 @@
-//! Proof of Exponentiation. See page 16 of B&B. Allows efficient verification of group
+//! Proof of Exponentiation. See BBF (page 16). Allows efficient verification of group
 //! exponentiation when the exponent is larger than 2^256.
 use crate::group::Group;
 use crate::hash::hash_to_prime;
@@ -7,17 +7,15 @@ use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-/// Struct for Non-interactive Proof of Exponentiation (PoE).
+/// Struct for Non-interactive Proof of Exponentiation.
 ///
-/// See page 16 in _Batching Techniques for Accumulators
-/// with Applications to IOPs and Stateless Blockchains_ for details.
+/// See BBF (page 8) for details.
 pub struct Poe<G: Group> {
   Q: G::Elem,
 }
 
 impl<G: Group> Poe<G> {
-  /// See page 16 of _Batching Techniques for Accumulators
-  /// with Applications to IOPs and Stateless Blockchains_.
+  /// See BBF (page 8) for details.
   pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let l = hash_to_prime(&(base, exp, result));
     let q = exp / l;
@@ -26,8 +24,7 @@ impl<G: Group> Poe<G> {
     }
   }
 
-  /// See page 16 of _Batching Techniques for Accumulators
-  /// with Applications to IOPs and Stateless Blockchains_.
+  /// See BBF (page 8) for details.
   pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &Self) -> bool {
     let l = hash_to_prime(&(base, exp, result));
     let r = int(exp % &l);

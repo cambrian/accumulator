@@ -1,8 +1,11 @@
 //! Zero-allocation U256 and U512 types built on GMP. We created this module specifically for our
 //! use case of implementing primality checking for 256-bit integers, but it may be worth
 //! polishing a bit for more general use.
-//! Obviously there are a lot of unsafe {} blocks to work with GMP. Take care when using this module
+//!
+//! Obviously there are a lot of `unsafe` blocks to work with GMP. Take care when using this module
 //! because there may be bugs we did not catch.
+//!
+//! TODO: Benchmark our U256 vs. 256-bit `rug::Integer` vs. Parity U256.
 #![allow(clippy::cast_sign_loss)]
 
 use gmp_mpfr_sys::gmp;
@@ -19,7 +22,8 @@ macro_rules! u_types {
     $(
       #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
       pub struct $t {
-        // Size also denotes the sign of the number, while limbs reflect only the magnitude.
+        // Field `size` also denotes the sign of the number, while `limbs` reflect only the
+        // magnitude.
         // We keep size >= 0 except in very rare circumstances.
         size: i64,
         limbs: [u64; $size],
@@ -40,7 +44,8 @@ macro_rules! u_types {
           }
         }
 
-        // The cast from i64 to i32 is fine since |size| is <= 4 for U256, and <= 8 for U512.
+        // The cast from `i64` to `i32` is fine since |`size`| is <= 4 for `U256`, and <= 8 for
+        // `U512`.
         #[allow(clippy::cast_possible_truncation)]
         fn as_mpz(&self) -> mpz_t {
           mpz_t {
@@ -69,7 +74,7 @@ macro_rules! u_types {
         }
 
         #[allow(clippy::if_not_else)]
-        /// panics if m == 0.
+        /// Panics if `m == 0`.
         pub fn mod_inv(self, m: &Self) -> Option<Self> {
           let mut out = Self::zero();
           let outmpz = out.as_mpz();
@@ -85,7 +90,7 @@ macro_rules! u_types {
           }
         }
 
-        /// panics if m == 0.
+        /// Panics if `m == 0`.
         pub fn pow_mod(self, e: Self, m: &Self) -> Self {
           let mut out = Self::zero();
           let outmpz = out.as_mpz();
@@ -376,7 +381,7 @@ macro_rules! u_types {
           if x.size > self.size {
             return self;
           }
-          let (mut y, rem) = ($t::zero(), $t::zero());
+          let (mut y, rem) = (Self::zero(), Self::zero());
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -402,8 +407,8 @@ macro_rules! u_types {
       }
 
       impl From<$t> for Integer {
-        fn from(x: $t) -> Integer {
-          Integer::from_digits(&x.limbs, Order::Lsf)
+        fn from(x: $t) -> Self {
+          Self::from_digits(&x.limbs, Order::Lsf)
         }
       }
     )+
@@ -413,7 +418,7 @@ macro_rules! u_types {
 u_types!(U256, 4, U512, 8);
 
 impl U512 {
-  /// Returns the lower half of this U512 as a U256.
+  /// Returns the lower half of this `U512` as a `U256`.
   /// TODO: Make checked?
   pub fn low_u256(self) -> U256 {
     let mut x = unsafe { transmute::<Self, (U256, [u64; 4])>(self) }.0;
@@ -485,7 +490,7 @@ impl U256 {
   }
 }
 
-/// It turns out to be faster to provide multiplication as U256 * U256 -> U512, because it lets us
+/// It turns out to be faster to provide multiplication as `U256 * U256 -> U512`, because it lets us
 /// use `mpn_mul_n` instead of `mpn_mul`.
 impl ops::Mul<&Self> for U256 {
   type Output = U512;

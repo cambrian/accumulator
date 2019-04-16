@@ -26,6 +26,13 @@ Contributions are encouraged from anyone!
 - When you are ready to submit your branch, create a pull request to `master`. A code owner will
   shepherd your PR through a review process prior to merge.
 
+## Starting Points
+- Comments in the code labeled `REVIEW` or `TODO` need attention of some sort.
+- You are also welcome to triage and resolve
+  [issues](https://github.com/cambrian/accumulator/issues), particularly those labeled `good first
+  issue`.
+- So little time, so much [code to review](https://github.com/cambrian/accumulator/pulls)...
+
 ## Notes
 - This repository falls under the MIT License. Ensure that your contributions are MIT-compatible (or
   ask for help if you are not sure).

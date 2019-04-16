@@ -1,4 +1,4 @@
-//! Ristretto group implementation (cyclic subgroup of Ed25519).
+//! Ristretto group implementation (cyclic subgroup of `Ed25519`).
 use super::Group;
 use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -9,7 +9,7 @@ use rug::ops::Pow;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 
-#[allow(clippy::stutter)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// Ristretto group implementation.
 pub enum Ristretto {}
@@ -32,10 +32,10 @@ impl Ristretto {
 // REVIEW: Ideally we'd just use `RistrettoPoint` here, but only traits defined in this crate can
 // be implemented for arbitrary types. How to fix without wrapping?
 //
-// It may make sense to fork curve25519-dalek to add the `Hash` impl. Then we won't need to wrap.
-#[allow(clippy::stutter)]
+// It may make sense to fork `curve25519-dalek` to add the `Hash` impl. Then we won't need to wrap.
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-/// Ristretto group element.  Thin wrapper around a ristretto point.
+/// Ristretto group element. Thin wrapper around a Ristretto point.
 pub struct RistrettoElem(RistrettoPoint);
 
 #[allow(clippy::derive_hash_xor_eq)]

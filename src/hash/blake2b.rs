@@ -9,7 +9,7 @@ pub struct Blake2b(pub Blake2b_);
 impl Default for Blake2b {
   fn default() -> Self {
     // 32 bytes = 256 bits
-    Blake2b(Blake2b_::new(32))
+    Self(Blake2b_::new(32))
   }
 }
 

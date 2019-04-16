@@ -1,5 +1,6 @@
 //! This module wraps `blake2b_rfc` into a convenient hashing interface (`GeneralHasher`) and
-//! exports the `hash` function is optimized to produce 256-bit primes.
+//! exports the generalized `hash` function. Also exported is `hash_to_prime`, which works by
+//! primality-testing the iterative outputs of `hash`.
 use crate::uint::u256;
 use rug::integer::Order;
 use rug::Integer;
@@ -17,7 +18,6 @@ pub trait GeneralHasher: Hasher {
   fn finalize(self) -> Self::Output;
 }
 
-//
 // Note: We explicitly pass in the hasher constructor so we don't have to specify its type via
 // generics. Rust has poor support for type applications, so if we wanted to pass `H` at the
 // type-level, we'd need to fully specify `T` as well, which is a pain in the ass.
@@ -30,8 +30,7 @@ pub trait GeneralHasher: Hasher {
 
 /// Hash using the general Hasher.
 ///
-/// This function takes in the hash constructor as an
-/// argument for convenience.
+/// This function takes in the hash constructor as an argument for convenience.
 pub fn hash<H: GeneralHasher, T: Hash + ?Sized>(new_hasher: &Fn() -> H, t: &T) -> H::Output {
   let mut h = new_hasher();
   t.hash(&mut h);
@@ -45,9 +44,11 @@ pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
 
 /// Hashes `t` to an odd prime.
 ///
-/// Uses Blake2b as the hash function. Hashes with a counter until a prime is
-/// found. This function is optimized for 256-bit integers.
-#[allow(clippy::stutter)]
+/// Uses `Blake2b` as the hash function, and hashes with a counter until a prime is found via
+/// probabilistic primality checking.
+///
+/// This function is optimized for 256-bit integers.
+#[allow(clippy::module_name_repetitions)]
 pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
   let mut counter = 0_u64;
   loop {

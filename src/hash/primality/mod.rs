@@ -7,11 +7,11 @@ use constants::{D_VALUES, SMALL_PRIMES};
 
 /// Implements the Baillie-PSW probabilistic primality test, which is known to be deterministic over
 /// all integers up to 64 bits (u64). Offers more bang for your buck than Miller-Rabin (i.e.
-/// iterated Fermat tests of random base) at wide n since Fermat and Lucas pseudoprimes have been
+/// iterated Fermat tests of random base) at wide `n` since Fermat and Lucas pseudoprimes have been
 /// shown to be anticorrelated. Steps of BPSW are as follows:
 /// 1. Accept small primes and reject multiples of them.
 /// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).
-/// 4. Do a strong probabilistic Lucas test (squares filtered during test initialization).
+/// 3. Do a strong probabilistic Lucas test (squares filtered during test initialization).
 pub fn is_prob_prime(n: &U256) -> bool {
   for &p in SMALL_PRIMES.iter() {
     if n.is_divisible_u(p) {
@@ -21,7 +21,7 @@ pub fn is_prob_prime(n: &U256) -> bool {
   passes_miller_rabin_base_2(&n) && passes_lucas(&n)
 }
 
-///
+/// A single iteration of the Miller-Rabin test.
 pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
   let (d, r) = (n - 1).remove_factor(u256(2));
   let mut x = u256(2).pow_mod(d, n);
@@ -41,12 +41,15 @@ pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
 }
 
 /// Strong Lucas probable prime test (NOT the more common Lucas primality test which requires
-/// factorization of `n-1`). Selects parameters `d`, `p`, `q` according to Selfridge's method.
-/// Cf. [Lucas pseudoprime](https://en.wikipedia.org/wiki/Lucas_pseudoprime) on Wikipedia
+/// factorization of `n-1`).
+///
+/// Selects parameters `d`, `p`, `q` according to Selfridge's method.
+///
 /// If `n` passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
 /// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
 /// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
-/// Filters perfect squares as part of `choose_d`.
+///
+/// Cf. [Lucas pseudoprime](https://en.wikipedia.org/wiki/Lucas_pseudoprime) on Wikipedia.
 pub fn passes_lucas(n: &U256) -> bool {
   let d_ = choose_d(n);
   if d_.is_err() {
@@ -57,7 +60,7 @@ pub fn passes_lucas(n: &U256) -> bool {
 
   let (u_delta, v_delta, q_delta_over_2) =
     compute_lucas_sequences(*n + 1, n, u256(1), u256(1), q, d);
-  // u_delta % n != 0 proves n composite.
+  // `u_delta % n != 0` proves n composite.
   u_delta == 0
   // Additional check which is not strictly part of Lucas test but nonetheless filters some
     // composite n for free. See section "Checking additional congruence conditions" on Wikipedia.
@@ -96,6 +99,7 @@ fn choose_d(n: &U256) -> Result<i32, IsPerfectSquare> {
 /// in an order determined by the binary expansion of `k`. Also returns `q^{k/2} (mod n)`, which is
 /// used in a stage of the strong Lucas test. In the Lucas case we specify that `d = p^2 - 4q` and
 /// set `k_target = delta = n - (d/n) = n + 1`.
+///
 /// Note that `p` does not show up in the code because it is set to 1.
 #[allow(clippy::cast_sign_loss)]
 fn compute_lucas_sequences(
@@ -106,7 +110,7 @@ fn compute_lucas_sequences(
   q0: i32,
   d: i32,
 ) -> (U256, U256, U256) {
-  // Mod an i32 into the [0,n) range.
+  // Mod an `i32` into the `[0, n)` range.
   let i_mod_n = |x: i32| {
     if x < 0 {
       *n - (u256(x.abs() as u64) % n)
@@ -119,8 +123,8 @@ fn compute_lucas_sequences(
   let mut q = q0;
   let mut q_k_over_2 = q0;
 
-  // Finds t in Z_n with 2t = x (mod n).
-  // Assumes x in 0..n
+  // Finds `t` in `Z_n` with `2t = x (mod n)`.
+  // Assumes `x` in `[0, n)`.
   let half = |x: U256| {
     if x.is_odd() {
       (x >> 1) + (*n >> 1) + 1
@@ -135,23 +139,24 @@ fn compute_lucas_sequences(
       *n - (b - a) % n
     }
   };
-  // Write binary expansion of k as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. x_1 is always
-  // 1. For i = 2, 3, ..., l, do the following: if x_i = 0 then update u_k and v_k to u_{2k} and
-  // v_{2k}, respectively. Else if x_i = 1, update to u_{2k+1} and v_{2k+1}. At the end of the loop
-  // we will have computed u_k and v_k, with k as given, in log(delta) time.
+  // Write binary expansion of `k` as [x_1, ..., x_l], e.g. [1, 0, 1, 1] for 11. `x_1` is always
+  // 1. For `i = 2, 3, ..., l`, do the following: if `x_i = 0`, then update `u_k` and `v_k` to
+  // `u_{2k}` and `v_{2k}`, respectively. Else if `x_i = 1`, update to `u_{2k+1}` and `v_{2k+1}`.
+  // At the end of the loop we will have computed `u_k` and `v_k`, with `k` as given, in
+  // `log(delta)` time.
   let mut k_target_bits = [0; 257];
   let len = k_target.write_binary(&mut k_target_bits);
   for &bit in k_target_bits[..len].iter().skip(1) {
-    // Compute (u, v)_{2k} from (u, v)_k according to the following:
+    // Compute `(u, v)_{2k}` from `(u, v)_k` according to the following:
     // u_2k = u_k * v_k (mod n)
     // v_2k = v_k^2 - 2*q^k (mod n)
     u = u * v % n;
     v = sub_mod_n(v * v, u512(q) << 1);
-    // Continuously maintain q_k = q^k (mod n) and q_k_over_2 = q^{k/2} (mod n).
+    // Continuously maintain `q_k = q^k (mod n)` and `q_k_over_2 = q^{k/2} (mod n)`.
     q_k_over_2 = q;
     q = q * q % n;
     if bit == 1 {
-      // Compute (u, v)_{2k+1} from (u, v)_{2k} according to the following:
+      // Compute `(u, v)_{2k+1}` from `(u, v)_{2k}` according to the following:
       // u_{2k+1} = 1/2 * (p*u_{2k} + v_{2k}) (mod n)
       // v_{2k+1} = 1/2 * (d*u_{2k} + p*v_{2k}) (mod n)
       let u_old = u;
@@ -160,7 +165,7 @@ fn compute_lucas_sequences(
       q = q * q0 % n;
     }
   }
-  // These are all % n so the low_u256 is lossless. We could make it checked...
+  // These are all `mod n` so the `low_u256` is lossless. We could make it checked...
   (u, v, q_k_over_2)
 }
 
@@ -186,7 +191,7 @@ mod tests {
   #[test]
   fn test_lucas() {
     assert!(passes_lucas(&u256(5)));
-    // Should fail on p = 2.
+    // Should fail on `p = 2`.
     for &sp in SMALL_PRIMES[1..].iter() {
       assert!(passes_lucas(&u256(sp)));
       assert!(!passes_lucas(&(u256(sp) * u256(2047)).low_u256()));

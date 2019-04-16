@@ -1,6 +1,6 @@
 [package]
 name = "accumulator"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2018"
 authors = [
   "Pablo Aldape <pablo.aldape@gmail.com>",
@@ -42,7 +42,6 @@ name = "add"
 path = "benches/accumulator/add.rs"
 harness = false
 
-
 [[bench]]
 name = "delete"
 path = "benches/accumulator/delete.rs"
@@ -82,6 +81,6 @@ harness = false
 opt-level = 3
 debug = true
 
-# Flamegraph debug symbols. TODO: Remove when we actually cut releases?
+# Flamegraph debug symbols.
 [profile.release]
 debug = true

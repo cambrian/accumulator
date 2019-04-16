@@ -7,10 +7,9 @@ use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
-/// Struct for optimied Proof of Knowledge of Exponent.
+/// Struct for optimized Proof of Knowledge of Exponent.
 ///
-/// See page 10-11 of _Batching Techniques for Accumulators
-/// with Applications to IOPs and Stateless Blockchains_.
+/// See BBF (page 10).
 pub struct Poke2<G: UnknownOrderGroup> {
   z: G::Elem,
   Q: G::Elem,
@@ -18,8 +17,7 @@ pub struct Poke2<G: UnknownOrderGroup> {
 }
 
 impl<G: UnknownOrderGroup> Poke2<G> {
-  /// See page 16 of _Batching Techniques for Accumulators
-  /// with Applications to IOPs and Stateless Blockchains_.
+  /// See BBF (page 10).
   pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let g = G::unknown_order_elem();
     let z = G::exp(&g, exp);
@@ -31,8 +29,7 @@ impl<G: UnknownOrderGroup> Poke2<G> {
     Self { z, Q, r }
   }
 
-  /// See page 16 of _Batching Techniques for Accumulators
-  /// with Applications to IOPs and Stateless Blockchains_.
+  /// See BBF (page 10).
   #[allow(non_snake_case)]
   pub fn verify(base: &G::Elem, result: &G::Elem, Self { z, Q, r }: &Self) -> bool {
     let g = G::unknown_order_elem();

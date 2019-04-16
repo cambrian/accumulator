@@ -1,13 +1,13 @@
-//! RSA (2048) group using rug's GMP integers.
+//! RSA (2048) group using GMP integers in the `rug` crate.
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::str::FromStr;
 
-#[allow(clippy::stutter)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// RSA-2048 group implementation. Modulus taken
-/// from [here](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
+/// RSA-2048 group implementation. Modulus taken from
+/// [here](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
 pub enum Rsa2048 {}
 
 /// RSA-2048 modulus, taken from [Wikipedia](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
@@ -25,9 +25,9 @@ lazy_static! {
   pub static ref HALF_MODULUS: Integer = RSA2048_MODULUS.clone() / 2;
 }
 
-#[allow(clippy::stutter)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// RSA 2048 group element. A thin wrapper around a Rug integer.
+/// RSA 2048 group element. A thin wrapper around a `Rug` integer.
 pub struct Rsa2048Elem(Integer);
 
 impl TypeRep for Rsa2048 {

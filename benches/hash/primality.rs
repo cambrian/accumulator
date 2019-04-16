@@ -15,7 +15,7 @@ fn bench_mr2(bytes: &[u8; 32]) {
 
 fn bench_mr2_rug(bytes: &[u8; 32]) {
   let n = Integer::from_digits(bytes, Order::Lsf);
-  // GMP does not let us demand a base-2 Fermat test so we just do 1 of random base
+  // GMP does not let us demand a base-2 Fermat test so we just do one of random base.
   n.is_probably_prime(1);
 }
 

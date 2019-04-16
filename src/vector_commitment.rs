@@ -1,29 +1,27 @@
-//! Vector commitment library, built on a generic group interface. WIP.
+//! Vector commitment library, built on a generic group interface. **Very much a WIP.**
 use super::accumulator::{Accumulator, MembershipProof, NonmembershipProof, Witness};
 use crate::group::UnknownOrderGroup;
 use rug::Integer;
 use std::collections::HashSet;
 
 #[derive(Debug)]
-/// Enum for different types of vector commitment errors.
+/// The different types of vector commitment errors.
 pub enum VCError {
-  /// When there are conflicting indices in the vector commitment
+  /// When there are conflicting indices in the vector commitment.
   ConflictingIndices,
-
   /// When an opening fails.
   InvalidOpen,
-
-  /// Unexpected state during an update.Box
+  /// Unexpected state during an update.
   UnexpectedState,
 }
 
-// Represented internally by an accumulator of indices where the corresponding bit == 1.
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-/// Struct for a vector commitment.  Wraps an accumulator.
+/// A vector commitment, wrapping an underlying accumulator. The accumulator contains indices of an
+/// abstract vector where the corresponding bit is True.
 pub struct VectorCommitment<G: UnknownOrderGroup>(Accumulator<G, Integer>);
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-/// Struct for a vector proof.
+/// A vector commitment proof.
 pub struct VectorProof<G: UnknownOrderGroup> {
   membership_proof: MembershipProof<G, Integer>,
   nonmembership_proof: NonmembershipProof<G, Integer>,
@@ -47,32 +45,31 @@ fn group_elems_by_bit(bits: &[(bool, Integer)]) -> Result<(Vec<Integer>, Vec<Int
 }
 
 impl<G: UnknownOrderGroup> VectorCommitment<G> {
-  /// Initializes a new vector commitment.
+  /// Initializes a new vector commitment (VC).
   pub fn empty() -> Self {
-    VectorCommitment(Accumulator::<G, Integer>::empty())
+    Self(Accumulator::<G, Integer>::empty())
   }
 
-  /// Updates a vector commitment with a list of values and positions.
+  /// Updates a VC with a list of values and indices.
   ///
   /// # Arguments
   ///
-  /// * `vc_acc_set` - Slice of
-  /// * `bits` -
+  /// * `vc_acc_set` - All indices that are set (True).
+  /// * `bits` - Tuples (truth value, bit index) to set.
   ///
-  ///  Uses a move instead of a `&self` reference to prevent accidental use of the old vc state.
+  /// Uses a move instead of a `&self` reference to prevent accidental use of the old VC state.
   pub fn update(
     vc: Self,
     vc_acc_set: &[Integer],
     bits: &[(bool, Integer)],
   ) -> Result<(Self, VectorProof<G>), VCError> {
-    // Must hold hash commitments in vec in order to pass by reference to accumulator fns.
     let (elems_with_zero, elems_with_one) = group_elems_by_bit(&bits)?;
     let (new_acc, membership_proof) = vc.0.add_with_proof(&elems_with_one);
     let nonmembership_proof = new_acc
       .prove_nonmembership(vc_acc_set, &elems_with_zero)
       .map_err(|_| VCError::UnexpectedState)?;
     Ok((
-      VectorCommitment(new_acc),
+      Self(new_acc),
       VectorProof {
         membership_proof,
         nonmembership_proof,
@@ -80,13 +77,12 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     ))
   }
 
-  /// Opens a commitment.
+  /// Opens/generates a commitment to indices in the VC.
   ///
   /// # Arguments
-  /// * `vc_ac_set` -
-  /// * `zero_bits` -
-  /// * `one_bit_witnesses` -
-  ///
+  /// * `vc_acc_set` - All indices that are set (True).
+  /// * `zero_bits` - Indices you want to prove are unset (False).
+  /// * `one_bit_witnesses` - Indices you want to prove are set (True) and their witnesses.
   pub fn open(
     vc: &Self,
     vc_acc_set: &[Integer],
@@ -107,12 +103,12 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     })
   }
 
-  /// Verifies  a commitment.
+  /// Verifies a commitment to indices in the VC.
   ///
   /// # Arguments
   ///
-  /// * `bits`
-  /// * `VectorProof`
+  /// * `bits` - Tuples (truth value, bit index) to verify.
+  /// * `VectorProof` - A `VectorProof` to verify against.
   pub fn verify(
     vc: &Self,
     bits: &[(bool, Integer)],
@@ -128,7 +124,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
     let (elems_with_zero, elems_with_one) = group_result.unwrap();
     let verified_membership = vc
       .0
-      .verify_aggregate_membership(&elems_with_one, membership_proof);
+      .verify_membership_batch(&elems_with_one, membership_proof);
     let verified_nonmembership = vc
       .0
       .verify_nonmembership(&elems_with_zero, nonmembership_proof);
@@ -136,5 +132,6 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
   }
 }
 
+// TODO: Write tests.
 #[cfg(test)]
 mod tests {}

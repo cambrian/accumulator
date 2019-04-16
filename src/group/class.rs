@@ -1,7 +1,7 @@
 //! Fixed-discriminant implementation of a form class group, with optimizations.
 //!
-//! Using a class group instead of an RSA group for accumulators or vector commitements eliminates
-//! the need for a trusted setup at the expense of slower operations.
+//! Using a class group instead of an RSA group for accumulators or vector commitments eliminates
+//! the need for a trusted setup, albeit at the expense of slower operations.
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::util;
 use crate::util::{int, TypeRep};
@@ -9,13 +9,12 @@ use rug::{Assign, Integer};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-#[allow(clippy::stutter)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// Class Group implementation, with optimizations available with the
-/// `--features` flag.
+/// Class group implementation, with future optimizations available via the `--features` flag.
 pub enum ClassGroup {}
 
-// 2048-bit prime, negated, congruent to 3 mod 4.  Generated using OpenSSL.
+// 2048-bit prime, negated, congruent to `3 mod 4`. Generated using OpenSSL.
 // According to "A Survey of IQ Cryptography" (Buchmann & Hamdy) Table 1, IQ-MPQS for computing
 // discrete logarithms in class groups with a 2048-bit discriminant is comparable in complexity to
 // GNFS for factoring a 4096-bit integer.
@@ -33,10 +32,10 @@ lazy_static! {
     Integer::from_str(DISCRIMINANT2048_DECIMAL).unwrap();
 }
 
-#[allow(clippy::stutter)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, Eq)]
-/// A class group element.  A wrapper around three Rug integers. You should not
-/// ever need to construct a class group element yourself.
+/// A class group element, which wraps three `Rug` integers. You should never need to construct a
+/// class group element yourself.
 pub struct ClassElem {
   a: Integer,
   b: Integer,
@@ -60,9 +59,8 @@ impl ClassGroup {
   }
 
   /// This method is public for benchmarking. You should not need to use it.
-
-  // Note: Does not return a ClassElem because the output is not guaranteed to be
-  // a valid ClassElem for all inputs.
+  // Note: Does not return a `ClassElem` because the output is not guaranteed to be
+  // a valid `ClassElem` for all inputs.
   pub fn reduce(mut a: Integer, mut b: Integer, mut c: Integer) -> (Integer, Integer, Integer) {
     while !Self::is_reduced(&a, &b, &c) {
       // s = floor_div(c + b, 2c)
@@ -81,7 +79,8 @@ impl ClassGroup {
   #[allow(non_snake_case)]
   /// This method is public for benchmarking purposes. You should not need to use it.
   pub fn square(x: &ClassElem) -> ClassElem {
-    // Solve `bk = c mod a` for k, represented by mu, v and any integer n s.t. k = mu + v * n.
+    // Solve `bk = c mod a` for `k`, represented by `mu`, `v` and any integer `n` s.t.
+    // `k = mu + v * n`.
     let (mu, _) = util::solve_linear_congruence(&x.b, &x.c, &x.a).unwrap();
 
     // A = a^2
@@ -145,7 +144,7 @@ impl Group for ClassGroup {
     // a = tu
     // b = hu + sc
     // m = st
-    // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions k.
+    // Solve linear congruence `(tu)k = hu + sc mod st` or `ak = b mod m` for solutions `k`.
     let a = int(&t * &u);
     let b = int(&h * &u) + (&s * &x.c);
     let mut m = int(&s * &t);
@@ -154,7 +153,7 @@ impl Group for ClassGroup {
     // a = tv
     // b = h - t * mu
     // m = s
-    // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions k.
+    // Solve linear congruence `(tv)k = h - t * mu mod s` or `ak = b mod m` for solutions `k`.
     let a = int(&t * &v);
     let b = &h - int(&t * &mu);
     m.assign(&s);
@@ -244,7 +243,7 @@ impl PartialEq for ClassElem {
   }
 }
 
-/// Panics if (a, b, c) cannot be reduced to a valid class element.
+/// Panics if `(a, b, c)` cannot be reduced to a valid class element.
 impl<A, B, C> ElemFrom<(A, B, C)> for ClassGroup
 where
   Integer: From<A>,
@@ -509,7 +508,7 @@ mod tests {
   }
 
   #[test]
-  // REVIEW: This test should be rewritten, because it may be broken by unknown_order_elem() not
+  // REVIEW: This test should be rewritten, because it may be broken by `unknown_order_elem` not
   // working correctly.
   fn test_discriminant_basic() {
     let g = ClassGroup::unknown_order_elem();
@@ -520,7 +519,7 @@ mod tests {
   }
 
   #[test]
-  // REVIEW: This test should be rewritten. See review for test_discriminant_basic().
+  // REVIEW: This test should be rewritten. See review for `test_discriminant_basic`.
   fn test_discriminant_across_ops() {
     let id = ClassGroup::id();
     let g1 = ClassGroup::unknown_order_elem();
