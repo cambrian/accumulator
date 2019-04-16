@@ -348,7 +348,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
   /// For accumulator with elems `[x_1, ..., x_n]`, computes a membership witness for each `x_i` in
   /// accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N log N) time
   /// using the root factor algorithm.
-  pub fn compute_individual_witnesses<'a>(elems: &'a [T]) -> Vec<(&'a T, Witness<G, T>)> {
+  pub fn compute_individual_witnesse(elems: &[T]) -> Vec<(&T, Witness<G, T>)> {
     let primes = elems.iter().map(hash_to_prime).collect::<Vec<_>>();
     let witnesses_raw = Self::root_factor(&G::unknown_order_elem(), &primes);
     let witnesses = witnesses_raw.iter().map(|value| {
