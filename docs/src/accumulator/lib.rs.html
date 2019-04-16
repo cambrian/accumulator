@@ -112,6 +112,7 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Fast cryptographic accumulator and vector commitment library, originally written by Cambrian</span>
 <span class="doccomment">//! Technologies [\[GitHub\]](https://github.com/cambrian/accumulator).</span>
@@ -122,10 +123,11 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Important Note</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! To ensure correspondence between accumulator and set operations in your application, you must</span>
-<span class="doccomment">//! ensure that **no element is accumulated twice**. In particular, deleting a doubly-accumulated</span>
-<span class="doccomment">//! element will remove only one &quot;copy&quot; of it from the accumulator, meaning that its membership can</span>
-<span class="doccomment">//! still be verified. Hence, an accumulator without this invariant can be viewed as a multiset.</span>
+<span class="doccomment">//! To ensure correspondence between accumulator methods and logical set operations in your</span>
+<span class="doccomment">//! application, you must ensure that **no element is accumulated twice**. In particular, deleting</span>
+<span class="doccomment">//! a doubly-accumulated element will remove only one &quot;copy&quot; of it from the accumulator, meaning</span>
+<span class="doccomment">//! that its membership can still be verified. Hence, an accumulator without this invariant can be</span>
+<span class="doccomment">//! viewed as a multiset.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # What is an accumulator?</span>
 <span class="doccomment">//!</span>

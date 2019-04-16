@@ -7,10 +7,11 @@
 //!
 //! # Important Note
 //!
-//! To ensure correspondence between accumulator and set operations in your application, you must
-//! ensure that **no element is accumulated twice**. In particular, deleting a doubly-accumulated
-//! element will remove only one "copy" of it from the accumulator, meaning that its membership can
-//! still be verified. Hence, an accumulator without this invariant can be viewed as a multiset.
+//! To ensure correspondence between accumulator methods and logical set operations in your
+//! application, you must ensure that **no element is accumulated twice**. In particular, deleting
+//! a doubly-accumulated element will remove only one "copy" of it from the accumulator, meaning
+//! that its membership can still be verified. Hence, an accumulator without this invariant can be
+//! viewed as a multiset.
 //!
 //! # What is an accumulator?
 //!
