@@ -19,7 +19,7 @@ fn bench_verify<G: UnknownOrderGroup>(
   elems: &[Integer],
   proof: &MembershipProof<G, Integer>,
 ) {
-  assert!(acc.verify_aggregate_membership(elems, proof));
+  assert!(acc.verify_membership_batch(elems, proof));
 }
 
 #[allow(dead_code)]
