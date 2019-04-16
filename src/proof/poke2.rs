@@ -1,9 +1,12 @@
+//! Non-Interactive Proofs of Knowledge of Exponent (NI-PoKE2). See BBF (pages 10 and 42) for
+//! details.
 use crate::group::UnknownOrderGroup;
 use crate::hash::{blake2b, hash_to_prime};
 use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
+/// Struct for NI-PoKE2.
 pub struct Poke2<G: UnknownOrderGroup> {
   z: G::Elem,
   Q: G::Elem,
@@ -11,8 +14,8 @@ pub struct Poke2<G: UnknownOrderGroup> {
 }
 
 impl<G: UnknownOrderGroup> Poke2<G> {
-  /// See page 16 of B&B.
-  pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Poke2<G> {
+  /// Computes a proof that you know `exp` s.t. `base ^ exp = result`.
+  pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let g = G::unknown_order_elem();
     let z = G::exp(&g, exp);
     let l = hash_to_prime(&(base, result, &z));
@@ -20,12 +23,12 @@ impl<G: UnknownOrderGroup> Poke2<G> {
     let (q, r) = <(Integer, Integer)>::from(exp.div_rem_euc_ref(&l));
     #[allow(non_snake_case)]
     let Q = G::exp(&G::op(&base, &G::exp(&g, &alpha)), &q);
-    Poke2 { z, Q, r }
+    Self { z, Q, r }
   }
 
-  /// See page 16 of B&B.
+  /// Verifies that the prover knows `exp` s.t. `base ^ exp = result`.
   #[allow(non_snake_case)]
-  pub fn verify(base: &G::Elem, result: &G::Elem, Poke2 { z, Q, r }: &Poke2<G>) -> bool {
+  pub fn verify(base: &G::Elem, result: &G::Elem, Self { z, Q, r }: &Self) -> bool {
     let g = G::unknown_order_elem();
     let l = hash_to_prime(&(base, result, &z));
     let alpha = blake2b(&(base, result, &z, &l));
@@ -52,7 +55,7 @@ mod tests {
     let result = Rsa2048::elem(1_048_576);
     let proof = Poke2::<Rsa2048>::prove(&base, &exp, &result);
     assert!(Poke2::verify(&base, &result, &proof));
-    // Must compare entire structs since elements z, Q, and r are private.
+    // Must compare entire structs since elements `z`, `Q`, and `r` are private.
     assert!(
       proof
         == Poke2 {

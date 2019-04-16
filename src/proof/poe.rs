@@ -1,3 +1,4 @@
+//! Non-Interactive Proofs of Exponentiation (NI-PoE). See BBF (pages 8 and 42) for details.
 use crate::group::Group;
 use crate::hash::hash_to_prime;
 use crate::util::int;
@@ -5,22 +6,23 @@ use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
+/// Struct for NI-PoE.
 pub struct Poe<G: Group> {
   Q: G::Elem,
 }
 
 impl<G: Group> Poe<G> {
-  /// See page 16 of B&B.
-  pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Poe<G> {
+  /// Computes a proof that `base ^ exp` was performed to derive `result`.
+  pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let l = hash_to_prime(&(base, exp, result));
     let q = exp / l;
-    Poe {
+    Self {
       Q: G::exp(&base, &q),
     }
   }
 
-  /// See page 16 of B&B.
-  pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &Poe<G>) -> bool {
+  /// Verifies that `base ^ exp = result` using the given proof to avoid computation.
+  pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &Self) -> bool {
     let l = hash_to_prime(&(base, exp, result));
     let r = int(exp % &l);
     // w = Q^l * u^r

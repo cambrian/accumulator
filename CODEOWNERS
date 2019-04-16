@@ -1,8 +1,2 @@
-# Default set of reviewers.
-@eddiew @whaatt @plra @lucasege
-
-# Rules with greater precedence.
-/src/ @eddiew @whaatt
-CODEOWNERS @eddiew @whaatt
-.gitignore @eddiew @whaatt
-/Cargo.toml @eddiew @whaatt
+# Default set of code owners.
+@eddiew @whaatt @plra @lucasege @alanefl @mstraka100

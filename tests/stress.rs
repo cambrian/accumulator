@@ -1,47 +1,38 @@
 use accumulator::group::Rsa2048;
-use accumulator::hash::hash_to_prime;
 use accumulator::Accumulator;
 use rand::Rng;
 
 /// Adds 10,000 random primes to accumulator (unverified), then tests 100 more random additions
 /// (with verification) and 100 random elements are verified to be nonmembers.
+///
 /// Takes about 5 minutes.
+///
+/// TODO: Use a counter instead of random bits.
 #[test]
 #[ignore]
 fn stress_test() {
   let mut acc_set = Vec::new();
-  let mut acc = Accumulator::<Rsa2048>::new();
+  let mut acc = Accumulator::<Rsa2048, [u8; 32]>::empty();
   for _ in 0..100 {
-    let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-    let prime = hash_to_prime(&random_bytes);
-    acc_set.push(prime);
+    let random_elem = rand::thread_rng().gen::<[u8; 32]>();
+    acc_set.push(random_elem);
   }
   println!("Starting add");
-  let (holder, _) = acc.clone().add(&acc_set);
-  acc = holder;
+  acc = acc.clone().add(&acc_set);
   println!("{}", acc_set.len());
   for _ in 0..100 {
-    let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-    let prime = hash_to_prime(&random_bytes);
-    assert!(!acc_set.contains(&prime));
-    let (new_acc, add_proof) = acc.clone().add(&[prime.clone()]);
-    assert!(new_acc.verify_membership(&[prime.clone()], &add_proof));
+    let new_elem = rand::thread_rng().gen::<[u8; 32]>();
+    assert!(!acc_set.contains(&new_elem));
+    let (new_acc, add_proof) = acc.clone().add_with_proof(&[new_elem]);
+    assert!(new_acc.verify_membership(&new_elem, &add_proof));
     let (_, del_proof) = new_acc
       .clone()
-      .delete(&[(prime.clone(), acc.clone())])
+      .delete_with_proof(&[(new_elem, add_proof.witness)])
       .unwrap();
-    assert!(new_acc.verify_membership(&[prime.clone()], &del_proof));
+    assert!(new_acc.verify_membership(&new_elem, &del_proof));
     let nonmem_proof = acc
-      .prove_nonmembership(&acc_set, &[prime.clone()])
+      .prove_nonmembership(&acc_set, &[new_elem])
       .expect("It works");
-    assert!(acc.verify_nonmembership(&[prime.clone()], &nonmem_proof));
-    for _ in 0..100 {
-      let random_bytes_2 = rand::thread_rng().gen::<[u8; 32]>();
-      let random_exp = hash_to_prime(&random_bytes_2);
-      let false_witness = Accumulator::<Rsa2048>::new().add(&[random_exp]).0;
-      assert!(acc
-        .prove_membership(&[(prime.clone(), false_witness)])
-        .is_err());
-    }
+    assert!(acc.verify_nonmembership(&[new_elem], &nonmem_proof));
   }
 }

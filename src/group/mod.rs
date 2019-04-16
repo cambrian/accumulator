@@ -1,3 +1,9 @@
+//! Implementations for different mathematical groups, each of which satisfies our
+//! `UnknownOrderGroup` trait. They can be used with the accumulator and vector commitment
+//! structures, or standalone if you have a custom application.
+//!
+//! The preferred elliptic group implementation is the `Ristretto` group, which is a cyclic subset
+//! of the `Ed25519` group.
 use crate::util::{int, TypeRep};
 use rug::Integer;
 use std::fmt::Debug;
@@ -5,28 +11,49 @@ use std::hash::Hash;
 use std::marker::Sized;
 
 mod class;
-mod ecc;
+pub use class::{ClassElem, ClassGroup};
+mod ristretto;
+pub use ristretto::{Ristretto, RistrettoElem};
 mod rsa;
 pub use rsa::{Rsa2048, Rsa2048Elem};
 
-/// We avoid having to pass group objects around by using the TypeRep trait.
+/// A mathematical group.
 ///
-/// Clone is only required here because Rust can't figure out how to clone an Accumulator<G> even
-/// though it's just a wrapped G::Elem. (Same thing for Eq, Send, Sync) If possible we'd remove it.
-pub trait Group: Clone + Eq + TypeRep + Send + Sync {
-  /// In theory the association Group::Elem is bijective, such that it makes sense to write
-  /// something like Elem::Group::get(). This would let us define op, exp, inv, etc on the Elem
-  /// type and avoid using prefix notation for all of our group operations.
-  /// But afaik bijective associated types are not supported by Rust.
+/// This trait allows the implementation of standard group routines:
+/// - Identity
+/// - Op (the fundamental group operation)
+/// - Exponentiation
+/// - Inverse (particularly where this is efficient to compute)
+///
+/// The `TypeRep` trait lets us emulate type-level static fields, e.g. the modulus in an RSA group
+/// or the discriminant in a class group.
+///
+/// Clients of this trait need to implement functions of the form `*_`, which take in `TypeRep`
+/// data as a parameter. Consumers use functions without the underscore: `id`, `op`, `exp`, and
+/// `inv`.
+
+// The other traits are only required here because Rust can't figure out how to do stuff with an
+// `Accumulator<G>` even though it's just a wrapped `G::Elem`. If possible we'd remove them.
+pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
+  // In theory the association `Group::Elem` is bijective, such that it makes sense to write
+  // something like `Elem::Group::get()`. This would let us define `op`, `exp`, `inv`, etc. on the
+  //`Elem` type and avoid using prefix notation for all of our group operations. Bijective
+  // associated types are not currently supported by Rust.
+
+  /// The associated group element type for this group.
   type Elem: Clone + Debug + Eq + Hash + Sized + Send + Sync;
 
+  /// A group-specific wrapper for `id`.
   fn id_(rep: &Self::Rep) -> Self::Elem;
 
+  /// A group-specific wrapper for `op`.
   fn op_(rep: &Self::Rep, a: &Self::Elem, b: &Self::Elem) -> Self::Elem;
 
-  /// Default implementation of exponentiation via repeated squaring.
-  /// Implementations may provide more performant specializations
-  /// (e.g. Montgomery multiplication for RSA groups).
+  /// A group-specific wrapper for `exp`, although it comes with a default implementation via
+  /// repeated squaring.
+  ///
+  /// Specific implementations may provide more performant specializations as needed (e.g.
+  /// Montgomery multiplication for RSA groups).
   fn exp_(_rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
     let (mut val, mut a, mut n) = {
       if *n < int(0) {
@@ -35,57 +62,66 @@ pub trait Group: Clone + Eq + TypeRep + Send + Sync {
         (Self::id(), a.clone(), n.clone())
       }
     };
-    loop {
-      if n == int(0) {
-        return val;
-      }
+    while n > int(0) {
       if n.is_odd() {
         val = Self::op(&val, &a);
       }
       a = Self::op(&a, &a);
       n >>= 1;
     }
+    val
   }
 
+  /// A group-specific wrapper for `inv`.
   fn inv_(rep: &Self::Rep, a: &Self::Elem) -> Self::Elem;
 
   // -------------------
   // END OF REQUIRED FNS
   // -------------------
 
+  /// Returns the identity element of the group.
   fn id() -> Self::Elem {
     Self::id_(Self::rep())
   }
 
+  /// Applies the group operation to elements `a` and `b` and returns the result.
   fn op(a: &Self::Elem, b: &Self::Elem) -> Self::Elem {
     Self::op_(Self::rep(), a, b)
   }
 
+  /// Applies the group operation to `a` and itself `n` times and returns the result.
   fn exp(a: &Self::Elem, n: &Integer) -> Self::Elem {
     Self::exp_(Self::rep(), a, n)
   }
 
+  /// Returns the group inverse of `a`.
   fn inv(a: &Self::Elem) -> Self::Elem {
     Self::inv_(Self::rep(), a)
   }
 }
 
-/// We use this to mean a group containing elements of unknown order, not necessarily that the group
-/// itself has unknown order. E.g. RSA groups.
+/// A group containing elements of unknown order.
+///
+/// **Note**: This trait does not imply that the group itself has unknown order (e.g. RSA groups).
+#[allow(clippy::module_name_repetitions)]
 pub trait UnknownOrderGroup: Group {
-  /// E.g. 2, for RSA groups.
-  fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;
-
+  /// Returns an element of unknown order in the group.
   fn unknown_order_elem() -> Self::Elem {
     Self::unknown_order_elem_(Self::rep())
   }
+
+  /// A group-specific wrapper for `unknown_order_elem`.
+  fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;
 }
 
-/// Like From<T>, but implemented on the Group instead of the element type.
+/// Like `From<T>`, but implemented on the `Group` instead of the element type.
 pub trait ElemFrom<T>: Group {
+  /// Returns a group element from an initial value.
   fn elem(val: T) -> Self::Elem;
 }
 
+/// Computes the product of `alpha_i ^ (p(x) / x_i)`, where `i` is an index into the `alphas` and
+/// `x` arrays, and `p(x)` is the product of all `x_i`. See BBF (page 11).
 pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   if alphas.len() == 1 {
     return alphas[0].clone();
