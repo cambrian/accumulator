@@ -27,12 +27,13 @@ pub enum AccError {
 }
 
 // See https://doc.rust-lang.org/std/marker/struct.PhantomData.html#ownership-and-the-drop-check
-// for recommendations regarding phantom types.
+// for recommendations regarding phantom types. Note that we disregard the suggestion to use a
+// const reference in the phantom type parameter, which causes issues for the `Send` trait.
 #[derive(PartialEq, Eq, Debug, Hash)]
 /// A cryptographic accumulator. Wraps a single unknown-order group element and phantom data
 /// representing the type `T` being hashed-to-prime and accumulated.
 pub struct Accumulator<G: UnknownOrderGroup, T: Hash> {
-  phantom: PhantomData<*const T>,
+  phantom: PhantomData<T>,
   value: G::Elem,
 }
 
