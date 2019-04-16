@@ -3,7 +3,11 @@ Cryptographic accumulators in Rust, implemented over a generic group interface. 
 class group implementations) included!
 
 ## Installation
-TODO.
+```
+# Cargo.toml
+[dependencies]
+accumulator = { git = "https://github.com/cambrian/accumulator.git" }`
+```
 
 ## Contributing
 Please see our

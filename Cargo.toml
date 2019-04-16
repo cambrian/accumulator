@@ -13,7 +13,7 @@ authors = [
 description = "Cryptographic accumulators in Rust."
 keywords = ["cryptography", "crypto", "accumulator", "rsa", "vector", "commitment"]
 readme = "README.md"
-repository = "https://github.com/1protocol/accumulator"
+repository = "https://github.com/cambrian/accumulator"
 
 [dependencies]
 arrayref = "0.3.5"

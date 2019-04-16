@@ -1,5 +1,5 @@
 //! Fast cryptographic accumulator and vector commitment library, originally written and maintained
-//! by Cambrian Labs.
+//! by Cambrian Labs [[GitHub]](https://github.com/cambrian/accumulator).
 //!
 //! **Disclaimer**: This library is intended to be production-quality code, but it has not been
 //! independently-audited for correctness or tested to a critical degree. As such, please treat this
