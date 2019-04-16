@@ -15,12 +15,12 @@ pub enum VCError {
   UnexpectedState,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 /// A vector commitment, wrapping an underlying accumulator. The accumulator contains indices of an
 /// abstract vector where the corresponding bit is True.
 pub struct VectorCommitment<G: UnknownOrderGroup>(Accumulator<G, Integer>);
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 /// A vector commitment proof.
 pub struct VectorProof<G: UnknownOrderGroup> {
   membership_proof: MembershipProof<G, Integer>,

@@ -29,10 +29,10 @@ pub enum AccError {
 // See https://doc.rust-lang.org/std/marker/struct.PhantomData.html#ownership-and-the-drop-check
 // for recommendations regarding phantom types. Note that we disregard the suggestion to use a
 // const reference in the phantom type parameter, which causes issues for the `Send` trait.
-#[derive(PartialEq, Eq, Debug, Hash)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 /// A cryptographic accumulator. Wraps a single unknown-order group element and phantom data
 /// representing the type `T` being hashed-to-prime and accumulated.
-pub struct Accumulator<G: UnknownOrderGroup, T: Hash> {
+pub struct Accumulator<G: UnknownOrderGroup, T> {
   phantom: PhantomData<T>,
   value: G::Elem,
 }
@@ -48,11 +48,11 @@ impl<G: UnknownOrderGroup, T: Hash> Clone for Accumulator<G, T> {
   }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 /// A witness to one or more values in an accumulator, represented as an accumulator.
 pub struct Witness<G: UnknownOrderGroup, T: Hash>(pub Accumulator<G, T>);
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 /// A succinct proof of membership (some element is in some accumulator).
 pub struct MembershipProof<G: UnknownOrderGroup, T: Hash> {
   /// The witness for the element in question.
@@ -60,9 +60,9 @@ pub struct MembershipProof<G: UnknownOrderGroup, T: Hash> {
   proof: Poe<G>,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 /// A succinct proof of nonmembership (some element is not in some accumulator).
-pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash> {
+pub struct NonmembershipProof<G: UnknownOrderGroup, T> {
   phantom: PhantomData<*const T>,
   d: G::Elem,
   v: G::Elem,
@@ -71,40 +71,7 @@ pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash> {
   poe_proof: Poe<G>,
 }
 
-impl<G: UnknownOrderGroup, T: Hash> Witness<G, T> {
-  /// Given a witness for `old_witness_set`, returns a witness for `new_witness_set`.
-  ///
-  /// The `new_witness_set` must be a subset of the `old_witness_set`.
-  pub fn compute_sub_witness(
-    self,
-    old_witness_set: &[T],
-    new_witness_set: &[T],
-  ) -> Result<Self, AccError>
-  where
-    T: PartialEq,
-  {
-    for new_witness in new_witness_set {
-      if !old_witness_set.contains(new_witness) {
-        return Err(AccError::BadWitness);
-      }
-    }
-
-    let numerator = prime_hash_product(old_witness_set);
-    let denominator = prime_hash_product(new_witness_set);
-    let (quotient, remainder) = numerator.div_rem(denominator);
-
-    if remainder != int(0) {
-      return Err(AccError::InexactDivision);
-    }
-
-    Ok(Self(Accumulator {
-      phantom: PhantomData,
-      value: G::exp(&self.0.value, &quotient),
-    }))
-  }
-}
-
-impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
+impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
   /// Returns a new, empty accumulator.
   pub fn empty() -> Self {
     Self {
@@ -265,10 +232,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     tracked_elems: &[T],
     untracked_additions: &[T],
     untracked_deletions: &[T],
-  ) -> Result<Witness<G, T>, AccError>
-  where
-    T: Eq,
-  {
+  ) -> Result<Witness<G, T>, AccError> {
     let x = prime_hash_product(tracked_elems);
     let x_hat = prime_hash_product(untracked_deletions);
 
@@ -344,53 +308,86 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
     let x = elems.iter().map(hash_to_prime).product();
     Poke2::verify(&self.value, v, poke2_proof) && Poe::verify(d, &x, gv_inv, poe_proof)
   }
+}
 
-  /// For accumulator with elems `[x_1, ..., x_n]`, computes a membership witness for each `x_i` in
-  /// accumulator `g^{x_1 * ... * x_n}`, namely `g^{x_1 * ... * x_n / x_i}`, in O(N log N) time
-  /// using the root factor algorithm.
-  pub fn compute_individual_witnesses(elems: &[T]) -> Vec<(&T, Witness<G, T>)> {
-    let primes = elems.iter().map(hash_to_prime).collect::<Vec<_>>();
-    let witnesses_raw = Self::root_factor(&G::unknown_order_elem(), &primes);
-    let witnesses = witnesses_raw.iter().map(|value| {
-      Witness(Self {
-        phantom: PhantomData,
-        value: value.clone(),
-      })
-    });
-    elems.iter().zip(witnesses).collect::<Vec<_>>()
-  }
-
-  #[allow(non_snake_case)]
-  /// The root factor algorithm, as described in BBF (page 13).
-  fn root_factor(g: &G::Elem, primes: &[Integer]) -> Vec<G::Elem> {
-    dbg!((&g, &primes));
-    if primes.len() == 1 {
-      return vec![g.clone()];
-    }
-    let half_n = primes.len() / 2;
-    let g_l = primes[..half_n]
-      .iter()
-      .fold(g.clone(), |g_, x| G::exp(&g_, x));
-    let g_r = primes[half_n..]
-      .iter()
-      .fold(g.clone(), |g_, x| G::exp(&g_, x));
-    let mut L = Self::root_factor(&g_r, &primes[..half_n]);
-    let mut R = Self::root_factor(&g_l, &primes[half_n..]);
-    L.append(&mut R);
-    L
+impl<G: UnknownOrderGroup, T: Eq + Hash> From<&[T]> for Accumulator<G, T> {
+  fn from(ts: &[T]) -> Self {
+    Self::empty().add(ts)
   }
 }
 
-impl<G: UnknownOrderGroup, T: Hash + Eq> From<&[T]> for Accumulator<G, T> {
-  fn from(ts: &[T]) -> Self {
-    Self::empty().add(ts)
+impl<G: UnknownOrderGroup, T: Clone + Hash> Witness<G, T> {
+  /// Given a witness for `witness_set`, returns a witness for `witness_subset`.
+  ///
+  /// The `witness_subset` must be a subset of the `witness_set`.
+  pub fn compute_subset_witness(
+    self,
+    witness_set: &[T],
+    witness_subset: &[T],
+  ) -> Result<Self, AccError>
+  where
+    T: PartialEq,
+  {
+    for witness in witness_subset {
+      if !witness_set.contains(witness) {
+        return Err(AccError::BadWitness);
+      }
+    }
+
+    let numerator = prime_hash_product(witness_set);
+    let denominator = prime_hash_product(witness_subset);
+    let (quotient, remainder) = numerator.div_rem(denominator);
+
+    if remainder != int(0) {
+      return Err(AccError::InexactDivision);
+    }
+
+    Ok(Self(Accumulator {
+      phantom: PhantomData,
+      value: G::exp(&self.0.value, &quotient),
+    }))
+  }
+
+  /// Given a witness for many `elems`, computes a sub-witness for each individual element in
+  /// O(N log N) time.
+  pub fn compute_individual_witnesses(&self, elems: &[T]) -> Vec<(T, Self)> {
+    let hashes = elems.iter().map(hash_to_prime).collect::<Vec<_>>();
+    elems
+      .iter()
+      .zip(self.root_factor(&hashes).iter())
+      .map(|(x, y)| (x.clone(), y.clone()))
+      .collect()
+  }
+
+  #[allow(non_snake_case)]
+  fn root_factor(&self, elems: &[Integer]) -> Vec<Self> {
+    if elems.len() == 1 {
+      return vec![self.clone()];
+    }
+    let half_n = elems.len() / 2;
+    let g_l = elems[..half_n].iter().fold(self.clone(), |sum, x| {
+      Self(Accumulator {
+        phantom: PhantomData,
+        value: G::exp(&sum.0.value, x),
+      })
+    });
+    let g_r = elems[half_n..].iter().fold(self.clone(), |sum, x| {
+      Self(Accumulator {
+        phantom: PhantomData,
+        value: G::exp(&sum.0.value, x),
+      })
+    });
+    let mut L = g_r.root_factor(&Vec::from(&elems[..half_n]));
+    let mut R = g_l.root_factor(&Vec::from(&elems[half_n..]));
+    L.append(&mut R);
+    L
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ClassGroup, ElemFrom, Rsa2048};
+  use crate::group::{ClassGroup, Rsa2048};
 
   fn new_acc<G: UnknownOrderGroup, T: Hash + Eq>(data: &[T]) -> Accumulator<G, T> {
     Accumulator::<G, T>::empty().add(data)
@@ -414,20 +411,6 @@ mod tests {
         $test_func::<ClassGroup>();
       }
     };
-  }
-
-  test_all_groups!(
-    test_compute_sub_witness,
-    test_compute_sub_witness_rsa2048,
-    test_compute_sub_witness_class,
-  );
-  fn test_compute_sub_witness<G: UnknownOrderGroup>() {
-    let empty_witness = Witness(Accumulator::<G, &'static str>::empty());
-    let sub_witness = empty_witness
-      .compute_sub_witness(&["a", "b"], &["a"])
-      .unwrap();
-    let exp_quotient_expected = Witness(new_acc::<G, &'static str>(&["b"]));
-    assert!(sub_witness == exp_quotient_expected);
   }
 
   test_all_groups!(test_add, test_add_rsa2048, test_add_class,);
@@ -526,12 +509,39 @@ mod tests {
     assert!(acc.verify_nonmembership(&non_members, &proof));
   }
 
-  fn test_compute_individual_witnesses<G: UnknownOrderGroup + ElemFrom<u32>>() {
-    let elems = ["a", "b", "c"];
-    let acc = new_acc::<G, &'static str>(&elems);
-    let witnesses = Accumulator::<G, &'static str>::compute_individual_witnesses(&elems);
+  test_all_groups!(
+    test_compute_sub_witness,
+    test_compute_sub_witness_rsa2048,
+    test_compute_sub_witness_class,
+  );
+  fn test_compute_sub_witness<G: UnknownOrderGroup>() {
+    let empty_witness = Witness(Accumulator::<G, &'static str>::empty());
+    let sub_witness = empty_witness
+      .compute_subset_witness(&["a", "b"], &["a"])
+      .unwrap();
+    let exp_quotient_expected = Witness(new_acc::<G, &'static str>(&["b"]));
+    assert!(sub_witness == exp_quotient_expected);
+  }
+
+  test_all_groups!(
+    test_compute_sub_witness_failure,
+    test_compute_sub_witness_failure_rsa2048,
+    test_compute_sub_witness_failure_class,
+    should_panic(expected = "BadWitness")
+  );
+  fn test_compute_sub_witness_failure<G: UnknownOrderGroup>() {
+    let empty_witness = Witness(Accumulator::<G, &'static str>::empty());
+    empty_witness
+      .compute_subset_witness(&["a", "b"], &["c"])
+      .unwrap();
+  }
+
+  fn test_compute_individual_witnesses<G: UnknownOrderGroup>() {
+    let acc = new_acc::<G, &'static str>(&["a", "b", "c"]);
+    let witness_multiple = Witness(new_acc::<G, &'static str>(&["a"]));
+    let witnesses = witness_multiple.compute_individual_witnesses(&["b", "c"]);
     for (elem, witness) in witnesses {
-      assert_eq!(acc.value, G::exp(&witness.0.value, &hash_to_prime(*elem)));
+      assert_eq!(acc.value, G::exp(&witness.0.value, &hash_to_prime(elem)));
     }
   }
 
