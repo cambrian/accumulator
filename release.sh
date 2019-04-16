@@ -9,7 +9,7 @@ cp docs/404.html docs_tmp
 cp docs/_config.yml docs_tmp
 
 # Generate docs.
-rm -rf docs
+rm -rf target/doc docs
 cargo doc --no-deps
 cp -r target/doc docs
 
