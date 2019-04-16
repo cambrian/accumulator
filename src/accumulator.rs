@@ -49,7 +49,7 @@ impl<G: UnknownOrderGroup, T: Hash> Clone for Accumulator<G, T> {
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 /// A witness to one or more values in an accumulator, represented as an accumulator.
-pub struct Witness<G: UnknownOrderGroup, T: Hash>(Accumulator<G, T>);
+pub struct Witness<G: UnknownOrderGroup, T: Hash>(pub Accumulator<G, T>);
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 /// A succinct proof of membership (some element is in some accumulator).
@@ -70,15 +70,7 @@ pub struct NonmembershipProof<G: UnknownOrderGroup, T: Hash> {
   poe_proof: Poe<G>,
 }
 
-impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
-  /// Returns a new, empty accumulator.
-  pub fn empty() -> Self {
-    Self {
-      phantom: PhantomData,
-      value: G::unknown_order_elem(),
-    }
-  }
-
+impl<G: UnknownOrderGroup, T: Hash> Witness<G, T> {
   /// Given a witness for `old_witness_set`, returns a witness for `new_witness_set`.
   ///
   /// The `new_witness_set` must be a subset of the `old_witness_set`.
@@ -104,10 +96,20 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
       return Err(AccError::InexactDivision);
     }
 
-    Ok(Self {
+    Ok(Self(Accumulator {
       phantom: PhantomData,
-      value: G::exp(&self.value, &quotient),
-    })
+      value: G::exp(&self.0.value, &quotient),
+    }))
+  }
+}
+
+impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
+  /// Returns a new, empty accumulator.
+  pub fn empty() -> Self {
+    Self {
+      phantom: PhantomData,
+      value: G::unknown_order_elem(),
+    }
   }
 
   /// Internal add method that also returns the prime hash product of added elements, enabling an
@@ -419,9 +421,11 @@ mod tests {
     test_compute_sub_witness_class,
   );
   fn test_compute_sub_witness<G: UnknownOrderGroup>() {
-    let empty_acc = Accumulator::<G, &'static str>::empty();
-    let sub_witness = empty_acc.compute_sub_witness(&["a", "b"], &["a"]).unwrap();
-    let exp_quotient_expected = new_acc::<G, &'static str>(&["b"]);
+    let empty_witness = Witness(Accumulator::<G, &'static str>::empty());
+    let sub_witness = empty_witness
+      .compute_sub_witness(&["a", "b"], &["a"])
+      .unwrap();
+    let exp_quotient_expected = Witness(new_acc::<G, &'static str>(&["b"]));
     assert!(sub_witness == exp_quotient_expected);
   }
 
