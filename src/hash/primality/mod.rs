@@ -6,11 +6,14 @@ mod constants;
 use constants::{D_VALUES, SMALL_PRIMES};
 
 /// Implements the Baillie-PSW probabilistic primality test, which is known to be deterministic over
-/// all integers up to 64 bits (u64). Offers more bang for your buck than Miller-Rabin (i.e.
-/// iterated Fermat tests of random base) at wide `n` since Fermat and Lucas pseudoprimes have been
-/// shown to be anticorrelated. Steps of BPSW are as follows:
+/// all integers up to 64 bits.
+///
+/// Outperforms naked Miller-Rabin (i.e. iterated Fermat tests of random base) at wide `n` since
+/// Fermat and Lucas pseudoprimes have been shown to be anticorrelated. Steps of BPSW are as
+/// follows:
+///
 /// 1. Accept small primes and reject multiples of them.
-/// 2. Do a single iteration of Miller-Rabin (base-2 Fermat test).
+/// 2. Do a single iteration of Miller-Rabin (in particular, a base-2 Fermat test).
 /// 3. Do a strong probabilistic Lucas test (squares filtered during test initialization).
 pub fn is_prob_prime(n: &U256) -> bool {
   for &p in SMALL_PRIMES.iter() {
@@ -21,7 +24,7 @@ pub fn is_prob_prime(n: &U256) -> bool {
   passes_miller_rabin_base_2(&n) && passes_lucas(&n)
 }
 
-/// A single iteration of the Miller-Rabin test.
+/// A single iteration of the Miller-Rabin test (base-2 Fermat test).
 pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
   let (d, r) = (n - 1).remove_factor(u256(2));
   let mut x = u256(2).pow_mod(d, n);

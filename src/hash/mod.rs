@@ -1,6 +1,6 @@
 //! This module wraps `blake2b_rfc` into a convenient hashing interface (`GeneralHasher`) and
 //! exports the generalized `hash` function. Also exported is `hash_to_prime`, which works by
-//! primality-testing the iterative outputs of `hash`.
+//! repeatedly `hash`ing a value together with an incrementing nonce until the output is prime.
 use crate::uint::u256;
 use rug::integer::Order;
 use rug::Integer;
