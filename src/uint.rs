@@ -1,5 +1,5 @@
 //! Zero-allocation U256 and U512 types built on GMP. We created this module specifically for our
-//! use case of implementing primality checking for 256-bit integers, but it may be worth
+//! use case of implementing primality checking over 256-bit integers, but it may be worth
 //! polishing a bit for more general use.
 //!
 //! Obviously there are a lot of `unsafe` blocks to work with GMP. Take care when using this module

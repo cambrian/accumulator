@@ -58,7 +58,7 @@ impl ClassGroup {
     (a, new_b, new_c)
   }
 
-  /// This method is public for benchmarking. You should not need to use it.
+  /// This method is only public for benchmarking. You should not need to use it.
   // Note: Does not return a `ClassElem` because the output is not guaranteed to be
   // a valid `ClassElem` for all inputs.
   pub fn reduce(mut a: Integer, mut b: Integer, mut c: Integer) -> (Integer, Integer, Integer) {
@@ -77,7 +77,7 @@ impl ClassGroup {
   }
 
   #[allow(non_snake_case)]
-  /// This method is public for benchmarking purposes. You should not need to use it.
+  /// This method is only public for benchmarking. You should not need to use it.
   pub fn square(x: &ClassElem) -> ClassElem {
     // Solve `bk = c mod a` for `k`, represented by `mu`, `v` and any integer `n` s.t.
     // `k = mu + v * n`.

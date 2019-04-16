@@ -1,25 +1,23 @@
-//! Proof of Knowledge of Co-prime Roots.
+//! Non-Interactive Proofs of Knowledge of Co-prime Roots (NI-PoKCR). See BBF (page 11) for details.
 use crate::group::{multi_exp, Group};
 use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
-/// Struct for Proof of Knowledge of Co-prime Roots.
-///
-/// See BBF (page 11).
+/// Struct for NI-PoKCR.
 pub struct Pokcr<G: Group> {
   w: G::Elem,
 }
 
 impl<G: Group> Pokcr<G> {
-  /// See BBF (page 11).
+  /// Generates an NI-PoKCR proof.
   pub fn prove(witnesses: &[G::Elem]) -> Self {
     Self {
       w: witnesses.iter().fold(G::id(), |a, b| G::op(&a, b)),
     }
   }
 
-  /// See BBF (page 11).
+  /// Verifies an NI-PoKCR proof.
   pub fn verify(alphas: &[G::Elem], x: &[Integer], proof: &Self) -> bool {
     let y = multi_exp::<G>(alphas, x);
     let lhs = G::exp(&proof.w, &x.iter().product());

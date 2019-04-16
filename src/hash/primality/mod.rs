@@ -47,9 +47,9 @@ pub fn passes_miller_rabin_base_2(n: &U256) -> bool {
 ///
 /// If `n` passes, it is either prime or a "strong" Lucas pseudoprime. (The precise meaning of
 /// "strong" is not fixed in the literature.) Procedure can be further strengthened by implementing
-/// more tests in section 6 of [Baillie & Wagstaff 1980], but for now this is TODO.
+/// more tests in Section 6 of [Baillie and Wagstaff 1980], but for now this is TODO.
 ///
-/// Cf. [Lucas pseudoprime](https://en.wikipedia.org/wiki/Lucas_pseudoprime) on Wikipedia.
+/// See also: [Lucas pseudoprime](https://en.wikipedia.org/wiki/Lucas_pseudoprime) on Wikipedia.
 pub fn passes_lucas(n: &U256) -> bool {
   let d_ = choose_d(n);
   if d_.is_err() {

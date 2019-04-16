@@ -1,5 +1,4 @@
-//! Proof of Exponentiation. See BBF (page 16). Allows efficient verification of group
-//! exponentiation when the exponent is larger than 2^256.
+//! Non-Interactive Proofs of Exponentiation (NI-PoE). See BBF (pages 8 and 42) for details.
 use crate::group::Group;
 use crate::hash::hash_to_prime;
 use crate::util::int;
@@ -7,15 +6,13 @@ use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-/// Struct for Non-interactive Proof of Exponentiation.
-///
-/// See BBF (page 8) for details.
+/// Struct for NI-PoE.
 pub struct Poe<G: Group> {
   Q: G::Elem,
 }
 
 impl<G: Group> Poe<G> {
-  /// See BBF (page 8) for details.
+  /// Computes a proof that `base ^ exp` was performed to derive `result`.
   pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let l = hash_to_prime(&(base, exp, result));
     let q = exp / l;
@@ -24,7 +21,7 @@ impl<G: Group> Poe<G> {
     }
   }
 
-  /// See BBF (page 8) for details.
+  /// Verifies that `base ^ exp = result` using the given proof to avoid computation.
   pub fn verify(base: &G::Elem, exp: &Integer, result: &G::Elem, proof: &Self) -> bool {
     let l = hash_to_prime(&(base, exp, result));
     let r = int(exp % &l);

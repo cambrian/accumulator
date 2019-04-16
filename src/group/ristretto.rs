@@ -35,7 +35,7 @@ impl Ristretto {
 // It may make sense to fork `curve25519-dalek` to add the `Hash` impl. Then we won't need to wrap.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-/// Ristretto group element. Thin wrapper around a Ristretto point.
+/// A Ristretto group element, directly wrapping a Ristretto point.
 pub struct RistrettoElem(RistrettoPoint);
 
 #[allow(clippy::derive_hash_xor_eq)]

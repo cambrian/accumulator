@@ -25,12 +25,12 @@ pub use rsa::{Rsa2048, Rsa2048Elem};
 /// - Exponentiation
 /// - Inverse (particularly where this is efficient to compute)
 ///
-/// The `TypeRep` trait lets us emulate type-level static fields, e.g., the modulus in an RSA group
+/// The `TypeRep` trait lets us emulate type-level static fields, e.g. the modulus in an RSA group
 /// or the discriminant in a class group.
 ///
-/// Implementors of this trait need to implement functions of the form `*_`, which take in
-/// `TypeRep` data as a parameter. Consumers use functions without the underscore: `id`, `op`,
-/// `exp`, and `inv`.
+/// Clients of this trait need to implement functions of the form `*_`, which take in `TypeRep`
+/// data as a parameter. Consumers use functions without the underscore: `id`, `op`, `exp`, and
+/// `inv`.
 
 // The other traits are only required here because Rust can't figure out how to do stuff with an
 // `Accumulator<G>` even though it's just a wrapped `G::Elem`. If possible we'd remove them.
@@ -114,7 +114,7 @@ pub trait UnknownOrderGroup: Group {
   fn unknown_order_elem_(rep: &Self::Rep) -> Self::Elem;
 }
 
-/// Like `From<T>`, but implemented on the Group instead of the element type.
+/// Like `From<T>`, but implemented on the `Group` instead of the element type.
 pub trait ElemFrom<T>: Group {
   /// Returns a group element from an initial value.
   fn elem(val: T) -> Self::Elem;

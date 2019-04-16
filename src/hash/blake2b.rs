@@ -3,7 +3,7 @@ use super::GeneralHasher;
 use blake2_rfc::blake2b::Blake2b as Blake2b_;
 use std::hash::Hasher;
 
-/// Thin wrapper around Blake2b from `blake2_rfc`.
+/// Thin wrapper around `Blake2b` from `blake2_rfc`.
 pub struct Blake2b(pub Blake2b_);
 
 impl Default for Blake2b {

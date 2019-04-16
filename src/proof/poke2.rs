@@ -1,15 +1,12 @@
-//! Proof of Knowledge of Exponentation. See page 16 of B&B. Allows zero-knowledge proof and
-//! efficient verification for knowledge of group exponentiation when the exponent is larger than
-//! 2^256.
+//! Non-Interactive Proofs of Knowledge of Exponent (NI-PoKE2). See BBF (pages 10 and 42) for
+//! details.
 use crate::group::UnknownOrderGroup;
 use crate::hash::{blake2b, hash_to_prime};
 use rug::Integer;
 
 #[allow(non_snake_case)]
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
-/// Struct for optimized Proof of Knowledge of Exponent.
-///
-/// See BBF (page 10).
+/// Struct for NI-PoKE2.
 pub struct Poke2<G: UnknownOrderGroup> {
   z: G::Elem,
   Q: G::Elem,
@@ -17,7 +14,7 @@ pub struct Poke2<G: UnknownOrderGroup> {
 }
 
 impl<G: UnknownOrderGroup> Poke2<G> {
-  /// See BBF (page 10).
+  /// Computes a proof that you know `exp` s.t. `base ^ exp = result`.
   pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let g = G::unknown_order_elem();
     let z = G::exp(&g, exp);
@@ -29,7 +26,7 @@ impl<G: UnknownOrderGroup> Poke2<G> {
     Self { z, Q, r }
   }
 
-  /// See BBF (page 10).
+  /// Verifies that the prover knows `exp` s.t. `base ^ exp = result`.
   #[allow(non_snake_case)]
   pub fn verify(base: &G::Elem, result: &G::Elem, Self { z, Q, r }: &Self) -> bool {
     let g = G::unknown_order_elem();

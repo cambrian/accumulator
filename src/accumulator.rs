@@ -29,7 +29,7 @@ pub enum AccError {
 // See https://doc.rust-lang.org/std/marker/struct.PhantomData.html#ownership-and-the-drop-check
 // for recommendations regarding phantom types.
 #[derive(PartialEq, Eq, Debug, Hash)]
-/// A cryptographic accumulator. Wraps a single unknown order group element and a phantom data
+/// A cryptographic accumulator. Wraps a single unknown-order group element and phantom data
 /// representing the type `T` being hashed-to-prime and accumulated.
 pub struct Accumulator<G: UnknownOrderGroup, T: Hash> {
   phantom: PhantomData<*const T>,
@@ -184,7 +184,9 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
   ///
   /// # Arguments
   ///
-  /// * `elem_witnesses` - Tuples consisting of (element to delete, its accumulator witness).
+  /// * `elem_witnesses` - Tuples consisting of (element to delete, element's witness).
+  ///
+  /// Uses a move instead of a `&self` reference to prevent accidental use of the old accumulator.
   pub fn delete(self, elem_witnesses: &[(T, Witness<G, T>)]) -> Result<Self, AccError> {
     Ok(self.delete_(elem_witnesses)?.0)
   }
@@ -211,7 +213,7 @@ impl<G: UnknownOrderGroup, T: Hash> Accumulator<G, T> {
   ///
   /// # Arguments
   ///
-  /// * `elem_witnesses` - Tuples consisting of (element to prove, its accumulator witness).
+  /// * `elem_witnesses` - Tuples consisting of (element to prove, element's witness).
   pub fn prove_membership(
     &self,
     elem_witnesses: &[(T, Witness<G, T>)],

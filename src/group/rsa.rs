@@ -27,7 +27,7 @@ lazy_static! {
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// RSA 2048 group element. A thin wrapper around a `Rug` integer.
+/// An RSA 2048 group element, directly wrapping a `Rug` integer.
 pub struct Rsa2048Elem(Integer);
 
 impl TypeRep for Rsa2048 {

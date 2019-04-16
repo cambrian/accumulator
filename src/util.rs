@@ -1,4 +1,4 @@
-//! Miscellaneous functions commonly used throughout the library.
+//! Miscellaneous functions used throughout the library.
 use crate::group::Group;
 use crate::hash::hash_to_prime;
 use rug::Integer;
@@ -49,8 +49,8 @@ pub fn shamir_trick<G: Group>(
   Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
 }
 
-/// Solve a linear congruence of form `ax = b mod m` for the set of solutions `x`. Solution sets are
-/// characterized by integers `mu` and `v` s.t. `x = mu + vn` and `n` is any integer.
+/// Solves a linear congruence of form `ax = b mod m` for the set of solutions `x`. Solution sets
+/// are characterized by integers `mu` and `v` s.t. `x = mu + vn` and `n` is any integer.
 pub fn solve_linear_congruence(
   a: &Integer,
   b: &Integer,
