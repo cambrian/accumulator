@@ -15,7 +15,7 @@ questions.
 
 ## Demo
 We have a [proof-of-concept](https://github.com/cambrian/accumulator-demo) for stateless Bitcoin
-nodes!
+nodes.
 
 ## Contributing
 Please see our
