@@ -4,15 +4,18 @@ structures, or standalone if you have a custom application.</p>
 <p>The preferred elliptic group implementation is the <code>Ristretto</code> group, which is a cyclic subset
 of the <code>Ed25519</code> group.</p>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
-<table><tr class='module-item'><td><a class="struct" href="struct.ClassElem.html" title='accumulator::group::ClassElem struct'>ClassElem</a></td><td class='docblock-short'><p>A class group element, which wraps three <code>Rug</code> integers. You should never need to construct a
-class group element yourself.</p>
+<table><tr class='module-item'><td><a class="struct" href="struct.ClassElem.html" title='accumulator::group::ClassElem struct'>ClassElem</a></td><td class='docblock-short'><p>A class group element, which wraps three GMP integers from the <code>rug</code> crate. You should never
+need to construct a class group element yourself.</p>
 </td></tr><tr class='module-item'><td><a class="struct" href="struct.RistrettoElem.html" title='accumulator::group::RistrettoElem struct'>RistrettoElem</a></td><td class='docblock-short'><p>A Ristretto group element, directly wrapping a Ristretto point.</p>
-</td></tr><tr class='module-item'><td><a class="struct" href="struct.Rsa2048Elem.html" title='accumulator::group::Rsa2048Elem struct'>Rsa2048Elem</a></td><td class='docblock-short'><p>An RSA 2048 group element, directly wrapping a <code>Rug</code> integer.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.Rsa2048Elem.html" title='accumulator::group::Rsa2048Elem struct'>Rsa2048Elem</a></td><td class='docblock-short'><p>An RSA 2048 group element, directly wrapping a GMP integer from the <code>rug</code> crate.</p>
 </td></tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
-<table><tr class='module-item'><td><a class="enum" href="enum.ClassGroup.html" title='accumulator::group::ClassGroup enum'>ClassGroup</a></td><td class='docblock-short'><p>Class group implementation, with future optimizations available via the <code>--features</code> flag.</p>
-</td></tr><tr class='module-item'><td><a class="enum" href="enum.Ristretto.html" title='accumulator::group::Ristretto enum'>Ristretto</a></td><td class='docblock-short'><p>Ristretto group implementation.</p>
+<table><tr class='module-item'><td><a class="enum" href="enum.ClassGroup.html" title='accumulator::group::ClassGroup enum'>ClassGroup</a></td><td class='docblock-short'><p>Class group implementation, with future optimizations available via the <code>--features</code> flag.
+Discriminant generated via OpenSSL.</p>
+</td></tr><tr class='module-item'><td><a class="enum" href="enum.Ristretto.html" title='accumulator::group::Ristretto enum'>Ristretto</a></td><td class='docblock-short'><p>Ristretto group implementation (based on the <code>curve25519-dalek</code> crate).</p>
 </td></tr><tr class='module-item'><td><a class="enum" href="enum.Rsa2048.html" title='accumulator::group::Rsa2048 enum'>Rsa2048</a></td><td class='docblock-short'><p>RSA-2048 group implementation. Modulus taken from
-<a href="https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048">here</a>.</p>
+<a href="https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048">here</a>. <strong>Note</strong>: If you want to use
+<code>Rsa2048</code> outside the context of this crate, be advised that it treats <code>x</code> and <code>-x</code> as the same
+element for sound proofs-of-exponentiation. See BBF (page 9).</p>
 </td></tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
 <table><tr class='module-item'><td><a class="trait" href="trait.ElemFrom.html" title='accumulator::group::ElemFrom trait'>ElemFrom</a></td><td class='docblock-short'><p>Like <code>From&lt;T&gt;</code>, but implemented on the <code>Group</code> instead of the element type.</p>
 </td></tr><tr class='module-item'><td><a class="trait" href="trait.Group.html" title='accumulator::group::Group trait'>Group</a></td><td class='docblock-short'><p>A mathematical group.</p>

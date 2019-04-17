@@ -1,4 +1,4 @@
-//! Ristretto group implementation (cyclic subgroup of `Ed25519`).
+//! Ristretto group implementation (based on the `curve25519-dalek` crate).
 use super::Group;
 use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -11,7 +11,7 @@ use std::hash::{Hash, Hasher};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// Ristretto group implementation.
+/// Ristretto group implementation (based on the `curve25519-dalek` crate).
 pub enum Ristretto {}
 
 lazy_static! {

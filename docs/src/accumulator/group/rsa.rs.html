@@ -134,6 +134,8 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! RSA (2048) group using GMP integers in the `rug` crate.</span>
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">ElemFrom</span>, <span class="ident">Group</span>, <span class="ident">UnknownOrderGroup</span>};
@@ -144,7 +146,9 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="doccomment">/// RSA-2048 group implementation. Modulus taken from</span>
-<span class="doccomment">/// [here](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).</span>
+<span class="doccomment">/// [here](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048). **Note**: If you want to use</span>
+<span class="doccomment">/// `Rsa2048` outside the context of this crate, be advised that it treats `x` and `-x` as the same</span>
+<span class="doccomment">/// element for sound proofs-of-exponentiation. See BBF (page 9).</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Rsa2048</span> {}
 
 <span class="doccomment">/// RSA-2048 modulus, taken from [Wikipedia](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).</span>
@@ -164,7 +168,7 @@
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
-<span class="doccomment">/// An RSA 2048 group element, directly wrapping a `Rug` integer.</span>
+<span class="doccomment">/// An RSA 2048 group element, directly wrapping a GMP integer from the `rug` crate.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rsa2048Elem</span>(<span class="ident">Integer</span>);
 
 <span class="kw">impl</span> <span class="ident">TypeRep</span> <span class="kw">for</span> <span class="ident">Rsa2048</span> {

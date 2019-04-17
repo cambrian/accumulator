@@ -1,4 +1,4 @@
-//! Fixed-discriminant implementation of a form class group, with optimizations.
+//! Fixed-discriminant implementation of an ideal class group, with future optimizations.
 //!
 //! Using a class group instead of an RSA group for accumulators or vector commitments eliminates
 //! the need for a trusted setup, albeit at the expense of slower operations.
@@ -12,6 +12,7 @@ use std::str::FromStr;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// Class group implementation, with future optimizations available via the `--features` flag.
+/// Discriminant generated via OpenSSL.
 pub enum ClassGroup {}
 
 // 2048-bit prime, negated, congruent to `3 mod 4`. Generated using OpenSSL.
@@ -34,8 +35,8 @@ lazy_static! {
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, Eq)]
-/// A class group element, which wraps three `Rug` integers. You should never need to construct a
-/// class group element yourself.
+/// A class group element, which wraps three GMP integers from the `rug` crate. You should never
+/// need to construct a class group element yourself.
 pub struct ClassElem {
   a: Integer,
   b: Integer,

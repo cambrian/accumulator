@@ -722,8 +722,9 @@
 <span id="722">722</span>
 <span id="723">723</span>
 <span id="724">724</span>
+<span id="725">725</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Fixed-discriminant implementation of a form class group, with optimizations.</span>
+<span class="doccomment">//! Fixed-discriminant implementation of an ideal class group, with future optimizations.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Using a class group instead of an RSA group for accumulators or vector commitments eliminates</span>
 <span class="doccomment">//! the need for a trusted setup, albeit at the expense of slower operations.</span>
@@ -737,6 +738,7 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="doccomment">/// Class group implementation, with future optimizations available via the `--features` flag.</span>
+<span class="doccomment">/// Discriminant generated via OpenSSL.</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ClassGroup</span> {}
 
 <span class="comment">// 2048-bit prime, negated, congruent to `3 mod 4`. Generated using OpenSSL.</span>
@@ -759,8 +761,8 @@
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>)]</span>
-<span class="doccomment">/// A class group element, which wraps three `Rug` integers. You should never need to construct a</span>
-<span class="doccomment">/// class group element yourself.</span>
+<span class="doccomment">/// A class group element, which wraps three GMP integers from the `rug` crate. You should never</span>
+<span class="doccomment">/// need to construct a class group element yourself.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClassElem</span> {
   <span class="ident">a</span>: <span class="ident">Integer</span>,
   <span class="ident">b</span>: <span class="ident">Integer</span>,

@@ -107,7 +107,7 @@
 <span id="107">107</span>
 <span id="108">108</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Ristretto group implementation (cyclic subgroup of `Ed25519`).</span>
+<span class="doccomment">//! Ristretto group implementation (based on the `curve25519-dalek` crate).</span>
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">Group</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">int</span>, <span class="ident">TypeRep</span>};
 <span class="kw">use</span> <span class="ident">curve25519_dalek</span>::<span class="ident">ristretto</span>::<span class="ident">RistrettoPoint</span>;
@@ -120,7 +120,7 @@
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
-<span class="doccomment">/// Ristretto group implementation.</span>
+<span class="doccomment">/// Ristretto group implementation (based on the `curve25519-dalek` crate).</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Ristretto</span> {}
 
 <span class="macro">lazy_static</span><span class="macro">!</span> {

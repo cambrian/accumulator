@@ -7,7 +7,9 @@ use std::str::FromStr;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// RSA-2048 group implementation. Modulus taken from
-/// [here](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
+/// [here](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048). **Note**: If you want to use
+/// `Rsa2048` outside the context of this crate, be advised that it treats `x` and `-x` as the same
+/// element for sound proofs-of-exponentiation. See BBF (page 9).
 pub enum Rsa2048 {}
 
 /// RSA-2048 modulus, taken from [Wikipedia](https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048).
@@ -27,7 +29,7 @@ lazy_static! {
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// An RSA 2048 group element, directly wrapping a `Rug` integer.
+/// An RSA 2048 group element, directly wrapping a GMP integer from the `rug` crate.
 pub struct Rsa2048Elem(Integer);
 
 impl TypeRep for Rsa2048 {
