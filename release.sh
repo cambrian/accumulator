@@ -3,7 +3,7 @@ set -e
 cargo build
 cargo test
 
-# Clone docs branch.
+# Clone docs branch in submodule.
 git submodule update --init docs
 
 # Backup manually-placed files.
@@ -12,9 +12,9 @@ cp docs/404.html docs_tmp
 cp docs/_config.yml docs_tmp
 
 # Generate docs.
-rm -rf target/doc docs
+rm -rf target/doc docs/*
 cargo doc --no-deps
-cp -r target/doc docs
+cp -r target/doc/* docs
 
 # Restore manually-placed files.
 cp docs_tmp/* docs
@@ -31,3 +31,9 @@ redirect_from: "/index.html"
 ---
 .
 w' | ed docs/docs/index.html
+
+# Commit regenerated docs to submodule.
+cd docs
+git add --all
+git commit -m "Regenerating docs via script."
+cd ..

@@ -80,7 +80,8 @@
 //!
 //! The RSA group is fast but relies on the security of the RSA-2048 modulus and needs trusted
 //! setup if using a different modulus. The class group is slower but eliminates the need for a
-//! trusted setup.
+//! trusted setup. For more on class groups, please visit this thorough
+//! [explainer](https://www.michaelstraka.com/posts/classgroups/) by contributor Michael Straka.
 //!
 //! # Performance
 //!
