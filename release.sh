@@ -3,6 +3,9 @@ set -e
 cargo build
 cargo test
 
+# Clone docs branch.
+git submodule update --init docs
+
 # Backup manually-placed files.
 mkdir -p docs_tmp
 cp docs/404.html docs_tmp
