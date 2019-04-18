@@ -5,11 +5,15 @@ cargo test
 
 # Clone docs branch in submodule.
 git submodule update --init docs
+cd docs
+git checkout gh-pages
+cd ..
 
 # Backup manually-placed files.
 mkdir -p docs_tmp
 cp docs/404.html docs_tmp
 cp docs/_config.yml docs_tmp
+cp docs/README.md docs_tmp
 
 # Generate docs.
 rm -rf target/doc docs/*
