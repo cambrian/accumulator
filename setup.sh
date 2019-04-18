@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 # Set up the Rust toolchain and modify PATH.
 curl https://sh.rustup.rs -sSf | sh

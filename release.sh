@@ -1,5 +1,7 @@
 #!/bin/sh
 set -e
+
+# Sanity check the code.
 cargo build
 cargo test
 
