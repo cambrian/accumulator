@@ -21,6 +21,19 @@ lazy_static! {
     MAX_SAFE_EXPONENT.write_digits(&mut digits, Order::LsfLe);
     Scalar::from_bytes_mod_order(digits)
   };
+
+
+  pub static ref NEW_MAX_SAFE_EXPONENT: Integer = {
+    //2^\{252\} + 27742317777372353535851937790883648493
+    let str_max_scalar = "7237005577332262213973186563042994240857116359379907606001950938285454250989";
+    Integer::from_str_radix(str_max_scalar, 10).unwrap()
+  };
+  pub static ref NEW_MAX_SAFE_SCALAR: Scalar = {
+    let mut digits: [u8; 32] = [0; 32];
+    NEW_MAX_SAFE_EXPONENT.write_digits(&mut digits, Order::LsfLe);
+    Scalar::from_bytes_mod_order(digits)
+  };
+
 }
 
 impl Ristretto {
@@ -76,6 +89,7 @@ impl Group for Ristretto {
       remaining -= Self::max_safe_exponent();
     }
 
+
     let mut digits: [u8; 32] = [0; 32];
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
@@ -104,5 +118,11 @@ mod tests {
     let exp_b = Ristretto::exp(&bp, &int(2).pow(257));
     let exp_b_2 = Ristretto::exp(&exp_b, &int(2));
     assert_eq!(exp_a, exp_b_2);
+
+    let exp_c = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() + &int(20)));
+    let exp_d = Ristretto::exp(&bp, &int(20));
+    let exp_e = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() * &int(11) + &int(20)));
+    assert_eq!(exp_c, exp_d);
+    assert_eq!(exp_e, exp_d);
   }
 }
