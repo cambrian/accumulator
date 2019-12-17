@@ -160,4 +160,15 @@ mod tests {
     let res_2 = multi_exp::<Rsa2048>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
     assert!(res_2 == Rsa2048::elem(1_687_500));
   }
+
+  #[test]
+  fn test_multi_exp_Classgroup() {
+    use class::ClassGroup;
+    let alpha_1 = ClassGroup::unknown_order_elem();
+    let g2 = ClassGroup::op(&alpha_1, &alpha_1);
+    let id = ClassGroup::id();
+    let g3 = ClassGroup::op(&id, &g2);
+
+    assert_eq!(g2, g3);
+  }
 }
