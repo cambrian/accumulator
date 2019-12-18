@@ -171,4 +171,23 @@ mod tests {
 
     assert_eq!(g2, g3);
   }
+
+  #[test]
+  fn test_multi_exp_Ristretto() {
+    use rug::ops::Pow;
+    use curve25519_dalek::constants;
+    use ristretto::NEW_MAX_SAFE_EXPONENT;
+
+    let bp = Ristretto::unknown_order_elem();
+    let exp_a = Ristretto::exp(&bp, &int(2).pow(258));
+    let exp_b = Ristretto::exp(&bp, &int(2).pow(257));
+    let exp_b_2 = Ristretto::exp(&exp_b, &int(2));
+    assert_eq!(exp_a, exp_b_2);
+
+    let exp_c = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() + &int(20)));
+    let exp_d = Ristretto::exp(&bp, &int(20));
+    let exp_e = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() * &int(11) + &int(20)));
+    assert_eq!(exp_c, exp_d);
+    assert_eq!(exp_e, exp_d);
+  }
 }

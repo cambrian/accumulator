@@ -1,9 +1,10 @@
 //! Ristretto group implementation (based on the `curve25519-dalek` crate).
-use super::Group;
+use super::{Group, UnknownOrderGroup};
 use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
+use curve25519_dalek::constants;
 use rug::integer::Order;
 use rug::ops::Pow;
 use rug::Integer;
@@ -38,7 +39,7 @@ lazy_static! {
 
 impl Ristretto {
   fn max_safe_exponent() -> &'static Integer {
-    &MAX_SAFE_EXPONENT
+    &NEW_MAX_SAFE_EXPONENT
   }
 }
 
@@ -84,8 +85,10 @@ impl Group for Ristretto {
     let mut remaining = n.clone();
     let mut result = Self::id();
 
-    while remaining > *MAX_SAFE_EXPONENT {
-      result = RistrettoElem(result.0 + x.0 * (*MAX_SAFE_SCALAR));
+    while remaining > *NEW_MAX_SAFE_EXPONENT {
+      //For x.0 * (*NEW_MAX_SAFE_SCALAR)=RistrettoPoint::identity()
+      //result = RistrettoElem(result.0 + x.0 * (*NEW_MAX_SAFE_SCALAR));
+      result = RistrettoElem(result.0);
       remaining -= Self::max_safe_exponent();
     }
 
@@ -97,11 +100,16 @@ impl Group for Ristretto {
   }
 }
 
+impl UnknownOrderGroup for Ristretto {
+  fn unknown_order_elem_(_: &()) -> RistrettoElem {
+    RistrettoElem(constants::RISTRETTO_BASEPOINT_POINT)
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
   use crate::util::int;
-  use curve25519_dalek::constants;
 
   #[test]
   fn test_inv() {
