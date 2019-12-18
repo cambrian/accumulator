@@ -17,12 +17,12 @@ impl<G: UnknownOrderGroup> Poke2<G> {
   /// Computes a proof that you know `exp` s.t. `base ^ exp = result`.
   pub fn prove(base: &G::Elem, exp: &Integer, result: &G::Elem) -> Self {
     let g = G::unknown_order_elem();
-    let z = G::exp(&g, exp);
+    let z = G::exp(&g, exp).unwrap();
     let l = hash_to_prime(&(base, result, &z));
     let alpha = blake2b(&(base, result, &z, &l));
     let (q, r) = <(Integer, Integer)>::from(exp.div_rem_euc_ref(&l));
     #[allow(non_snake_case)]
-    let Q = G::exp(&G::op(&base, &G::exp(&g, &alpha)), &q);
+    let Q = G::exp(&G::op(&base, &G::exp(&g, &alpha).unwrap()), &q).unwrap();
     Self { z, Q, r }
   }
 
@@ -33,10 +33,10 @@ impl<G: UnknownOrderGroup> Poke2<G> {
     let l = hash_to_prime(&(base, result, &z));
     let alpha = blake2b(&(base, result, &z, &l));
     let lhs = G::op(
-      &G::exp(Q, &l),
-      &G::exp(&G::op(&base, &G::exp(&g, &alpha)), &r),
+      &G::exp(Q, &l).unwrap(),
+      &G::exp(&G::op(&base, &G::exp(&g, &alpha).unwrap()), &r).unwrap(),
     );
-    let rhs = G::op(result, &G::exp(&z, &alpha));
+    let rhs = G::op(result, &G::exp(&z, &alpha).unwrap());
     lhs == rhs
   }
 }
@@ -86,7 +86,7 @@ mod tests {
   fn test_poke2_negative() {
     let base = Rsa2048::elem(2);
     let exp = int(-5);
-    let result = Rsa2048::exp(&base, &exp);
+    let result = Rsa2048::exp(&base, &exp).unwrap();
     let proof = Poke2::<Rsa2048>::prove(&base, &exp, &result);
     assert!(Poke2::verify(&base, &result, &proof));
   }

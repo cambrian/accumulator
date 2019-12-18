@@ -81,22 +81,25 @@ impl Group for Ristretto {
     RistrettoElem(-x.0)
   }
 
-  fn exp_(_: &(), x: &RistrettoElem, n: &Integer) -> RistrettoElem {
+  fn exp_(_: &(), x: &RistrettoElem, n: &Integer) -> Option<RistrettoElem> {
     let mut remaining = n.clone();
     let mut result = Self::id();
 
-    while remaining > *NEW_MAX_SAFE_EXPONENT {
+    /*while remaining > *NEW_MAX_SAFE_EXPONENT {
       //For x.0 * (*NEW_MAX_SAFE_SCALAR)=RistrettoPoint::identity()
       //result = RistrettoElem(result.0 + x.0 * (*NEW_MAX_SAFE_SCALAR));
       result = RistrettoElem(result.0);
       remaining -= Self::max_safe_exponent();
+    }*/
+    if remaining >= *NEW_MAX_SAFE_EXPONENT {
+      return None;
     }
 
 
     let mut digits: [u8; 32] = [0; 32];
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
-    RistrettoElem(result.0 + x.0 * factor)
+    Some(RistrettoElem(result.0 + x.0 * factor))
   }
 }
 
@@ -122,15 +125,21 @@ mod tests {
   #[test]
   fn test_exp() {
     let bp = RistrettoElem(constants::RISTRETTO_BASEPOINT_POINT);
-    let exp_a = Ristretto::exp(&bp, &int(2).pow(258));
-    let exp_b = Ristretto::exp(&bp, &int(2).pow(257));
-    let exp_b_2 = Ristretto::exp(&exp_b, &int(2));
+    let exp_a = Ristretto::exp(&bp, &int(2).pow(58)).unwrap();
+    let exp_b = Ristretto::exp(&bp, &int(2).pow(57)).unwrap();
+    let exp_b_2 = Ristretto::exp(&exp_b, &int(2)).unwrap();
     assert_eq!(exp_a, exp_b_2);
 
-    let exp_c = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() + &int(20)));
-    let exp_d = Ristretto::exp(&bp, &int(20));
-    let exp_e = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() * &int(11) + &int(20)));
+    /*let exp_c = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() + &int(20))).unwrap();
+    let exp_d = Ristretto::exp(&bp, &int(20)).unwrap();
+    let exp_e = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() * &int(11) + &int(20))).unwrap();
     assert_eq!(exp_c, exp_d);
-    assert_eq!(exp_e, exp_d);
+    assert_eq!(exp_e, exp_d);*/
+  }
+  #[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
+  #[test]
+  fn test_exp_overflow() {
+    let bp = Ristretto::unknown_order_elem();
+    let _ = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() + &int(20))).unwrap();
   }
 }

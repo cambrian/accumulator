@@ -84,7 +84,7 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
   /// efficient `add_with_proof`.
   fn add_(&self, elems: &[T]) -> (Self, Integer) {
     let x = prime_hash_product(elems);
-    let acc_elem = G::exp(&self.value, &x);
+    let acc_elem = G::exp(&self.value, &x).unwrap();
     (
       Self {
         phantom: PhantomData,
@@ -130,7 +130,7 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
       .collect::<Vec<_>>();
 
     for (p, witness_elem) in &prime_witnesses {
-      if G::exp(&witness_elem, &p) != self.value {
+      if G::exp(&witness_elem, &p).unwrap() != self.value {
         return Err(AccError::BadWitness);
       }
     }
@@ -246,8 +246,8 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
     assert!(gcd == int(1));
 
     let w = witness.0.add(untracked_additions);
-    let w_to_b = G::exp(&w.value, &b);
-    let acc_new_to_a = G::exp(&self.value, &a);
+    let w_to_b = G::exp(&w.value, &b).unwrap();
+    let acc_new_to_a = G::exp(&self.value, &a).unwrap();
     Ok(Witness(Self {
       phantom: PhantomData,
       value: G::op(&w_to_b, &acc_new_to_a),
@@ -275,8 +275,8 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
     }
 
     let g = G::unknown_order_elem();
-    let d = G::exp(&g, &a);
-    let v = G::exp(&self.value, &b);
+    let d = G::exp(&g, &a).unwrap();
+    let v = G::exp(&self.value, &b).unwrap();
     let gv_inv = G::op(&g, &G::inv(&v));
 
     let poke2_proof = Poke2::prove(&self.value, &b, &v);
@@ -344,7 +344,7 @@ impl<G: UnknownOrderGroup, T: Clone + Hash> Witness<G, T> {
 
     Ok(Self(Accumulator {
       phantom: PhantomData,
-      value: G::exp(&self.0.value, &quotient),
+      value: G::exp(&self.0.value, &quotient).unwrap(),
     }))
   }
 
@@ -368,13 +368,13 @@ impl<G: UnknownOrderGroup, T: Clone + Hash> Witness<G, T> {
     let g_l = elems[..half_n].iter().fold(self.clone(), |sum, x| {
       Self(Accumulator {
         phantom: PhantomData,
-        value: G::exp(&sum.0.value, x),
+        value: G::exp(&sum.0.value, x).unwrap(),
       })
     });
     let g_r = elems[half_n..].iter().fold(self.clone(), |sum, x| {
       Self(Accumulator {
         phantom: PhantomData,
-        value: G::exp(&sum.0.value, x),
+        value: G::exp(&sum.0.value, x).unwrap(),
       })
     });
     let mut L = g_r.root_factor(&Vec::from(&elems[..half_n]));
@@ -421,7 +421,7 @@ mod tests {
     let acc_expected = G::exp(
       &G::unknown_order_elem(),
       &prime_hash_product(&["a", "b", "c", "d"]),
-    );
+    ).unwrap();
     assert!(acc_new.value == acc_expected);
     assert!(acc_new.verify_membership_batch(&new_elems, &proof));
   }
@@ -541,7 +541,7 @@ mod tests {
     let witness_multiple = Witness(new_acc::<G, &'static str>(&["a"]));
     let witnesses = witness_multiple.compute_individual_witnesses(&["b", "c"]);
     for (elem, witness) in witnesses {
-      assert_eq!(acc.value, G::exp(&witness.0.value, &hash_to_prime(elem)));
+      assert_eq!(acc.value, G::exp(&witness.0.value, &hash_to_prime(elem)).unwrap());
     }
   }
 

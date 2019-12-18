@@ -46,7 +46,7 @@ pub fn shamir_trick<G: Group>(
     return None;
   }
 
-  Some(G::op(&G::exp(xth_root, &b), &G::exp(yth_root, &a)))
+  Some(G::op(&G::exp(xth_root, &b).unwrap(), &G::exp(yth_root, &a).unwrap()))
 }
 
 /// Solves a linear congruence of form `ax = b mod m` for the set of solutions `x`. Solution sets
@@ -170,17 +170,17 @@ mod tests {
   #[test]
   fn test_shamir_trick() {
     let (x, y, z) = (&int(13), &int(17), &int(19));
-    let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z));
-    let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z));
-    let xyth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), z);
+    let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z)).unwrap();
+    let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z)).unwrap();
+    let xyth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), z).unwrap();
     assert!(shamir_trick::<Rsa2048>(&xth_root, &yth_root, x, y) == Some(xyth_root));
   }
 
   #[test]
   fn test_shamir_trick_failure() {
     let (x, y, z) = (&int(7), &int(14), &int(19)); // Inputs not coprime.
-    let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z));
-    let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z));
+    let xth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(y * z)).unwrap();
+    let yth_root = Rsa2048::exp(&Rsa2048::unknown_order_elem(), &int(x * z)).unwrap();
     assert!(shamir_trick::<Rsa2048>(&xth_root, &yth_root, x, y) == None);
   }
 
