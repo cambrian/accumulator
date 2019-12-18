@@ -129,11 +129,6 @@ mod tests {
     );
 
     assert_eq!(
-      (Integer::from(-2), Integer::from(4)),
-      solve_linear_congruence(&Integer::from(3), &Integer::from(2), &Integer::from(4)).unwrap()
-    );
-
-    assert_eq!(
       (Integer::from(1), Integer::from(2)),
       solve_linear_congruence(&Integer::from(5), &Integer::from(1), &Integer::from(2)).unwrap()
     );
