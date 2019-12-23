@@ -122,16 +122,72 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
       return false;
     }
     let (elems_with_zero, elems_with_one) = group_result.unwrap();
-    let verified_membership = vc
-      .0
-      .verify_membership_batch(&elems_with_one, membership_proof);
-    let verified_nonmembership = vc
-      .0
-      .verify_nonmembership(&elems_with_zero, nonmembership_proof);
+    let mut verified_membership = false;
+    let mut verified_nonmembership = false;
+    //for empty elems, default as true verify.
+    if elems_with_one.len() == 0 {
+      verified_membership = true;
+    } else {
+      verified_membership = vc
+        .0
+        .verify_membership_batch(&elems_with_one, membership_proof);
+    }
+    if elems_with_zero.len() == 0 {
+      verified_nonmembership = true;
+    } else {
+      verified_nonmembership = vc
+        .0
+        .verify_nonmembership(&elems_with_zero, nonmembership_proof);
+    }
+
     verified_membership && verified_nonmembership
   }
 }
 
 // TODO: Write tests.
 #[cfg(test)]
-mod tests {}
+mod tests {
+  use super::*;
+  use crate::group::{ClassGroup, Rsa2048};
+  use crate::util::int;
+
+
+  macro_rules! test_all_groups {
+    ($test_func:ident, $func_name_rsa:ident, $func_name_class:ident, $($attr:meta)*) => {
+      #[test]
+      $(
+        #[$attr]
+      )*
+      fn $func_name_rsa() {
+        $test_func::<Rsa2048>();
+      }
+
+      #[test]
+      $(
+        #[$attr]
+      )*
+      fn $func_name_class() {
+        $test_func::<ClassGroup>();
+      }
+    };
+  }
+  test_all_groups!(
+    test_vc_basic,
+    test_vc_basic_rsa2048,
+    test_vc_basic_class,
+  );
+  fn test_vc_basic<G: UnknownOrderGroup>() {
+    let vc = VectorCommitment::<G>::empty();
+    let mut bits = [(true, int(2)), (false, int(3)), (true, int(7)), (true, int(11))];
+    let (non_members, vc_acc_set) = group_elems_by_bit(&bits).unwrap();
+    let (new_acc, vc_proof) = VectorCommitment::update(vc, &vc_acc_set, &bits).unwrap();
+    assert!(VectorCommitment::verify(&new_acc.clone(), &bits, &vc_proof));
+
+    let to_open = [(int(2), Witness(Accumulator::<G, Integer>::empty().add(&[int(7), int(11)]))), (int(7), Witness(Accumulator::<G, Integer>::empty().add(&[int(2), int(11)])))];
+    let open_verify = [(true, int(2)), (true, int(7))];
+    let open_proof = VectorCommitment::open(&new_acc.clone(), &vc_acc_set, &non_members, &to_open).unwrap();
+    assert!(new_acc.0.verify_membership_batch(&[int(2), int(7)], &open_proof.membership_proof));
+    assert!(VectorCommitment::verify(&new_acc.clone(), &open_verify, &open_proof));
+  }
+
+}
