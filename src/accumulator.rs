@@ -387,7 +387,7 @@ impl<G: UnknownOrderGroup, T: Clone + Hash> Witness<G, T> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::group::{ClassGroup, Rsa2048};
+  use crate::group::{ClassGroup, Rsa2048, Ristretto};
 
   fn new_acc<G: UnknownOrderGroup, T: Hash + Eq>(data: &[T]) -> Accumulator<G, T> {
     Accumulator::<G, T>::empty().add(data)
@@ -549,5 +549,12 @@ mod tests {
   fn test_compute_individual_witnesses_rsa2048() {
     // Class version takes too long for a unit test.
     test_compute_individual_witnesses::<Rsa2048>();
+  }
+
+   #[test]
+  fn test_compute_individual_witnesses_ristretto() {
+    // TODO: more than one hash_to_prime product value is always bigger than `*NEW_MAX_SAFE_EXPONENT`.
+    // TODO: How to make it possible? by bulletproof style?
+    test_compute_individual_witnesses::<Ristretto>();
   }
 }

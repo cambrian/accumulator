@@ -92,6 +92,7 @@ impl Group for Ristretto {
       remaining -= Self::max_safe_exponent();
     }*/
     if remaining >= *NEW_MAX_SAFE_EXPONENT {
+      println!("zouyudi........remaining:{:?}, NEW_MAX_SAFE_EXPONENT:{:?}", remaining, *NEW_MAX_SAFE_EXPONENT);
       return None;
     }
 
