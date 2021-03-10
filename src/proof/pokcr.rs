@@ -20,7 +20,7 @@ impl<G: Group> Pokcr<G> {
   /// Verifies an NI-PoKCR proof.
   pub fn verify(alphas: &[G::Elem], x: &[Integer], proof: &Self) -> bool {
     let y = multi_exp::<G>(alphas, x);
-    let lhs = G::exp(&proof.w, &x.iter().product());
+    let lhs = G::exp(&proof.w, &x.iter().product()).unwrap();
     lhs == y
   }
 }

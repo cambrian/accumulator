@@ -195,7 +195,7 @@ impl Group for ClassGroup {
     }
   }
 
-  fn exp_(_: &Integer, a: &ClassElem, n: &Integer) -> ClassElem {
+  fn exp_(_: &Integer, a: &ClassElem, n: &Integer) -> Option<ClassElem> {
     let (mut val, mut a, mut n) = {
       if *n < int(0) {
         (Self::id(), Self::inv(a), int(-n))
@@ -205,7 +205,7 @@ impl Group for ClassGroup {
     };
     loop {
       if n == int(0) {
-        return val;
+        return Some(val);
       }
       if n.is_odd() {
         val = Self::op(&val, &a);
@@ -700,7 +700,7 @@ mod tests {
 
     for i in 1..=1000 {
       g = ClassGroup::op(&g, &g_anchor);
-      assert_eq!(&g, &ClassGroup::exp(&g_anchor, &int(i)));
+      assert_eq!(&g, &ClassGroup::exp(&g_anchor, &int(i)).unwrap());
     }
   }
 

@@ -17,7 +17,7 @@ impl<G: Group> Poe<G> {
     let l = hash_to_prime(&(base, exp, result));
     let q = exp / l;
     Self {
-      Q: G::exp(&base, &q),
+      Q: G::exp(&base, &q).unwrap(),
     }
   }
 
@@ -26,7 +26,7 @@ impl<G: Group> Poe<G> {
     let l = hash_to_prime(&(base, exp, result));
     let r = int(exp % &l);
     // w = Q^l * u^r
-    let w = G::op(&G::exp(&proof.Q, &l), &G::exp(&base, &r));
+    let w = G::op(&G::exp(&proof.Q, &l).unwrap(), &G::exp(&base, &r).unwrap());
     w == *result
   }
 }
@@ -39,29 +39,24 @@ mod tests {
 
   #[test]
   fn test_poe_small_exp() {
-    // 2^20 = 1048576
+    use std::str::FromStr;
+    // sage: w = power_mod(2,exp, modulus)
     let base = Rsa2048::unknown_order_elem();
-    let exp = int(20);
-    let result = Rsa2048::elem(1_048_576);
+    let exp = Integer::from_str(
+      "47837607866886756167333839869251273774207619337757918597995294777816250058331116325341018110",
+    )
+    .unwrap();
+    let w = Integer::from_str("15237009150211370041572066643854992199159670014401836849321696862635102033487835342310727017245109132166684919786539411147576425083300413858833269356670380323733544946009726244587299888075528737163608201739522141432863879185104979614488213225007619266202959930396741246840028757785072423669876995919918707162762105031693124069429835211177047936412676083097631109112467835488434055566930455343640875193245804869807246696358272733220445826908935579926381184476706321520364895733176015236667338933737155347587968575990509888262873494415904958502766481314251287061092434837169635961698728491245532926158449261934834101518").unwrap();
+    let result = Rsa2048::elem(w);
     let proof = Poe::<Rsa2048>::prove(&base, &exp, &result);
     assert!(Poe::verify(&base, &exp, &result, &proof));
-    assert!(
-      proof
-        == Poe {
-          Q: Rsa2048::elem(1)
-        }
-    );
+
 
     // 2^35 = 34359738368
     let exp_2 = int(35);
     let result_2 = Rsa2048::elem(34_359_738_368u64);
     let proof_2 = Poe::<Rsa2048>::prove(&base, &exp_2, &result_2);
     assert!(Poe::verify(&base, &exp_2, &result_2, &proof_2));
-    assert!(
-      proof_2
-        == Poe {
-          Q: Rsa2048::elem(1)
-        }
-    );
+
   }
 }

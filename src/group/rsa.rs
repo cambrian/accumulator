@@ -53,9 +53,9 @@ impl Group for Rsa2048 {
     Self::elem(x.0.invert_ref(modulus).unwrap())
   }
 
-  fn exp_(modulus: &Integer, x: &Rsa2048Elem, n: &Integer) -> Rsa2048Elem {
+  fn exp_(modulus: &Integer, x: &Rsa2048Elem, n: &Integer) -> Option<Rsa2048Elem> {
     // A side-channel resistant impl is 40% slower; we'll consider it in the future if we need to.
-    Self::elem(x.0.pow_mod_ref(n, modulus).unwrap())
+    Some(Self::elem(x.0.pow_mod_ref(n, modulus).unwrap()))
   }
 }
 
@@ -106,9 +106,9 @@ mod tests {
 
   #[test]
   fn test_exp() {
-    let a = Rsa2048::exp(&Rsa2048::elem(2), &int(3));
+    let a = Rsa2048::exp(&Rsa2048::elem(2), &int(3)).unwrap();
     assert!(a == Rsa2048::elem(8));
-    let b = Rsa2048::exp(&Rsa2048::elem(2), &int(4096));
+    let b = Rsa2048::exp(&Rsa2048::elem(2), &int(4096)).unwrap();
     assert!(
       b == Rsa2048::elem(
         Integer::parse(

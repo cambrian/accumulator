@@ -54,7 +54,7 @@ pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
   ///
   /// Specific implementations may provide more performant specializations as needed (e.g.
   /// Montgomery multiplication for RSA groups).
-  fn exp_(_rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Self::Elem {
+  fn exp_(_rep: &Self::Rep, a: &Self::Elem, n: &Integer) -> Option<Self::Elem> {
     let (mut val, mut a, mut n) = {
       if *n < int(0) {
         (Self::id(), Self::inv(a), int(-n))
@@ -69,7 +69,7 @@ pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
       a = Self::op(&a, &a);
       n >>= 1;
     }
-    val
+    Some(val)
   }
 
   /// A group-specific wrapper for `inv`.
@@ -90,7 +90,7 @@ pub trait Group: Clone + Debug + Eq + Hash + TypeRep + Send + Sync {
   }
 
   /// Applies the group operation to `a` and itself `n` times and returns the result.
-  fn exp(a: &Self::Elem, n: &Integer) -> Self::Elem {
+  fn exp(a: &Self::Elem, n: &Integer) -> Option<Self::Elem> {
     Self::exp_(Self::rep(), a, n)
   }
 
@@ -136,7 +136,7 @@ pub fn multi_exp<G: Group>(alphas: &[G::Elem], x: &[Integer]) -> G::Elem {
   let x_star_r = x_r.iter().product();
   let l = multi_exp::<G>(alpha_l, x_l);
   let r = multi_exp::<G>(alpha_r, x_r);
-  G::op(&G::exp(&l, &x_star_r), &G::exp(&r, &x_star_l))
+  G::op(&G::exp(&l, &x_star_r).unwrap(), &G::exp(&r, &x_star_l).unwrap())
 }
 
 #[cfg(test)]
@@ -160,4 +160,29 @@ mod tests {
     let res_2 = multi_exp::<Rsa2048>(&[alpha_1, alpha_2, alpha_3], &[x_1, x_2, x_3]);
     assert!(res_2 == Rsa2048::elem(1_687_500));
   }
+
+  #[test]
+  fn test_Classgroup() {
+    use class::ClassGroup;
+    let alpha_1 = ClassGroup::unknown_order_elem();
+    let g2 = ClassGroup::op(&alpha_1, &alpha_1);
+    let id = ClassGroup::id();
+    let g3 = ClassGroup::op(&id, &g2);
+
+    assert_eq!(g2, g3);
+  }
+
+  #[test]
+  fn test_Ristretto() {
+    use rug::ops::Pow;
+    use curve25519_dalek::constants;
+    use ristretto::NEW_MAX_SAFE_EXPONENT;
+
+    let bp = Ristretto::unknown_order_elem();
+    let exp_a = Ristretto::exp(&bp, &int(2).pow(58)).unwrap();
+    let exp_b = Ristretto::exp(&bp, &int(2).pow(57)).unwrap();
+    let exp_b_2 = Ristretto::exp(&exp_b, &int(2)).unwrap();
+    assert_eq!(exp_a, exp_b_2);
+  }
+
 }

@@ -1,9 +1,10 @@
 //! Ristretto group implementation (based on the `curve25519-dalek` crate).
-use super::Group;
+use super::{Group, UnknownOrderGroup};
 use crate::util::{int, TypeRep};
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
+use curve25519_dalek::constants;
 use rug::integer::Order;
 use rug::ops::Pow;
 use rug::Integer;
@@ -21,11 +22,24 @@ lazy_static! {
     MAX_SAFE_EXPONENT.write_digits(&mut digits, Order::LsfLe);
     Scalar::from_bytes_mod_order(digits)
   };
+
+
+  pub static ref NEW_MAX_SAFE_EXPONENT: Integer = {
+    //2^\{252\} + 27742317777372353535851937790883648493
+    let str_max_scalar = "7237005577332262213973186563042994240857116359379907606001950938285454250989";
+    Integer::from_str_radix(str_max_scalar, 10).unwrap()
+  };
+  pub static ref NEW_MAX_SAFE_SCALAR: Scalar = {
+    let mut digits: [u8; 32] = [0; 32];
+    NEW_MAX_SAFE_EXPONENT.write_digits(&mut digits, Order::LsfLe);
+    Scalar::from_bytes_mod_order(digits)
+  };
+
 }
 
 impl Ristretto {
   fn max_safe_exponent() -> &'static Integer {
-    &MAX_SAFE_EXPONENT
+    &NEW_MAX_SAFE_EXPONENT
   }
 }
 
@@ -67,19 +81,32 @@ impl Group for Ristretto {
     RistrettoElem(-x.0)
   }
 
-  fn exp_(_: &(), x: &RistrettoElem, n: &Integer) -> RistrettoElem {
+  fn exp_(_: &(), x: &RistrettoElem, n: &Integer) -> Option<RistrettoElem> {
     let mut remaining = n.clone();
     let mut result = Self::id();
 
-    while remaining > *MAX_SAFE_EXPONENT {
-      result = RistrettoElem(result.0 + x.0 * (*MAX_SAFE_SCALAR));
+    /*while remaining > *NEW_MAX_SAFE_EXPONENT {
+      //For x.0 * (*NEW_MAX_SAFE_SCALAR)=RistrettoPoint::identity()
+      //result = RistrettoElem(result.0 + x.0 * (*NEW_MAX_SAFE_SCALAR));
+      result = RistrettoElem(result.0);
       remaining -= Self::max_safe_exponent();
+    }*/
+    if remaining >= *NEW_MAX_SAFE_EXPONENT {
+      println!("zouyudi........remaining:{:?}, NEW_MAX_SAFE_EXPONENT:{:?}", remaining, *NEW_MAX_SAFE_EXPONENT);
+      return None;
     }
+
 
     let mut digits: [u8; 32] = [0; 32];
     remaining.write_digits(&mut digits, Order::LsfLe);
     let factor = Scalar::from_bytes_mod_order(digits);
-    RistrettoElem(result.0 + x.0 * factor)
+    Some(RistrettoElem(result.0 + x.0 * factor))
+  }
+}
+
+impl UnknownOrderGroup for Ristretto {
+  fn unknown_order_elem_(_: &()) -> RistrettoElem {
+    RistrettoElem(constants::RISTRETTO_BASEPOINT_POINT)
   }
 }
 
@@ -87,7 +114,6 @@ impl Group for Ristretto {
 mod tests {
   use super::*;
   use crate::util::int;
-  use curve25519_dalek::constants;
 
   #[test]
   fn test_inv() {
@@ -100,9 +126,21 @@ mod tests {
   #[test]
   fn test_exp() {
     let bp = RistrettoElem(constants::RISTRETTO_BASEPOINT_POINT);
-    let exp_a = Ristretto::exp(&bp, &int(2).pow(258));
-    let exp_b = Ristretto::exp(&bp, &int(2).pow(257));
-    let exp_b_2 = Ristretto::exp(&exp_b, &int(2));
+    let exp_a = Ristretto::exp(&bp, &int(2).pow(58)).unwrap();
+    let exp_b = Ristretto::exp(&bp, &int(2).pow(57)).unwrap();
+    let exp_b_2 = Ristretto::exp(&exp_b, &int(2)).unwrap();
     assert_eq!(exp_a, exp_b_2);
+
+    /*let exp_c = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() + &int(20))).unwrap();
+    let exp_d = Ristretto::exp(&bp, &int(20)).unwrap();
+    let exp_e = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() * &int(11) + &int(20))).unwrap();
+    assert_eq!(exp_c, exp_d);
+    assert_eq!(exp_e, exp_d);*/
+  }
+  #[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
+  #[test]
+  fn test_exp_overflow() {
+    let bp = Ristretto::unknown_order_elem();
+    let _ = Ristretto::exp(&bp, &(NEW_MAX_SAFE_EXPONENT.clone() + &int(20))).unwrap();
   }
 }
