@@ -16,6 +16,7 @@ use std::cmp::{min, Ord, Ordering, PartialOrd};
 use std::convert::From;
 use std::mem::transmute;
 use std::ops;
+use std::ptr;
 
 macro_rules! u_types {
   ($($t:ident,$size:expr),+) => {
