@@ -51,7 +51,7 @@ macro_rules! u_types {
         fn as_mpz(&self) -> mpz_t {
           mpz_t {
             size: self.size as i32,
-            d: std::ptr::NonNull::new((self.data())).unwrap(),
+            d: self.data(),
             alloc: $size,
           }
         }
@@ -534,7 +534,7 @@ fn i32_to_mpz(i: i32, data: &mut u64) -> mpz_t {
   *data = i.abs() as u64;
   mpz_t {
     size: i.signum(),
-    d: std::ptr::NonNull::new(data).unwrap() ,
+    d: mut_ptr(&data),
     alloc: 1,
   }
 }
